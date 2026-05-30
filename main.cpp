@@ -294,6 +294,7 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
         bool is_aiming = IsAimKeyPressed(overlay);
         bool stealth_active = !overlay->is_menu_open && overlay->disable_all_visuals_when_hidden && !overlay->is_drawing_zone;
         bool actually_drawing_visuals = (overlay->draw_esp || overlay->draw_fov || overlay->draw_fov_neural) && !stealth_active;
+        // ВАЖНО: inference должен работать всегда когда нажата клавиша аима, даже если меню скрыто
         bool should_infer = overlay->is_menu_open || actually_drawing_visuals || is_aiming || overlay->is_drawing_zone;
 
         if (!should_infer) {
@@ -606,7 +607,7 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
             {
                 std::lock_guard<std::mutex> lock(g_det_mutex);
                 g_shared_detections = g_shared_bodies;
-                g_new_detections = true;
+                // Флаг устанавливается в true выше по потоку, здесь просто продолжаем
             }
             current_read = 1 - current_read;
         }
@@ -671,9 +672,10 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
                     current_det.insert(current_det.end(), g_shared_bodies.begin(), g_shared_bodies.end());
                 }
                 is_new_frame = g_new_detections;
-                g_new_detections = false;
+                // НЕ сбрасываем g_new_detections здесь, чтобы аим мог использовать тот же кадр несколько раз
             }
-            if (!is_new_frame) { Sleep(1); continue; }
+            // Если нет нового кадра, но мы всё ещё держим клавишу аима - используем последние известные детекции
+            if (!is_new_frame && current_det.empty()) { Sleep(1); continue; }
 
             if (local_cfg.aim_target_lock && current_det.size() > 1) {
                 float center_x = g_capture_w / 2.0f;
