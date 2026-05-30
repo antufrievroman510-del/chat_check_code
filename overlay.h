@@ -194,6 +194,14 @@ public:
     bool hum_micro_movements = true;
     float hum_micro_amplitude = 0.8f;
     float hum_reaction_jitter = 2.0f;
+    float hum_path_randomization = 0.0f;
+    bool hum_overshoot_enabled = false;
+    float hum_overshoot_chance = 5.0f;
+    float hum_overshoot_amount = 0.0f;
+    float hum_return_speed = 1.0f;
+    bool pixelsmooth_enabled = false;
+    float pixelsmooth_value = 0.0f;
+    float smooth_factor = 1.0f;
     float byte_track_thresh = 0.5f;
     int byte_track_buffer = 30;
     float byte_match_thresh = 0.8f;
