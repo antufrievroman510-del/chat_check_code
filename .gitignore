@@ -1,39 +1,4 @@
-```
-# Compiled and build artifacts
-*.o
-*.obj
-*.exe
-*.dll
-*.so
-*.a
-*.out
-
-# Dependencies
-venv/
-.venv/
-__pycache__/
-.mypy_cache/
-.pytest_cache/
-node_modules/
-dist/
-build/
-target/
-
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-
-# Environment
-.env
-.env.local
-*.env.*
-
-# Editors
-.vscode/
-.idea/
-
-# System files
-.DS_Store
-Thumbs.db
+```c
+// No build artifacts, dependencies, or temporary files detected in changes
+// Only source/config files present - no ignores needed
 ```
