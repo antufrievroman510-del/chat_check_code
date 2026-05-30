@@ -9,14 +9,11 @@
 *.out
 
 # Dependencies
-node_modules/
 venv/
 .venv/
 __pycache__/
 .mypy_cache/
 .pytest_cache/
-target/
-.gradle/
 
 # Logs and temp files
 *.log
@@ -27,17 +24,16 @@ target/
 .vscode/
 .idea/
 
-# System files
-.DS_Store
-Thumbs.db
+# Environment
 .env
 .env.local
 *.env.*
 
-# Coverage reports
-coverage/
-htmlcov/
-.coverage
+# Build directories
+build/
+dist/
+target/
+.gradle/
 
 # Compressed files
 *.zip

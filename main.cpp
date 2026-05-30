@@ -730,17 +730,21 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
 
             // НОВЫЕ ПАРАМЕТРЫ (Sunone)
             aim->detection_resolution = local_cfg.detection_resolution;
-            aim->mouse_sensitivity = local_cfg.mouse_sensitivity;
-            aim->mouse_yaw = local_cfg.mouse_yaw;
-            aim->mouse_pitch = local_cfg.mouse_pitch;
-            aim->fovX = local_cfg.fovX;
-            aim->fovY = local_cfg.fovY;
             aim->min_aim_speed = local_cfg.min_aim_speed;
             aim->max_aim_speed = local_cfg.max_aim_speed;
-            aim->snap_radius = local_cfg.snap_radius;
-            aim->near_radius = local_cfg.near_radius;
-            aim->speed_curve_exponent = local_cfg.speed_curve_exponent;
-            aim->snap_boost_factor = local_cfg.snap_boost_factor;
+            aim->pixelsmooth_enabled = local_cfg.pixelsmooth_enabled;
+            aim->pixelsmooth_value = local_cfg.pixelsmooth_value;
+            aim->smooth_factor = local_cfg.smooth_factor;
+            aim->humanizer_enable = local_cfg.humanizer_enable;
+            aim->hum_reaction_delay = local_cfg.hum_reaction_delay;
+            aim->hum_tremor_scale = local_cfg.hum_tremor_scale;
+            aim->hum_micro_movements = local_cfg.hum_micro_movements;
+            aim->hum_micro_amplitude = local_cfg.hum_micro_amplitude;
+            aim->hum_path_randomization = local_cfg.hum_path_randomization;
+            aim->hum_overshoot_enabled = local_cfg.hum_overshoot_enabled;
+            aim->hum_overshoot_chance = local_cfg.hum_overshoot_chance;
+            aim->hum_overshoot_amount = local_cfg.hum_overshoot_amount;
+            aim->hum_return_speed = local_cfg.hum_return_speed;
             aim->kalman_enabled = local_cfg.kalman_enable;
             aim->kalman_process_noise_position = local_cfg.kalman_q;
             aim->kalman_measurement_noise = local_cfg.kalman_r;
@@ -749,6 +753,7 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
             aim->prediction_interval = local_cfg.prediction_interval;
             aim->disable_headshot = local_cfg.disable_headshot;
             aim->wind_mouse_enabled = false;  // пока отключено
+            aim->max_move_step = local_cfg.max_move_step;
 
             aim->Update(current_det, g_capture_w, g_capture_h, is_new_frame, current_time_ms, g_current_zoom.load());
             Sleep(1);

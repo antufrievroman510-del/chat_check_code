@@ -681,17 +681,11 @@ void Overlay::ApplySafeSettings() {
     sticky_threshold = 60.0f;
     sticky_frames_keep = 2;
     prediction_method = 1;
-    mouse_sensitivity = 1.0f;
-    mouse_yaw = 0.022f;
-    mouse_pitch = 0.022f;
-    fovX = 106.0f;
-    fovY = 74.0f;
-    min_aim_speed = 0.07f;
-    max_aim_speed = 0.18f;
-    snap_radius = 2.0f;
-    near_radius = 30.0f;
-    speed_curve_exponent = 3.0f;
-    snap_boost_factor = 1.2f;
+    min_aim_speed = 0.5f;
+    max_aim_speed = 3.0f;
+    pixelsmooth_enabled = true;
+    pixelsmooth_value = 8.0f;
+    smooth_factor = 0.15f;
     kalman_compensate_detection_delay = true;
     kalman_additional_prediction_ms = 10.0f;
     prediction_interval = 0.02f;
@@ -849,20 +843,36 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
     if (CustomCombo("Target Part:", "##tgt", &aim_target, tgts, 3, u8"Часть тела для прицеливания.")) cfg_changed = true;
     if (DrawToggle("Keep Current Lock:", "##keep_lock", &aim_target_lock, acc_u32, u8"Не переключаться на другую цель автоматически.")) cfg_changed = true;
     if (CustomSliderInt("Switch Delay:", "##sw_dly", &aim_switch_delay, 0, 1000, "%d ms", acc_vec, u8"Задержка перед переключением на другую цель.")) cfg_changed = true;
-    if (CustomSliderFloat("Mouse Sensitivity:", "##m_sens", &mouse_sensitivity, 0.1f, 5.0f, "%.2f", acc_vec, u8"Общая чувствительность мыши.")) cfg_changed = true;
-    if (CustomSliderFloat("Mouse Yaw:", "##m_yaw", &mouse_yaw, 0.001f, 0.1f, "%.4f", acc_vec, u8"Горизонтальный коэффициент (обычно 0.022).")) cfg_changed = true;
-    if (CustomSliderFloat("Mouse Pitch:", "##m_pitch", &mouse_pitch, 0.001f, 0.1f, "%.4f", acc_vec, u8"Вертикальный коэффициент (обычно 0.022).")) cfg_changed = true;
-    if (CustomSliderFloat("FOV (градусы):", "##fovX", &fovX, 60.0f, 120.0f, "%.0f", acc_vec, u8"Горизонтальное поле зрения игры.")) cfg_changed = true;
-    if (CustomSliderFloat("FOV Vertical:", "##fovY", &fovY, 40.0f, 100.0f, "%.0f", acc_vec, u8"Вертикальное поле зрения (обычно 74).")) cfg_changed = true;
     EndPanel();
 
-    if (BeginPanel("Speed & Curve", ImVec2(0, 200), acc_vec)) cfg_changed = true;
+    if (BeginPanel("Speed Control", ImVec2(0, 160), acc_vec)) cfg_changed = true;
     if (CustomSliderFloat("Min Aim Speed:", "##min_sp", &min_aim_speed, 0.1f, 5.0f, "%.3f", acc_vec, u8"Минимальная скорость наведения.")) cfg_changed = true;
     if (CustomSliderFloat("Max Aim Speed:", "##max_sp", &max_aim_speed, 0.5f, 10.0f, "%.3f", acc_vec, u8"Максимальная скорость наведения.")) cfg_changed = true;
-    if (CustomSliderFloat("Snap Radius (px):", "##snap_r", &snap_radius, 0.5f, 10.0f, "%.1f", acc_vec, u8"Радиус мгновенного захвата.")) cfg_changed = true;
-    if (CustomSliderFloat("Near Radius (px):", "##near_r", &near_radius, 5.0f, 100.0f, "%.1f", acc_vec, u8"Радиус, в котором скорость плавно растёт по кривой.")) cfg_changed = true;
-    if (CustomSliderFloat("Speed Curve Exponent:", "##curve_exp", &speed_curve_exponent, 1.0f, 5.0f, "%.2f", acc_vec, u8"Степень нелинейности.")) cfg_changed = true;
-    if (CustomSliderFloat("Snap Boost Factor:", "##snap_boost", &snap_boost_factor, 1.0f, 2.5f, "%.2f", acc_vec, u8"Увеличение скорости в зоне Snap Radius.")) cfg_changed = true;
+    if (CustomSliderFloat("Max Move Step (px):", "##max_move", &max_move_step, 5.0f, 200.0f, "%.1f", acc_vec, u8"Максимальное движение за кадр.")) cfg_changed = true;
+    EndPanel();
+
+    if (BeginPanel("Pixelsmooth / Humanizer", ImVec2(0, 240), acc_vec)) cfg_changed = true;
+    if (DrawToggle("Enable Pixelsmooth:", "##pix_en", &pixelsmooth_enabled, acc_u32, u8"Сглаживание движений.")) cfg_changed = true;
+    if (pixelsmooth_enabled) {
+        if (CustomSliderFloat("Smooth Steps:", "##pix_val", &pixelsmooth_value, 2.0f, 32.0f, "%.0f", acc_vec, u8"Количество шагов сглаживания.")) cfg_changed = true;
+        if (CustomSliderFloat("Lerp Factor:", "##smooth_f", &smooth_factor, 0.01f, 0.5f, "%.3f", acc_vec, u8"Фактор плавности (lerp).")) cfg_changed = true;
+    }
+    if (DrawToggle("Humanizer:", "##hum_en", &humanizer_enable, acc_u32, u8"Человеческая рандомизация.")) cfg_changed = true;
+    if (humanizer_enable) {
+        if (CustomSliderFloat("Reaction Delay (ms):", "##hum_react", &hum_reaction_delay, 0.0f, 200.0f, "%.0f ms", acc_vec, u8"Задержка реакции.")) cfg_changed = true;
+        if (CustomSliderFloat("Tremor Scale:", "##hum_tremor", &hum_tremor_scale, 0.0f, 5.0f, "%.2f", acc_vec, u8"Размах дрожания рук.")) cfg_changed = true;
+        if (DrawToggle("Micro Movements:", "##hum_micro", &hum_micro_movements, acc_u32, u8"Микродвижения.")) cfg_changed = true;
+        if (hum_micro_movements) {
+            if (CustomSliderFloat("Micro Amplitude:", "##hum_micro_amp", &hum_micro_amplitude, 0.0f, 3.0f, "%.2f", acc_vec, u8"Амплитуда микродвижений.")) cfg_changed = true;
+        }
+        if (CustomSliderFloat("Path Randomization:", "##hum_path_rand", &hum_path_randomization, 0.0f, 2.0f, "%.2f", acc_vec, u8"Рандомизация пути.")) cfg_changed = true;
+        if (DrawToggle("Overshoot:", "##hum_overshoot_en", &hum_overshoot_enabled, acc_u32, u8"Искусственный перелёт.")) cfg_changed = true;
+        if (hum_overshoot_enabled) {
+            if (CustomSliderFloat("Overshoot Chance (%):", "##hum_overshoot_ch", &hum_overshoot_chance, 0.0f, 50.0f, "%.1f%%", acc_vec, u8"Шанс перелёта.")) cfg_changed = true;
+            if (CustomSliderFloat("Overshoot Amount:", "##hum_overshoot_amt", &hum_overshoot_amount, 1.0f, 3.0f, "%.2f", acc_vec, u8"Множитель перелёта.")) cfg_changed = true;
+            if (CustomSliderFloat("Return Speed:", "##hum_return_sp", &hum_return_speed, 0.1f, 1.0f, "%.2f", acc_vec, u8"Скорость возврата.")) cfg_changed = true;
+        }
+    }
     EndPanel();
 
     if (BeginPanel("Kalman Predictor", ImVec2(0, 240), acc_vec, true, &kalman_enable, acc_u32)) cfg_changed = true;
