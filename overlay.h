@@ -286,4 +286,7 @@ private:
     void CleanupRenderTarget();
     void LoadConfig(Aimbot* aim);
     void FetchHardwareInfo();
+
+    // 2PC Network module
+    std::unique_ptr<Network2PC> network_2pc;
 };

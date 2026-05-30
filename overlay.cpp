@@ -7,6 +7,10 @@
 
 #include "overlay.h"
 #include "auth.h"
+#include "aimbot.h"
+#include "detector.h"
+#include "AimbotTarget.h"
+#include "network_2pc.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
@@ -28,6 +32,7 @@
 #include <atomic>
 #include <filesystem>
 #include <map>
+#include <memory>
 #include <set>
 #include <mutex>
 #include <unordered_map>
@@ -1264,6 +1269,48 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     const char* mon_opts[] = { "Monitor 1", "Monitor 2", "Monitor 3" };
     if (CustomCombo("Overlay Display:", "##mon", &target_monitor, mon_opts, 3, u8"Вывод на монитор.")) cfg_changed = true;
     if (DrawToggle("DMA Fuser Mode:", "##dmafus", &enable_dma_fuser, acc_u32, u8"Черный фон для слияния.")) cfg_changed = true;
+    
+    // 2PC Settings Section
+    if (hardware_type == 6) { // Generic 2PC (UDP)
+        ImGui::Separator();
+        ImGui::TextColored(acc_vec, "2PC Network Settings:");
+        ImGui::Spacing();
+        
+        static char ip_buf[64] = "192.168.1.100";
+        static int port_buf = 5555;
+        
+        ImGui::InputText("Target IP", ip_buf, IM_ARRAYSIZE(ip_buf));
+        ImGui::SameLine();
+        ImGui::InputInt("Port", &port_buf);
+        
+        if (network_2pc && network_2pc->is_connected_status()) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.8f, 0.2f, 0.6f));
+            if (ImGui::Button("Disconnect", ImVec2(120, 30))) {
+                network_2pc->disconnect();
+            }
+            ImGui::PopStyleColor(); // Баланс соблюден
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "CONNECTED");
+            
+            if (ImGui::Button("Send Test Data", ImVec2(120, 30))) {
+                network_2pc->send_aim_data(0.5f, 0.7f, true, 0.9f);
+            }
+        } else {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.6f));
+            if (ImGui::Button("Connect", ImVec2(120, 30))) {
+                if(network_2pc) {
+                    network_2pc->set_ip(std::string(ip_buf));
+                    network_2pc->set_port(port_buf);
+                    network_2pc->connect(ip_buf, port_buf);
+                }
+            }
+            ImGui::PopStyleColor(); // Баланс соблюден
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "DISCONNECTED");
+        }
+        ImGui::TextDisabled("Firewall: Allow UDP port %d", port_buf);
+    }
+    
     ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.5f, 0.8f, 1.0f));
     if (ImGui::Button(u8"Обучение: 2PC и Железо", ImVec2(-1, 35))) show_hw_tutorial = true;
@@ -1656,6 +1703,10 @@ bool Overlay::Initialize() {
     colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.95f, 1.00f);
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
+    
+    // Initialize 2PC network module
+    network_2pc = std::make_unique<Network2PC>();
+    
     chat_history.push_back({ is_russian ? u8"Привет! Я твой ИИ-Ассистент PWNZ." : "Hello! I am your PWNZ Assistant.", false });
     Aimbot temp_aim;
     LoadConfig(&temp_aim);
