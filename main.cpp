@@ -148,8 +148,8 @@ struct SafeConfig {
 
     // НОВЫЕ ПОЛЯ ДЛЯ АИМБОТА (Sunone)
     int detection_resolution;
-    float min_aim_speed;
-    float max_aim_speed;
+    float min_sensitivity;
+    float max_sensitivity;
     bool kalman_compensate_detection_delay;
     float kalman_additional_prediction_ms;
     float prediction_interval;
@@ -727,8 +727,8 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
 
             // НОВЫЕ ПАРАМЕТРЫ (Sunone)
             aim->detection_resolution = local_cfg.detection_resolution;
-            aim->min_sensitivity = local_cfg.min_aim_speed;
-            aim->max_sensitivity = local_cfg.max_aim_speed;
+            aim->min_sensitivity = local_cfg.min_sensitivity;
+            aim->max_sensitivity = local_cfg.max_sensitivity;
             aim->pixelsmooth_enabled = local_cfg.pixelsmooth_enabled;
             aim->pixelsmooth_value = local_cfg.pixelsmooth_value;
             aim->smooth_factor = local_cfg.smooth_factor;
@@ -918,8 +918,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // Инициализация новых полей
     g_safe_cfg.detection_resolution = 960;
-    g_safe_cfg.min_aim_speed = 0.5f;
-    g_safe_cfg.max_aim_speed = 3.0f;
+    g_safe_cfg.min_sensitivity = 0.5f;
+    g_safe_cfg.max_sensitivity = 3.0f;
     g_safe_cfg.kalman_compensate_detection_delay = true;
     g_safe_cfg.kalman_additional_prediction_ms = 0.0f;
     g_safe_cfg.prediction_interval = 0.01f;

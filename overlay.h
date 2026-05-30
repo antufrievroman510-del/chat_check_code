@@ -213,8 +213,8 @@ public:
     int sticky_frames_keep = 3;
     int prediction_method = 1;
 
-    float min_aim_speed = 0.5f;
-    float max_aim_speed = 3.0f;
+    float min_sensitivity = 0.5f;
+    float max_sensitivity = 3.0f;
     bool kalman_compensate_detection_delay = true;
     float kalman_additional_prediction_ms = 0.0f;
     float prediction_interval = 0.01f;
