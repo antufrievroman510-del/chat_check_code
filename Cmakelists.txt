@@ -44,6 +44,7 @@ add_executable(PWNZ_AI WIN32
     "aim_kalman.h"
     "AimbotTarget.cpp"
     "AimbotTarget.h"
+    "network_2pc.h"
     "${IMGUI_DIR}/imgui.cpp"
     "${IMGUI_DIR}/imgui_draw.cpp"
     "${IMGUI_DIR}/imgui_widgets.cpp"
