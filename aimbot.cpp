@@ -177,23 +177,24 @@ void Aimbot::SendHardwareClick() {
 // Вспомогательные методы
 // ============================================================
 std::pair<double, double> Aimbot::degToCounts(double degX, double degY) const {
-    if (mouse_sensitivity == 0.0f || mouse_yaw == 0.0f || mouse_pitch == 0.0f)
-        return { 0.0, 0.0 };
-    double cx = degX / (mouse_sensitivity * mouse_yaw);
-    double cy = degY / (mouse_sensitivity * mouse_pitch);
+    // Прямое преобразование градусов в пиксели движения
+    // Используем fov для масштаба
+    float scale = static_cast<float>(detection_resolution) / fov;
+    double cx = degX * scale;
+    double cy = degY * scale;
     return { cx, cy };
 }
 
 double Aimbot::calculateSpeedMultiplier(double distance) const {
-    if (distance < snap_radius)
-        return min_aim_speed * snap_boost_factor;
-    if (near_radius > 0.0f && distance < near_radius) {
-        double t = distance / near_radius;
-        double curve = 1.0 - std::pow(1.0 - t, speed_curve_exponent);
-        return min_aim_speed + (max_aim_speed - min_aim_speed) * curve;
-    }
-    double max_distance = std::hypot(static_cast<double>(detection_resolution), static_cast<double>(detection_resolution)) / 2.0;
-    double norm = std::clamp(distance / max_distance, 0.0, 1.0);
+    // Простая линейная интерполяция между min и max скоростью
+    // Вблизи цели - медленнее, вдали - быстрее
+    if (distance < 5.0f)
+        return min_aim_speed;
+    
+    float max_distance = static_cast<float>(detection_resolution) / 2.0f;
+    float norm = std::clamp(distance / max_distance, 0.0f, 1.0f);
+    
+    // Плавная кривая скорости
     return min_aim_speed + (max_aim_speed - min_aim_speed) * norm;
 }
 
@@ -270,20 +271,15 @@ std::pair<double, double> Aimbot::calcMovement(double targetX, double targetY) {
     double offX = targetX - centerX;
     double offY = targetY - centerY;
     double distance = std::hypot(offX, offY);
+    
+    // Получаем множитель скорости на основе расстояния
     double speed = calculateSpeedMultiplier(distance);
-
-    double degPerPxX = fovX / static_cast<double>(detection_resolution);
-    double degPerPxY = fovY / static_cast<double>(detection_resolution);
-    double degX = offX * degPerPxX;
-    double degY = offY * degPerPxY;
-
-    double fps = 30.0;
-    double corr = 1.0;
-    if (fps > 30.0) corr = 30.0 / fps;
-
-    auto counts = degToCounts(degX, degY);
-    double moveX = counts.first * speed * corr;
-    double moveY = counts.second * speed * corr;
+    
+    // Преобразуем смещение в пиксели движения напрямую
+    // speed уже содержит нужную нам скорость перемещения
+    double moveX = offX * speed;
+    double moveY = offY * speed;
+    
     return { moveX, moveY };
 }
 
