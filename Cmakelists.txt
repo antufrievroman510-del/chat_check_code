@@ -29,22 +29,22 @@ include_directories("${EIGEN_DIR}")
 file(GLOB BYTE_TRACK_SOURCES "${BYTE_TRACK_DIR}/src/*.cpp")
 
 add_executable(PWNZ_AI WIN32
-    "main.cpp"
-    "capture.cpp"
-    "capture.h"
-    "detector.cpp"
-    "detector.h"
-    "overlay.cpp"
-    "overlay.h"
-    "aimbot.h"
-    "aimbot.cpp"
-    "auth.h"
-    "auth.cpp"
-    "head_smoother.h"
-    "aim_kalman.h"
-    "AimbotTarget.cpp"
-    "AimbotTarget.h"
-    "network_2pc.h"
+    "src/main.cpp"
+    "src/capture.cpp"
+    "src/capture.h"
+    "src/detector.cpp"
+    "src/detector.h"
+    "src/overlay.cpp"
+    "src/overlay.h"
+    "src/aimbot.h"
+    "src/aimbot.cpp"
+    "src/auth.h"
+    "src/auth.cpp"
+    "src/head_smoother.h"
+    "src/aim_kalman.h"
+    "src/AimbotTarget.cpp"
+    "src/AimbotTarget.h"
+    "src/network_2pc.h"
     "${IMGUI_DIR}/imgui.cpp"
     "${IMGUI_DIR}/imgui_draw.cpp"
     "${IMGUI_DIR}/imgui_widgets.cpp"
@@ -56,18 +56,12 @@ add_executable(PWNZ_AI WIN32
     ${BYTE_TRACK_SOURCES}
 )
 
-# Подключение VMProtectSDK64.lib
-set(VMProtect_LIB_PATH "${CMAKE_SOURCE_DIR}/VMProtectSDK64.lib")
-if(NOT EXISTS "${VMProtect_LIB_PATH}")
-    message(WARNING "VMProtectSDK64.lib not found at ${VMProtect_LIB_PATH}")
-endif()
-
 target_link_libraries(PWNZ_AI PRIVATE
     d3d11.lib dxgi.lib d3dcompiler.lib dwmapi.lib setupapi.lib user32.lib gdi32.lib
     windowsapp.lib
     "${ONNX_DIR}/lib/onnxruntime.lib"
     "${ONNX_DIR}/lib/DirectML.lib"
-    "${VMProtect_LIB_PATH}"
+    "${CMAKE_SOURCE_DIR}/src/VMProtectSDK64.lib"
 )
 
 set_target_properties(PWNZ_AI PROPERTIES LINK_FLAGS "/DEBUG /OPT:REF /OPT:ICF /SUBSYSTEM:WINDOWS")
