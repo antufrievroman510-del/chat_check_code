@@ -186,20 +186,23 @@ std::pair<double, double> Aimbot::degToCounts(double degX, double degY) const {
 }
 
 double Aimbot::calculateSpeedMultiplier(double distance) const {
-    // Раздельная настройка скорости для обнаруженной и захваченной цели
-    // detect_aim_speed - минимальная скорость наводки на новую обнаруженную цель
-    // target_aim_speed - скорость сопровождения уже захваченной цели
-    
-    // Используем detect_aim_speed как базовую минимальную скорость
-    if (distance < 5.0f)
-        return detect_aim_speed;
+    // Расчет скорости наводки на основе min_sensitivity и max_sensitivity
+    // min_sensitivity - минимальная скорость (ползунок 0.1-20)
+    // max_sensitivity - максимальный потолок скорости (чтобы выше не улетала)
     
     float max_distance = static_cast<float>(detection_resolution) / 2.0f;
     float dist_ratio = distance / max_distance;
     float norm = (dist_ratio < 0.0f) ? 0.0f : ((dist_ratio > 1.0f) ? 1.0f : dist_ratio);
     
-    // Плавная кривая скорости между detect_aim_speed и target_aim_speed
-    return detect_aim_speed + (target_aim_speed - detect_aim_speed) * norm;
+    // Плавная кривая скорости между min_sensitivity и max_sensitivity
+    // На близких дистанциях - min_sensitivity, на дальних - приближается к max_sensitivity
+    float speed = min_sensitivity + (max_sensitivity - min_sensitivity) * norm;
+    
+    // Ограничиваем скорость значением max_sensitivity (потолок)
+    if (speed > max_sensitivity) speed = max_sensitivity;
+    if (speed < min_sensitivity) speed = min_sensitivity;
+    
+    return static_cast<double>(speed);
 }
 
 double Aimbot::currentDetectionDelaySec() const {
@@ -355,6 +358,22 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     double targetX = predicted.first;
     double targetY = predicted.second;
 
+    // Применяем смещение цели (Target zona: Head/Body/Auto)
+    // aim_target: 0=Auto, 1=Head, 2=Body
+    // classId: 0=Head, 1=Body
+    if (aim_target == 1) {
+        // Принудительно цель в голову - смещаем вверх на половину высоты бокса
+        targetY -= static_cast<double>(lockInfo.target.h) * 0.35;
+    } else if (aim_target == 2) {
+        // Принудительно цель в тело - смещаем вниз
+        targetY += static_cast<double>(lockInfo.target.h) * 0.15;
+    }
+    // aim_target == 0 (Auto) - используем детектированную точку без изменений
+
+    // Применяем дополнительные оффсеты из настроек
+    targetX += static_cast<double>(target_offset_x);
+    targetY += static_cast<double>(target_offset_y);
+
     if (elite_ballistics_enabled && lockInfo.target.w > 0) {
         float estimated_distance = 1000.0f / (lockInfo.target.w + 1.0f);
         float time_to_target = estimated_distance / elite_bullet_speed;
@@ -386,8 +405,8 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     int mx = static_cast<int>(mv.first);
     int my = static_cast<int>(mv.second);
 
-    // max_move_step теперь только ограничивает МАКСИМАЛЬНЫЙ шаг, не влияя на минимальную скорость
-    // Минимальная скорость контролируется через detect_aim_speed
+    // max_move_step ограничивает максимальный шаг движения
+    // Минимальная/максимальная скорость контролируется через min_sensitivity/max_sensitivity
     if (std::abs(mx) > max_move_step) mx = (mx > 0) ? static_cast<int>(max_move_step) : -static_cast<int>(max_move_step);
     if (std::abs(my) > max_move_step) my = (my > 0) ? static_cast<int>(max_move_step) : -static_cast<int>(max_move_step);
 
