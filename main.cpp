@@ -146,8 +146,8 @@ struct SafeConfig {
     float mouse_pitch;
     float fovX;
     float fovY;
-    float min_speed_multiplier;
-    float max_speed_multiplier;
+    float min_aim_speed;
+    float max_aim_speed;
     float snap_radius;
     float near_radius;
     float speed_curve_exponent;
@@ -735,8 +735,8 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
             aim->mouse_pitch = local_cfg.mouse_pitch;
             aim->fovX = local_cfg.fovX;
             aim->fovY = local_cfg.fovY;
-            aim->min_speed_multiplier = local_cfg.min_speed_multiplier;
-            aim->max_speed_multiplier = local_cfg.max_speed_multiplier;
+            aim->min_aim_speed = local_cfg.min_aim_speed;
+            aim->max_aim_speed = local_cfg.max_aim_speed;
             aim->snap_radius = local_cfg.snap_radius;
             aim->near_radius = local_cfg.near_radius;
             aim->speed_curve_exponent = local_cfg.speed_curve_exponent;
@@ -914,8 +914,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     g_safe_cfg.mouse_pitch = 0.022f;
     g_safe_cfg.fovX = 106.0f;
     g_safe_cfg.fovY = 74.0f;
-    g_safe_cfg.min_speed_multiplier = 0.1f;
-    g_safe_cfg.max_speed_multiplier = 0.1f;
+    g_safe_cfg.min_aim_speed = 0.5f;
+    g_safe_cfg.max_aim_speed = 3.0f;
     g_safe_cfg.snap_radius = 1.5f;
     g_safe_cfg.near_radius = 25.0f;
     g_safe_cfg.speed_curve_exponent = 3.0f;

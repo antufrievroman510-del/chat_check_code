@@ -218,8 +218,8 @@ public:
     float mouse_pitch = 0.022f;
     float fovX = 106.0f;
     float fovY = 74.0f;
-    float min_speed_multiplier = 0.1f;
-    float max_speed_multiplier = 0.1f;
+    float min_aim_speed = 0.5f;
+    float max_aim_speed = 3.0f;
     float snap_radius = 1.5f;
     float near_radius = 25.0f;
     float speed_curve_exponent = 3.0f;
