@@ -32,23 +32,12 @@ public:
     float fovY = 74.0f;
     int detection_resolution = 320;
 
-    float mouse_sensitivity = 1.0f;
-    float mouse_yaw = 0.022f;
-    float mouse_pitch = 0.022f;
-
     float min_aim_speed = 0.5f;
     float max_aim_speed = 3.0f;
-    float snap_radius = 2.0f;
-    float near_radius = 30.0f;
-    float speed_curve_exponent = 4.0f;
-    float snap_boost_factor = 1.15f;
 
     // === Pixelsmooth / Кривые Безье ===
     bool pixelsmooth_enabled = true;
     float pixelsmooth_value = 8.0f;          // Количество шагов сглаживания
-    float bezier_tension = 0.5f;             // Натяжение кривой Безье (0-1)
-    bool bezier_enabled = true;              // Использовать кривые Безье для траектории
-    float bezier_smoothness = 0.7f;          // Плавность кривой (0-1)
     float smooth_factor = 0.15f;             // Фактор сглаживания движений (lerp)
     
     // === Advanced Humanizer ===
