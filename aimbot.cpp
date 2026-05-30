@@ -186,15 +186,15 @@ std::pair<double, double> Aimbot::degToCounts(double degX, double degY) const {
 
 double Aimbot::calculateSpeedMultiplier(double distance) const {
     if (distance < snap_radius)
-        return min_speed_multiplier * snap_boost_factor;
+        return min_aim_speed * snap_boost_factor;
     if (near_radius > 0.0f && distance < near_radius) {
         double t = distance / near_radius;
         double curve = 1.0 - std::pow(1.0 - t, speed_curve_exponent);
-        return min_speed_multiplier + (max_speed_multiplier - min_speed_multiplier) * curve;
+        return min_aim_speed + (max_aim_speed - min_aim_speed) * curve;
     }
     double max_distance = std::hypot(static_cast<double>(detection_resolution), static_cast<double>(detection_resolution)) / 2.0;
     double norm = std::clamp(distance / max_distance, 0.0, 1.0);
-    return min_speed_multiplier + (max_speed_multiplier - min_speed_multiplier) * norm;
+    return min_aim_speed + (max_aim_speed - min_aim_speed) * norm;
 }
 
 double Aimbot::currentDetectionDelaySec() const {

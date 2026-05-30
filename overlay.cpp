@@ -394,8 +394,8 @@ void Overlay::LoadConfig(Aimbot* aim) {
     handlers["mouse_pitch"] = [&](const std::string& v) { mouse_pitch = safe_stof(v); };
     handlers["fovX"] = [&](const std::string& v) { fovX = safe_stof(v); };
     handlers["fovY"] = [&](const std::string& v) { fovY = safe_stof(v); };
-    handlers["min_speed_multiplier"] = [&](const std::string& v) { min_speed_multiplier = safe_stof(v); };
-    handlers["max_speed_multiplier"] = [&](const std::string& v) { max_speed_multiplier = safe_stof(v); };
+    handlers["min_aim_speed"] = [&](const std::string& v) { min_aim_speed = safe_stof(v); };
+    handlers["max_aim_speed"] = [&](const std::string& v) { max_aim_speed = safe_stof(v); };
     handlers["snap_radius"] = [&](const std::string& v) { snap_radius = safe_stof(v); };
     handlers["near_radius"] = [&](const std::string& v) { near_radius = safe_stof(v); };
     handlers["speed_curve_exponent"] = [&](const std::string& v) { speed_curve_exponent = safe_stof(v); };
@@ -566,8 +566,8 @@ void Overlay::SaveConfig(Aimbot* aim) {
     ss << "mouse_pitch=" << mouse_pitch << "\n";
     ss << "fovX=" << fovX << "\n";
     ss << "fovY=" << fovY << "\n";
-    ss << "min_speed_multiplier=" << min_speed_multiplier << "\n";
-    ss << "max_speed_multiplier=" << max_speed_multiplier << "\n";
+    ss << "min_aim_speed=" << min_aim_speed << "\n";
+    ss << "max_aim_speed=" << max_aim_speed << "\n";
     ss << "snap_radius=" << snap_radius << "\n";
     ss << "near_radius=" << near_radius << "\n";
     ss << "speed_curve_exponent=" << speed_curve_exponent << "\n";
@@ -656,8 +656,8 @@ void Overlay::ResetDefaults() {
     mouse_pitch = 0.022f;
     fovX = 106.0f;
     fovY = 74.0f;
-    min_speed_multiplier = 0.1f;
-    max_speed_multiplier = 0.1f;
+    min_aim_speed = 0.5f;
+    max_aim_speed = 3.0f;
     snap_radius = 1.5f;
     near_radius = 25.0f;
     speed_curve_exponent = 3.0f;
@@ -713,8 +713,8 @@ void Overlay::ApplySafeSettings() {
     mouse_pitch = 0.022f;
     fovX = 106.0f;
     fovY = 74.0f;
-    min_speed_multiplier = 0.07f;
-    max_speed_multiplier = 0.18f;
+    min_aim_speed = 0.07f;
+    max_aim_speed = 0.18f;
     snap_radius = 2.0f;
     near_radius = 30.0f;
     speed_curve_exponent = 3.0f;
@@ -884,8 +884,8 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
     EndPanel();
 
     if (BeginPanel("Speed & Curve", ImVec2(0, 200), acc_vec)) cfg_changed = true;
-    if (CustomSliderFloat("Min Speed Multiplier:", "##min_sp", &min_speed_multiplier, 0.01f, 0.5f, "%.3f", acc_vec, u8"Скорость прицела, когда цель близко к центру.")) cfg_changed = true;
-    if (CustomSliderFloat("Max Speed Multiplier:", "##max_sp", &max_speed_multiplier, 0.05f, 1.0f, "%.3f", acc_vec, u8"Скорость прицела, когда цель у края FOV.")) cfg_changed = true;
+    if (CustomSliderFloat("Min Aim Speed:", "##min_sp", &min_aim_speed, 0.1f, 5.0f, "%.3f", acc_vec, u8"Минимальная скорость наведения.")) cfg_changed = true;
+    if (CustomSliderFloat("Max Aim Speed:", "##max_sp", &max_aim_speed, 0.5f, 10.0f, "%.3f", acc_vec, u8"Максимальная скорость наведения.")) cfg_changed = true;
     if (CustomSliderFloat("Snap Radius (px):", "##snap_r", &snap_radius, 0.5f, 10.0f, "%.1f", acc_vec, u8"Радиус мгновенного захвата.")) cfg_changed = true;
     if (CustomSliderFloat("Near Radius (px):", "##near_r", &near_radius, 5.0f, 100.0f, "%.1f", acc_vec, u8"Радиус, в котором скорость плавно растёт по кривой.")) cfg_changed = true;
     if (CustomSliderFloat("Speed Curve Exponent:", "##curve_exp", &speed_curve_exponent, 1.0f, 5.0f, "%.2f", acc_vec, u8"Степень нелинейности.")) cfg_changed = true;
