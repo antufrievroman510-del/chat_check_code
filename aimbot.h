@@ -23,7 +23,7 @@ public:
     // === Настройки ===
     bool aim_enable = true;
     bool aim_target_lock = true;
-    int aim_target = 0;
+    int aim_target = 0;  // 0=Auto, 1=Head, 2=Body (Target zona)
     int aim_key_main = VK_RBUTTON;
     int aim_key_sub = 0;
     int aim_toggle_key = 0;
@@ -32,9 +32,10 @@ public:
     float fovY = 74.0f;
     int detection_resolution = 320;
 
-    float detect_aim_speed = 0.15f;    // Скорость наводки на обнаруженную цель (минимальная)
-    float target_aim_speed = 2.5f;     // Скорость сопровождения захваченной цели
-    float max_move_step = 150.0f;      // Максимальное ограничение шага движения (не влияет на мин. скорость)
+    // === Настройки чувствительности (0.1 - 20.0) ===
+    float min_sensitivity = 0.1f;      // Минимальная сенса (ползунок 0.1-20)
+    float max_sensitivity = 20.0f;     // Максимальная сенса (потолок, выше не улетает)
+    float max_move_step = 150.0f;      // Максимальное ограничение шага движения
 
     // === Pixelsmooth / Кривые Безье ===
     bool pixelsmooth_enabled = true;
