@@ -138,23 +138,20 @@ struct SafeConfig {
     bool hum_micro_movements;
     float hum_micro_amplitude;
     float hum_reaction_jitter;
+    float hum_path_randomization;
+    bool hum_overshoot_enabled;
+    float hum_overshoot_amount;
+    float hum_return_speed;
+    bool pixelsmooth_enabled;
+    float pixelsmooth_value;
+    float smooth_factor;
 
     // НОВЫЕ ПОЛЯ ДЛЯ АИМБОТА (Sunone)
     int detection_resolution;
-    float mouse_sensitivity;
-    float mouse_yaw;
-    float mouse_pitch;
-    float fovX;
-    float fovY;
     float min_aim_speed;
     float max_aim_speed;
-    float snap_radius;
-    float near_radius;
-    float speed_curve_exponent;
-    float snap_boost_factor;
     bool kalman_compensate_detection_delay;
     float kalman_additional_prediction_ms;
-    float kalman_reset_timeout_sec;
     float prediction_interval;
     bool disable_headshot;
 };
@@ -911,20 +908,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     g_safe_cfg.hum_micro_movements = true;
     g_safe_cfg.hum_micro_amplitude = 0.8f;
     g_safe_cfg.hum_reaction_jitter = 2.0f;
+    g_safe_cfg.hum_path_randomization = 0.3f;
+    g_safe_cfg.hum_overshoot_enabled = false;
+    g_safe_cfg.hum_overshoot_amount = 1.2f;
+    g_safe_cfg.hum_return_speed = 0.85f;
+    g_safe_cfg.pixelsmooth_enabled = true;
+    g_safe_cfg.pixelsmooth_value = 8.0f;
+    g_safe_cfg.smooth_factor = 0.15f;
 
     // Инициализация новых полей
     g_safe_cfg.detection_resolution = 960;
-    g_safe_cfg.mouse_sensitivity = 1.0f;
-    g_safe_cfg.mouse_yaw = 0.022f;
-    g_safe_cfg.mouse_pitch = 0.022f;
-    g_safe_cfg.fovX = 106.0f;
-    g_safe_cfg.fovY = 74.0f;
     g_safe_cfg.min_aim_speed = 0.5f;
     g_safe_cfg.max_aim_speed = 3.0f;
-    g_safe_cfg.snap_radius = 1.5f;
-    g_safe_cfg.near_radius = 25.0f;
-    g_safe_cfg.speed_curve_exponent = 3.0f;
-    g_safe_cfg.snap_boost_factor = 1.15f;
     g_safe_cfg.kalman_compensate_detection_delay = true;
     g_safe_cfg.kalman_additional_prediction_ms = 0.0f;
     g_safe_cfg.prediction_interval = 0.01f;
@@ -997,6 +992,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             g_safe_cfg.hum_micro_movements = overlay.hum_micro_movements;
             g_safe_cfg.hum_micro_amplitude = overlay.hum_micro_amplitude;
             g_safe_cfg.hum_reaction_jitter = overlay.hum_reaction_jitter;
+            g_safe_cfg.hum_path_randomization = overlay.hum_path_randomization;
+            g_safe_cfg.hum_overshoot_enabled = overlay.hum_overshoot_enabled;
+            g_safe_cfg.hum_overshoot_amount = overlay.hum_overshoot_amount;
+            g_safe_cfg.hum_return_speed = overlay.hum_return_speed;
+            g_safe_cfg.pixelsmooth_enabled = overlay.pixelsmooth_enabled;
+            g_safe_cfg.pixelsmooth_value = overlay.pixelsmooth_value;
+            g_safe_cfg.smooth_factor = overlay.smooth_factor;
         }
         if (overlay.is_authenticated) {
             auto now_time = std::chrono::steady_clock::now();
