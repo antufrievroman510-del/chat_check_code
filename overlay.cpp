@@ -681,8 +681,6 @@ void Overlay::ApplySafeSettings() {
     sticky_threshold = 60.0f;
     sticky_frames_keep = 2;
     prediction_method = 1;
-    min_aim_speed = 0.5f;
-    max_aim_speed = 3.0f;
     pixelsmooth_enabled = true;
     pixelsmooth_value = 8.0f;
     smooth_factor = 0.15f;
