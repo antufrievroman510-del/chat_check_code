@@ -9,8 +9,10 @@
 #include <vector>
 #include <string>
 #include <mutex>
+#include <memory>
 #include "detector.h"
 #include "aimbot.h"
+#include "network_2pc.h"
 #include "imgui.h"
 #include "implot.h"
 
