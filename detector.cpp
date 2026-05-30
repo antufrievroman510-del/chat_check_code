@@ -33,7 +33,17 @@ void PreprocessDirect(const unsigned char* src, std::vector<float>& dst, int w, 
 }
 
 Detector::Detector() {}
-Detector::~Detector() {}
+Detector::~Detector() {
+    // Освобождаем память, выделенную через _strdup
+    for (auto* name : input_names) {
+        if (name) free((void*)name);
+    }
+    for (auto* name : output_names) {
+        if (name) free((void*)name);
+    }
+    input_names.clear();
+    output_names.clear();
+}
 
 bool Detector::initialize(const std::string& model_path, int force_w, int force_h) {
     try {

@@ -94,9 +94,121 @@ void MultiTargetTracker::update(
     bool disableHeadshot,
     bool keepCurrentLock,
     std::chrono::steady_clock::time_point observationTime) {
-    // ... (весь ваш существующий код, я его не меняю) ...
-    // Вставьте сюда ваш полный код метода update из старого AimbotTarget.cpp
-    // (он очень длинный, но я не буду его переписывать – вы его скопируете из своего файла)
+    
+    if (observationTime == std::chrono::steady_clock::time_point{}) {
+        observationTime = std::chrono::steady_clock::now();
+    }
+
+    for (auto& t : tracks_) {
+        t.observedThisFrame = false;
+        if (!keepCurrentLock && t.id == lockedTrackId_) {
+            t.missed++;
+        }
+    }
+
+    std::vector<DetectionCandidate> candidates;
+    candidates.reserve(boxes.size());
+    for (size_t i = 0; i < boxes.size(); ++i) {
+        const auto& box = boxes[i];
+        int cls = (i < classes.size()) ? classes[i] : 0;
+        
+        if (disableHeadshot && cls == 0) continue;
+        
+        DetectionCandidate cand;
+        cand.box = box;
+        cand.classId = cls;
+        cand.pivotX = box.x + box.width * 0.5;
+        cand.pivotY = box.y + box.height * 0.5;
+        candidates.push_back(cand);
+    }
+
+    std::vector<std::pair<int, int>> matches;
+    std::vector<bool> detUsed(candidates.size(), false);
+    std::vector<bool> trkUsed(tracks_.size(), false);
+
+    const float iouThreshold = 0.35f;
+    for (size_t ti = 0; ti < tracks_.size(); ++ti) {
+        if (tracks_[ti].missed > allowedMissedFrames(tracks_[ti])) continue;
+        
+        int bestDetIdx = -1;
+        float bestIoU = iouThreshold;
+        
+        for (size_t di = 0; di < candidates.size(); ++di) {
+            if (detUsed[di]) continue;
+            
+            float curIoU = iou(RectF(tracks_[ti].box.x, tracks_[ti].box.y, 
+                                     tracks_[ti].box.width, tracks_[ti].box.height),
+                               candidates[di].box);
+            
+            if (curIoU > bestIoU) {
+                bestIoU = curIoU;
+                bestDetIdx = static_cast<int>(di);
+            }
+        }
+        
+        if (bestDetIdx >= 0) {
+            matches.push_back({static_cast<int>(ti), bestDetIdx});
+            detUsed[bestDetIdx] = true;
+            trkUsed[ti] = true;
+        }
+    }
+
+    for (const auto& match : matches) {
+        TrackState& trk = tracks_[match.first];
+        const DetectionCandidate& det = candidates[match.second];
+        
+        const float alpha = 0.75f;
+        trk.box.x = trk.box.x * (1.0f - alpha) + det.box.x * alpha;
+        trk.box.y = trk.box.y * (1.0f - alpha) + det.box.y * alpha;
+        trk.box.width = trk.box.width * (1.0f - alpha) + det.box.width * alpha;
+        trk.box.height = trk.box.height * (1.0f - alpha) + det.box.height * alpha;
+        
+        const double velAlpha = 0.5;
+        const double newPivotX = det.box.x + det.box.width * 0.5;
+        const double newPivotY = det.box.y + det.box.height * 0.5;
+        trk.velocity.x = trk.velocity.x * (1.0f - velAlpha) + (newPivotX - trk.pivotX) * velAlpha;
+        trk.velocity.y = trk.velocity.y * (1.0f - velAlpha) + (newPivotY - trk.pivotY) * velAlpha;
+        
+        trk.pivotX = newPivotX;
+        trk.pivotY = newPivotY;
+        trk.classId = det.classId;
+        trk.hits++;
+        trk.missed = 0;
+        trk.observedThisFrame = true;
+        trk.lastUpdate = observationTime;
+    }
+
+    for (size_t di = 0; di < candidates.size(); ++di) {
+        if (detUsed[di]) continue;
+        
+        TrackState newTrk;
+        newTrk.id = nextId_++;
+        newTrk.box = candidates[di].box;
+        newTrk.classId = candidates[di].classId;
+        newTrk.pivotX = candidates[di].pivotX;
+        newTrk.pivotY = candidates[di].pivotY;
+        newTrk.hits = 1;
+        newTrk.missed = 0;
+        newTrk.observedThisFrame = true;
+        newTrk.lastUpdate = observationTime;
+        tracks_.push_back(newTrk);
+    }
+
+    pruneDeadTracks();
+
+    if (!keepCurrentLock && lockedTrackId_ >= 0) {
+        int idx = findTrackIndexById(lockedTrackId_);
+        if (idx < 0 || tracks_[idx].missed > allowedMissedFrames(tracks_[idx])) {
+            lockedTrackId_ = -1;
+        }
+    }
+
+    if (lockedTrackId_ < 0) {
+        int bestIdx = chooseBestTrack(screenWidth, screenHeight);
+        if (bestIdx >= 0) {
+            lockedTrackId_ = tracks_[bestIdx].id;
+        }
+    }
 }
 
 bool MultiTargetTracker::getLockedTarget(LockedTargetInfo& out) const {

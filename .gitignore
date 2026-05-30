@@ -1,0 +1,53 @@
+```
+# Build artifacts
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.out
+
+# CMake build directory
+build/
+
+# Dependencies
+venv/
+.venv/
+node_modules/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Editors
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Coverage reports
+coverage/
+htmlcov/
+*.coverage
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# MyPy cache
+.mypy_cache/
+
+# Pytest cache
+.pytest_cache/
+
+# OS specific
+.DS_Store
+Thumbs.db
+```
