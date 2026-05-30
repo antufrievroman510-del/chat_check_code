@@ -56,12 +56,18 @@ add_executable(PWNZ_AI WIN32
     ${BYTE_TRACK_SOURCES}
 )
 
+# Подключение VMProtectSDK64.lib
+set(VMProtect_LIB_PATH "${CMAKE_SOURCE_DIR}/VMProtectSDK64.lib")
+if(NOT EXISTS "${VMProtect_LIB_PATH}")
+    message(WARNING "VMProtectSDK64.lib not found at ${VMProtect_LIB_PATH}")
+endif()
+
 target_link_libraries(PWNZ_AI PRIVATE
     d3d11.lib dxgi.lib d3dcompiler.lib dwmapi.lib setupapi.lib user32.lib gdi32.lib
     windowsapp.lib
     "${ONNX_DIR}/lib/onnxruntime.lib"
     "${ONNX_DIR}/lib/DirectML.lib"
-    "${CMAKE_SOURCE_DIR}/VMProtectSDK64.lib"
+    "${VMProtect_LIB_PATH}"
 )
 
 set_target_properties(PWNZ_AI PROPERTIES LINK_FLAGS "/DEBUG /OPT:REF /OPT:ICF /SUBSYSTEM:WINDOWS")
