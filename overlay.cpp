@@ -354,6 +354,14 @@ void Overlay::LoadConfig(Aimbot* aim) {
     handlers["hum_micro_movements"] = [&](const std::string& v) { hum_micro_movements = std::stoi(v); };
     handlers["hum_micro_amplitude"] = [&](const std::string& v) { hum_micro_amplitude = safe_stof(v); };
     handlers["hum_reaction_jitter"] = [&](const std::string& v) { hum_reaction_jitter = safe_stof(v); };
+    handlers["hum_path_randomization"] = [&](const std::string& v) { hum_path_randomization = safe_stof(v); };
+    handlers["hum_overshoot_enabled"] = [&](const std::string& v) { hum_overshoot_enabled = std::stoi(v); };
+    handlers["hum_overshoot_chance"] = [&](const std::string& v) { hum_overshoot_chance = safe_stof(v); };
+    handlers["hum_overshoot_amount"] = [&](const std::string& v) { hum_overshoot_amount = safe_stof(v); };
+    handlers["hum_return_speed"] = [&](const std::string& v) { hum_return_speed = safe_stof(v); };
+    handlers["pixelsmooth_enabled"] = [&](const std::string& v) { pixelsmooth_enabled = std::stoi(v); };
+    handlers["pixelsmooth_value"] = [&](const std::string& v) { pixelsmooth_value = safe_stof(v); };
+    handlers["smooth_factor"] = [&](const std::string& v) { smooth_factor = safe_stof(v); };
     handlers["motion_tuning_enabled"] = [&](const std::string& v) { motion_tuning_enabled = std::stoi(v); };
     handlers["kalman_enable"] = [&](const std::string& v) { kalman_enable = std::stoi(v); };
     handlers["kalman_q"] = [&](const std::string& v) { kalman_q = safe_stof(v); };
@@ -518,6 +526,14 @@ void Overlay::SaveConfig(Aimbot* aim) {
     ss << "hum_micro_movements=" << hum_micro_movements << "\n";
     ss << "hum_micro_amplitude=" << hum_micro_amplitude << "\n";
     ss << "hum_reaction_jitter=" << hum_reaction_jitter << "\n";
+    ss << "hum_path_randomization=" << hum_path_randomization << "\n";
+    ss << "hum_overshoot_enabled=" << hum_overshoot_enabled << "\n";
+    ss << "hum_overshoot_chance=" << hum_overshoot_chance << "\n";
+    ss << "hum_overshoot_amount=" << hum_overshoot_amount << "\n";
+    ss << "hum_return_speed=" << hum_return_speed << "\n";
+    ss << "pixelsmooth_enabled=" << pixelsmooth_enabled << "\n";
+    ss << "pixelsmooth_value=" << pixelsmooth_value << "\n";
+    ss << "smooth_factor=" << smooth_factor << "\n";
     ss << "motion_tuning_enabled=" << motion_tuning_enabled << "\n";
     ss << "kalman_enable=" << kalman_enable << "\n";
     ss << "kalman_q=" << kalman_q << "\n";
@@ -603,6 +619,9 @@ void Overlay::ResetDefaults() {
     selected_preset = 0; esp_thickness = 1.5f; esp_style = 0; neural_nms = 0.45f; neural_max_det = 5;
     humanizer_enable = true; hum_reaction_delay = 15.0f; hum_overshoot_chance = 5.0f;
     hum_randomize_bone = false; hum_tremor_scale = 1.0f;
+    hum_path_randomization = 0.3f; hum_overshoot_enabled = false;
+    hum_overshoot_amount = 1.2f; hum_return_speed = 0.85f;
+    pixelsmooth_enabled = true; pixelsmooth_value = 8.0f; smooth_factor = 0.15f;
     enable_exclusion_zone = false; excl_x1 = 0; excl_y1 = 0; excl_x2 = 0; excl_y2 = 0;
     max_move_step = 50.0f;
     head_height_ratio = 0.1f;
@@ -892,6 +911,22 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
         if (DrawToggle("Micro Movements:", "##micro_mov", &hum_micro_movements, acc_u32, u8"Случайные микросмещения.")) cfg_changed = true;
         if (hum_micro_movements && CustomSliderFloat("Micro Amplitude:", "##mic_amp", &hum_micro_amplitude, 0.0f, 3.0f, "%.1f px", acc_vec, u8"Сила микросмещений.")) cfg_changed = true;
         if (CustomSliderFloat("Reaction Jitter (px):", "##reac_jit", &hum_reaction_jitter, 0.0f, 5.0f, "%.1f px", acc_vec, u8"Отклонение при захвате.")) cfg_changed = true;
+        if (CustomSliderFloat("Path Randomization:", "##path_rand", &hum_path_randomization, 0.0f, 2.0f, "%.2f", acc_vec, u8"Рандомизация траектории.")) cfg_changed = true;
+        if (DrawToggle("Overshoot Enabled:", "##overshoot_en", &hum_overshoot_enabled, acc_u32, u8"Искусственный перелёт.")) cfg_changed = true;
+        if (hum_overshoot_enabled) {
+            if (CustomSliderFloat("Overshoot Chance (%):", "##overshoot_ch", &hum_overshoot_chance, 0.0f, 50.0f, "%.1f %%", acc_vec, u8"Шанс перелёта.")) cfg_changed = true;
+            if (CustomSliderFloat("Overshoot Amount:", "##overshoot_amt", &hum_overshoot_amount, 1.0f, 3.0f, "%.2f x", acc_vec, u8"Множитель перелёта.")) cfg_changed = true;
+            if (CustomSliderFloat("Return Speed:", "##return_spd", &hum_return_speed, 0.5f, 1.0f, "%.2f", acc_vec, u8"Скорость возврата.")) cfg_changed = true;
+        }
+    }
+    EndPanel();
+
+    if (BeginPanel("Pixelsmooth / Smoothing", ImVec2(0, 220), acc_vec, true, &pixelsmooth_enabled, acc_u32)) cfg_changed = true;
+    if (pixelsmooth_enabled) {
+        if (CustomSliderFloat("Pixelsmooth Value:", "##ps_val", &pixelsmooth_value, 1.0f, 32.0f, "%.0f frames", acc_vec, u8"Количество кадров для усреднения.")) cfg_changed = true;
+        if (CustomSliderFloat("Smooth Factor (Lerp):", "##smooth_f", &smooth_factor, 0.0f, 0.5f, "%.3f", acc_vec, u8"Фактор сглаживания (0-0.5).")) cfg_changed = true;
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), u8"Эти настройки делают движение прицела более плавным и человечным.");
     }
     EndPanel();
 

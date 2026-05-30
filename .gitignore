@@ -1,21 +1,23 @@
 ```
-# Build artifacts
-build/
-cmake-build-*/
-CMakeFiles/
-CMakeCache.txt
-Makefile
-*.cmake
+# Compiled and build artifacts
 *.o
-*.a
-*.so
-*.dylib
-*.dll
+*.obj
 *.exe
+*.dll
+*.so
+*.a
 *.out
 
 # Dependencies
-vendor/
+venv/
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+node_modules/
+dist/
+build/
+target/
 
 # Logs and temp files
 *.log
@@ -30,10 +32,8 @@ vendor/
 # Editors
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# OS specific
+# System files
 .DS_Store
 Thumbs.db
 ```
