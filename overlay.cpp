@@ -821,7 +821,9 @@ bool Overlay::BeginPanel(const char* name, ImVec2 size, ImVec4 accent_vec, bool 
     ImGui::BeginChild(name, size, true, ImGuiWindowFlags_NoScrollbar);
     std::string display_name = name; size_t hash_pos = display_name.find("###");
     if (hash_pos != std::string::npos) display_name = display_name.substr(0, hash_pos);
-    ImGui::TextColored(accent_vec, display_name.c_str());
+    ImGui::PushStyleColor(ImGuiCol_Text, accent_vec);
+    ImGui::Text("%s", display_name.c_str());
+    ImGui::PopStyleColor();
     if (has_toggle && toggle_val) {
         ImGui::SameLine(ImGui::GetWindowWidth() - 45.0f);
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 2);
@@ -1286,6 +1288,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     HelpMarker(u8"Аварийная выгрузка.");
     ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
     if (ImGui::Button("RESET TO DEFAULTS", ImVec2(200, 40))) { ResetDefaults(); cfg_changed = true; }
     ImGui::PopStyleColor(2);
     EndPanel();
