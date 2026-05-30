@@ -108,7 +108,6 @@ public:
     int aim_flicker_key = 0;
     bool humanizer_enable = true;
     float hum_reaction_delay = 15.0f;
-    float hum_overshoot_chance = 5.0f;
     bool hum_randomize_bone = false;
     float hum_tremor_scale = 1.0f;
     bool enable_exclusion_zone = false;
