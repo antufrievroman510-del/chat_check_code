@@ -846,8 +846,8 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
     EndPanel();
 
     if (BeginPanel("Speed Control", ImVec2(0, 160), acc_vec)) cfg_changed = true;
-    if (CustomSliderFloat("Min Aim Speed:", "##min_sp", &min_aim_speed, 0.1f, 5.0f, "%.3f", acc_vec, u8"Минимальная скорость наведения.")) cfg_changed = true;
-    if (CustomSliderFloat("Max Aim Speed:", "##max_sp", &max_aim_speed, 0.5f, 10.0f, "%.3f", acc_vec, u8"Максимальная скорость наведения.")) cfg_changed = true;
+    if (CustomSliderFloat("Min Sensitivity:", "##min_sp", &min_aim_speed, 0.1f, 20.0f, "%.3f", acc_vec, u8"Минимальная скорость наведения (0.1-20).")) cfg_changed = true;
+    if (CustomSliderFloat("Max Sensitivity:", "##max_sp", &max_aim_speed, 0.1f, 20.0f, "%.3f", acc_vec, u8"Максимальная скорость наведения (потолок, 0.1-20).")) cfg_changed = true;
     if (CustomSliderFloat("Max Move Step (px):", "##max_move", &max_move_step, 5.0f, 200.0f, "%.1f", acc_vec, u8"Максимальное движение за кадр.")) cfg_changed = true;
     EndPanel();
 
