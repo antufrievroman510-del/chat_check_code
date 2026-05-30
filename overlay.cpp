@@ -389,8 +389,8 @@ void Overlay::LoadConfig(Aimbot* aim) {
     handlers["sticky_threshold"] = [&](const std::string& v) { sticky_threshold = safe_stof(v); };
     handlers["sticky_frames_keep"] = [&](const std::string& v) { sticky_frames_keep = std::stoi(v); };
     handlers["prediction_method"] = [&](const std::string& v) { prediction_method = std::stoi(v); };
-    handlers["min_aim_speed"] = [&](const std::string& v) { min_aim_speed = safe_stof(v); };
-    handlers["max_aim_speed"] = [&](const std::string& v) { max_aim_speed = safe_stof(v); };
+    handlers["min_sensitivity"] = [&](const std::string& v) { min_sensitivity = safe_stof(v); };
+    handlers["max_sensitivity"] = [&](const std::string& v) { max_sensitivity = safe_stof(v); };
     handlers["kalman_compensate_detection_delay"] = [&](const std::string& v) { kalman_compensate_detection_delay = std::stoi(v); };
     handlers["kalman_additional_prediction_ms"] = [&](const std::string& v) { kalman_additional_prediction_ms = safe_stof(v); };
     handlers["prediction_interval"] = [&](const std::string& v) { prediction_interval = safe_stof(v); };
@@ -552,8 +552,8 @@ void Overlay::SaveConfig(Aimbot* aim) {
     ss << "sticky_threshold=" << sticky_threshold << "\n";
     ss << "sticky_frames_keep=" << sticky_frames_keep << "\n";
     ss << "prediction_method=" << prediction_method << "\n";
-    ss << "min_aim_speed=" << min_aim_speed << "\n";
-    ss << "max_aim_speed=" << max_aim_speed << "\n";
+    ss << "min_sensitivity=" << min_sensitivity << "\n";
+    ss << "max_sensitivity=" << max_sensitivity << "\n";
     ss << "kalman_compensate_detection_delay=" << kalman_compensate_detection_delay << "\n";
     ss << "kalman_additional_prediction_ms=" << kalman_additional_prediction_ms << "\n";
     ss << "prediction_interval=" << prediction_interval << "\n";
@@ -633,8 +633,8 @@ void Overlay::ResetDefaults() {
     sticky_threshold = 50.0f;
     sticky_frames_keep = 3;
     prediction_method = 1;
-    min_aim_speed = 0.5f;
-    max_aim_speed = 3.0f;
+    min_sensitivity = 0.5f;
+    max_sensitivity = 3.0f;
     kalman_compensate_detection_delay = true;
     kalman_additional_prediction_ms = 0.0f;
     prediction_interval = 0.01f;
@@ -846,9 +846,8 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
     EndPanel();
 
     if (BeginPanel("Speed Control", ImVec2(0, 160), acc_vec)) cfg_changed = true;
-    if (CustomSliderFloat("Min Sensitivity:", "##min_sp", &min_aim_speed, 0.1f, 20.0f, "%.3f", acc_vec, u8"Минимальная скорость наведения (0.1-20).")) cfg_changed = true;
-    if (CustomSliderFloat("Max Sensitivity:", "##max_sp", &max_aim_speed, 0.1f, 20.0f, "%.3f", acc_vec, u8"Максимальная скорость наведения (потолок, 0.1-20).")) cfg_changed = true;
-    if (CustomSliderFloat("Max Move Step (px):", "##max_move", &max_move_step, 5.0f, 200.0f, "%.1f", acc_vec, u8"Максимальное движение за кадр.")) cfg_changed = true;
+    if (CustomSliderFloat("Min Sensitivity:", "##min_sp", &min_sensitivity, 0.1f, 20.0f, "%.3f", acc_vec, u8"Минимальная скорость наведения (0.1-20).")) cfg_changed = true;
+    if (CustomSliderFloat("Max Sensitivity:", "##max_sp", &max_sensitivity, 0.1f, 20.0f, "%.3f", acc_vec, u8"Максимальная скорость наведения (потолок, 0.1-20).")) cfg_changed = true;
     EndPanel();
 
     if (BeginPanel("Pixelsmooth / Humanizer", ImVec2(0, 240), acc_vec)) cfg_changed = true;
@@ -922,7 +921,6 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
     if (DrawToggle("Disable Headshot:", "##no_head", &disable_headshot, acc_u32, u8"Запретить прицеливание в голову.")) cfg_changed = true;
     if (DrawToggle("Lock X-Axis:", "##lock_x", &aim_lock_x, acc_u32, u8"Заблокировать горизонтальное перемещение.")) cfg_changed = true;
     if (DrawToggle("Lock Y-Axis:", "##lock_y", &aim_lock_y, acc_u32, u8"Заблокировать вертикальное перемещение.")) cfg_changed = true;
-    if (CustomSliderFloat("Max Move Step (px):", "##maxstep", &max_move_step, 10.0f, 150.0f, "%.0f px", acc_vec, u8"Максимальное смещение мыши за кадр.")) cfg_changed = true;
     EndPanel();
 
     ImGui::Columns(1);
