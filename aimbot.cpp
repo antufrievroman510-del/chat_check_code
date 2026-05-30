@@ -360,11 +360,11 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
 
     // Применяем выбор цели (Target zona: Head/Body/Auto)
     // aim_target: 0=Auto, 1=Head, 2=Body
-    // classId из детекта: 0=Head, 1=Body
+    // classId из детекта: 0=Body, 1=Head
     // При выборе Head или Body - ищем цель соответствующего класса в детекте
     if (aim_target == 1 || aim_target == 2) {
-        // Принудительный выбор класса: 1=Head, 2=Body (соответствует classId детекта)
-        int requiredClassId = aim_target - 1;  // 1->0 (Head), 2->1 (Body)
+        // Принудительный выбор класса: 1=Head->1, 2=Body->0 (соответствует classId детекта)
+        int requiredClassId = (aim_target == 1) ? 1 : 0;  // 1->1 (Head), 2->0 (Body)
         
         // Ищем детект с нужным классом среди всех detections
         bool foundMatchingClass = false;
