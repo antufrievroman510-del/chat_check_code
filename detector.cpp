@@ -5,8 +5,17 @@
 #include <vector>
 #include <cmath>
 #include <dxgi.h> 
+#include <limits>
 
 #pragma comment(lib, "dxgi.lib")
+
+// Улучшенная структура Detection (совместима с нашим ByteTrack)
+struct DetectionExt {
+    int class_id;
+    float confidence;
+    struct { float x, y, w, h; } box;
+    int track_id = -1;
+};
 
 inline float CalculateIoU(const Detection& a, const Detection& b) {
     float x1 = (std::max)(a.box.x, b.box.x);
@@ -16,6 +25,51 @@ inline float CalculateIoU(const Detection& a, const Detection& b) {
     if (x2 < x1 || y2 < y1) return 0.0f;
     float intersection = (x2 - x1) * (y2 - y1);
     return intersection / (a.box.w * a.box.h + b.box.w * b.box.h - intersection);
+}
+
+// Улучшенный NMS (из source_logic, адаптированный без OpenCV)
+void NMS_Improved(std::vector<Detection>& detections, float nms_threshold, std::chrono::duration<double, std::milli>* nms_time = nullptr) {
+    if (detections.empty() || nms_threshold <= 0.0f) {
+        if (nms_time) *nms_time = std::chrono::duration<double, std::milli>(0);
+        return;
+    }
+
+    auto t0 = std::chrono::steady_clock::now();
+
+    std::sort(detections.begin(), detections.end(),
+        [](const Detection& a, const Detection& b) {
+            return a.confidence > b.confidence;
+        });
+
+    std::vector<bool> suppress(detections.size(), false);
+    std::vector<Detection> result;
+    result.reserve(detections.size());
+
+    for (size_t i = 0; i < detections.size(); ++i) {
+        if (suppress[i]) continue;
+        result.push_back(detections[i]);
+
+        const float area_i = detections[i].box.w * detections[i].box.h;
+        for (size_t j = i + 1; j < detections.size(); ++j) {
+            if (suppress[j]) continue;
+
+            float x1 = (std::max)(detections[i].box.x, detections[j].box.x);
+            float y1 = (std::max)(detections[i].box.y, detections[j].box.y);
+            float x2 = (std::min)(detections[i].box.x + detections[i].box.w, detections[j].box.x + detections[j].box.w);
+            float y2 = (std::min)(detections[i].box.y + detections[i].box.h, detections[j].box.y + detections[j].box.h);
+
+            if (x2 > x1 && y2 > y1) {
+                float intersection = (x2 - x1) * (y2 - y1);
+                float union_area = area_i + detections[j].box.w * detections[j].box.h - intersection;
+                if (intersection / union_area > nms_threshold) {
+                    suppress[j] = true;
+                }
+            }
+        }
+    }
+
+    detections = std::move(result);
+    if (nms_time) *nms_time = std::chrono::steady_clock::now() - t0;
 }
 
 void PreprocessDirect(const unsigned char* src, std::vector<float>& dst, int w, int h) {
@@ -121,7 +175,7 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
 
 std::vector<Detection> Detector::run_inference(const unsigned char* pixel_data, int w, int h,
     float body_conf_threshold, float head_conf_threshold,
-    float /*nms_threshold*/, int max_det, bool elite_smoke_vision) {
+    float nms_threshold, int max_det, bool elite_smoke_vision) {
 
     std::vector<Detection> final_results;
     if (!session || w != model_width || h != model_height) return final_results;
@@ -161,7 +215,28 @@ std::vector<Detection> Detector::run_inference(const unsigned char* pixel_data, 
             transposed = true;
         }
         else {
-            return final_results;
+            // Попытка обработать формат [1, rows, cols] как в postProcessYoloDML
+            int64_t rows = (int64_t)output_shape[1];
+            int64_t cols = (int64_t)output_shape[2];
+            if (rows > 0 && cols > 0) {
+                // Формат: [batch, rows, cols] где cols=6 или rows=6
+                if (cols == 6) {
+                    num_detections = (int)rows;
+                    stride = 6;
+                    transposed = false;
+                }
+                else if (rows == 6) {
+                    num_detections = (int)cols;
+                    stride = 6;
+                    transposed = true;
+                }
+                else {
+                    return final_results;
+                }
+            }
+            else {
+                return final_results;
+            }
         }
 
         final_results.reserve(num_detections);
@@ -203,8 +278,15 @@ std::vector<Detection> Detector::run_inference(const unsigned char* pixel_data, 
             det.box.h = bh;
             det.track_id = -1;
             final_results.push_back(det);
+        }
 
-            if ((int)final_results.size() >= max_det) break;
+        // Применяем улучшенный NMS
+        std::chrono::duration<double, std::milli> nms_time;
+        NMS_Improved(final_results, nms_threshold, &nms_time);
+
+        // Ограничиваем количество детектов
+        if ((int)final_results.size() > max_det) {
+            final_results.resize(max_det);
         }
     }
     catch (...) {}
