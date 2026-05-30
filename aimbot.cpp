@@ -186,17 +186,20 @@ std::pair<double, double> Aimbot::degToCounts(double degX, double degY) const {
 }
 
 double Aimbot::calculateSpeedMultiplier(double distance) const {
-    // Простая линейная интерполяция между min и max скоростью
-    // Вблизи цели - медленнее, вдали - быстрее
+    // Раздельная настройка скорости для обнаруженной и захваченной цели
+    // detect_aim_speed - минимальная скорость наводки на новую обнаруженную цель
+    // target_aim_speed - скорость сопровождения уже захваченной цели
+    
+    // Используем detect_aim_speed как базовую минимальную скорость
     if (distance < 5.0f)
-        return min_aim_speed;
+        return detect_aim_speed;
     
     float max_distance = static_cast<float>(detection_resolution) / 2.0f;
     float dist_ratio = distance / max_distance;
     float norm = (dist_ratio < 0.0f) ? 0.0f : ((dist_ratio > 1.0f) ? 1.0f : dist_ratio);
     
-    // Плавная кривая скорости
-    return min_aim_speed + (max_aim_speed - min_aim_speed) * norm;
+    // Плавная кривая скорости между detect_aim_speed и target_aim_speed
+    return detect_aim_speed + (target_aim_speed - detect_aim_speed) * norm;
 }
 
 double Aimbot::currentDetectionDelaySec() const {
@@ -383,6 +386,8 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     int mx = static_cast<int>(mv.first);
     int my = static_cast<int>(mv.second);
 
+    // max_move_step теперь только ограничивает МАКСИМАЛЬНЫЙ шаг, не влияя на минимальную скорость
+    // Минимальная скорость контролируется через detect_aim_speed
     if (std::abs(mx) > max_move_step) mx = (mx > 0) ? static_cast<int>(max_move_step) : -static_cast<int>(max_move_step);
     if (std::abs(my) > max_move_step) my = (my > 0) ? static_cast<int>(max_move_step) : -static_cast<int>(max_move_step);
 

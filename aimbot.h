@@ -32,8 +32,9 @@ public:
     float fovY = 74.0f;
     int detection_resolution = 320;
 
-    float min_aim_speed = 0.5f;
-    float max_aim_speed = 3.0f;
+    float detect_aim_speed = 0.15f;    // Скорость наводки на обнаруженную цель (минимальная)
+    float target_aim_speed = 2.5f;     // Скорость сопровождения захваченной цели
+    float max_move_step = 150.0f;      // Максимальное ограничение шага движения (не влияет на мин. скорость)
 
     // === Pixelsmooth / Кривые Безье ===
     bool pixelsmooth_enabled = true;
@@ -84,8 +85,6 @@ public:
     bool rcs_enable = false;
     float rcs_pitch = 1.0f;
     float rcs_yaw = 0.0f;
-
-    float max_move_step = 50.0f;   // ДОБАВЛЕНО
 
     int hardware_type = 0;
     int com_port = 3;
