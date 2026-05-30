@@ -23,6 +23,13 @@ static long long g_first_seen_time = 0;
 static long long g_last_update_time = 0;
 static long long g_last_target_drop_time = 0;
 
+// Состояние для pixelsmooth / сглаживания
+static std::vector<std::pair<int, int>> g_move_history;
+static const int MAX_MOVE_HISTORY = 16;
+static float g_overshoot_x = 0.0f, g_overshoot_y = 0.0f;
+static bool g_in_overshoot = false;
+static long long g_overshoot_start_time = 0;
+
 thread_local std::random_device Aimbot::rd;
 thread_local std::mt19937 Aimbot::gen(rd());
 thread_local std::normal_distribution<float> Aimbot::gauss_dist(0.0f, 1.0f);
@@ -374,6 +381,7 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         }
     }
 
+    // === Pixelsmooth / Bezier сглаживание ===
     auto mv = calcMovement(targetX, targetY);
     int mx = static_cast<int>(mv.first);
     int my = static_cast<int>(mv.second);
@@ -388,6 +396,64 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
 
     if (aim_lock_x) mx = 0;
     if (aim_lock_y) my = 0;
+
+    // Применяем overshoot если включен
+    if (humanizer_enable && hum_overshoot_enabled && !g_in_overshoot) {
+        float rand_val = static_cast<float>(rand()) / RAND_MAX * 100.0f;
+        if (rand_val < hum_overshoot_chance && std::abs(mx) > 2 && std::abs(my) > 2) {
+            g_in_overshoot = true;
+            g_overshoot_start_time = current_time_ms;
+            g_overshoot_x = static_cast<float>(mx) * hum_overshoot_amount;
+            g_overshoot_y = static_cast<float>(my) * hum_overshoot_amount;
+        }
+    }
+
+    if (g_in_overshoot) {
+        long long elapsed = current_time_ms - g_overshoot_start_time;
+        float t = static_cast<float>(elapsed) / 150.0f;  // 150ms на возврат
+        if (t >= 1.0f) {
+            g_in_overshoot = false;
+            mx = static_cast<int>(g_overshoot_x * (1.0f - hum_return_speed));
+            my = static_cast<int>(g_overshoot_y * (1.0f - hum_return_speed));
+        } else {
+            mx = static_cast<int>(g_overshoot_x * (1.0f - t * hum_return_speed));
+            my = static_cast<int>(g_overshoot_y * (1.0f - t * hum_return_speed));
+        }
+    }
+
+    // Добавляем в историю для pixelsmooth
+    if (pixelsmooth_enabled && pixelsmooth_value > 1.0f) {
+        g_move_history.push_back({mx, my});
+        if (g_move_history.size() > static_cast<size_t>(pixelsmooth_value)) {
+            g_move_history.erase(g_move_history.begin());
+        }
+        
+        // Усредняем последние движения
+        int sum_x = 0, sum_y = 0;
+        for (const auto& m : g_move_history) {
+            sum_x += m.first;
+            sum_y += m.second;
+        }
+        mx = sum_x / static_cast<int>(g_move_history.size());
+        my = sum_y / static_cast<int>(g_move_history.size());
+    }
+
+    // Применяем сглаживание через lerp
+    if (smooth_factor > 0.0f && smooth_factor < 1.0f) {
+        static int prev_mx = 0, prev_my = 0;
+        mx = static_cast<int>(prev_mx * (1.0f - smooth_factor) + mx * smooth_factor);
+        my = static_cast<int>(prev_my * (1.0f - smooth_factor) + my * smooth_factor);
+        prev_mx = mx;
+        prev_my = my;
+    }
+
+    // Рандомизация пути (path randomization)
+    if (humanizer_enable && hum_path_randomization > 0.0f) {
+        float jitter_x = gauss_dist(gen) * hum_path_randomization;
+        float jitter_y = gauss_dist(gen) * hum_path_randomization;
+        mx += static_cast<int>(jitter_x);
+        my += static_cast<int>(jitter_y);
+    }
 
     g_frac_x += static_cast<float>(mx);
     g_frac_y += static_cast<float>(my);

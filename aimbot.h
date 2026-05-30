@@ -36,12 +36,35 @@ public:
     float mouse_yaw = 0.022f;
     float mouse_pitch = 0.022f;
 
-    float min_speed_multiplier = 0.1f;
-    float max_speed_multiplier = 0.1f;
-    float snap_radius = 1.5f;
-    float near_radius = 25.0f;
-    float speed_curve_exponent = 3.0f;
+    float min_speed_multiplier = 0.02f;
+    float max_speed_multiplier = 0.15f;
+    float snap_radius = 2.0f;
+    float near_radius = 30.0f;
+    float speed_curve_exponent = 4.0f;
     float snap_boost_factor = 1.15f;
+
+    // === Pixelsmooth / Кривые Безье ===
+    bool pixelsmooth_enabled = true;
+    float pixelsmooth_value = 8.0f;          // Количество шагов сглаживания
+    float bezier_tension = 0.5f;             // Натяжение кривой Безье (0-1)
+    bool bezier_enabled = true;              // Использовать кривые Безье для траектории
+    float bezier_smoothness = 0.7f;          // Плавность кривой (0-1)
+    float smooth_factor = 0.15f;             // Фактор сглаживания движений (lerp)
+    
+    // === Advanced Humanizer ===
+    bool humanizer_enable = true;
+    float hum_reaction_delay = 25.0f;
+    float hum_tremor_scale = 0.8f;
+    bool hum_micro_movements = true;
+    float hum_micro_amplitude = 0.5f;
+    float hum_reaction_jitter = 1.5f;
+    float hum_path_randomization = 0.3f;     // Рандомизация пути (0-1)
+    bool hum_overshoot_enabled = false;      // Искусственный перелёт с возвратом
+    float hum_overshoot_chance = 3.0f;       // Шанс перелёта в процентах
+    float hum_overshoot_amount = 1.2f;       // Множитель перелёта
+    float hum_return_speed = 0.85f;          // Скорость возврата после перелёта
+    bool hum_randomize_bone = false;         // Рандомизация точки прицеливания
+    float hum_bone_random_range = 8.0f;      // Диапазон рандомизации кости
 
     bool kalman_enabled = true;
     float kalman_process_noise_position = 40.0f;
@@ -72,12 +95,6 @@ public:
     bool rcs_enable = false;
     float rcs_pitch = 1.0f;
     float rcs_yaw = 0.0f;
-    bool humanizer_enable = true;
-    float hum_reaction_delay = 15.0f;
-    float hum_tremor_scale = 1.2f;
-    bool hum_micro_movements = true;
-    float hum_micro_amplitude = 0.8f;
-    float hum_reaction_jitter = 2.0f;
 
     float max_move_step = 50.0f;   // ДОБАВЛЕНО
 
