@@ -192,7 +192,8 @@ double Aimbot::calculateSpeedMultiplier(double distance) const {
         return min_aim_speed;
     
     float max_distance = static_cast<float>(detection_resolution) / 2.0f;
-    float norm = std::clamp(distance / max_distance, 0.0f, 1.0f);
+    float dist_ratio = distance / max_distance;
+    float norm = (dist_ratio < 0.0f) ? 0.0f : ((dist_ratio > 1.0f) ? 1.0f : dist_ratio);
     
     // Плавная кривая скорости
     return min_aim_speed + (max_aim_speed - min_aim_speed) * norm;
