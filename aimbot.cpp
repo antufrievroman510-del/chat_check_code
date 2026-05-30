@@ -358,15 +358,37 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     double targetX = predicted.first;
     double targetY = predicted.second;
 
-    // Применяем смещение цели (Target zona: Head/Body/Auto)
+    // Применяем выбор цели (Target zona: Head/Body/Auto)
     // aim_target: 0=Auto, 1=Head, 2=Body
-    // classId: 0=Head, 1=Body
-    if (aim_target == 1) {
-        // Принудительно цель в голову - смещаем вверх на половину высоты бокса
-        targetY -= static_cast<double>(lockInfo.target.h) * 0.35;
-    } else if (aim_target == 2) {
-        // Принудительно цель в тело - смещаем вниз
-        targetY += static_cast<double>(lockInfo.target.h) * 0.15;
+    // classId из детекта: 0=Head, 1=Body
+    // При выборе Head или Body - ищем цель соответствующего класса в детекте
+    if (aim_target == 1 || aim_target == 2) {
+        // Принудительный выбор класса: 1=Head, 2=Body (соответствует classId детекта)
+        int requiredClassId = aim_target - 1;  // 1->0 (Head), 2->1 (Body)
+        
+        // Ищем детект с нужным классом среди всех detections
+        bool foundMatchingClass = false;
+        for (const auto& d : detections) {
+            float tx = d.box.x + d.box.w / 2.0f;
+            float ty = d.box.y + d.box.h / 2.0f;
+            float dx = tx - center_x;
+            float dy = ty - center_y;
+            if (dx * dx + dy * dy > current_fov * current_fov)
+                continue;
+            
+            if (d.class_id == requiredClassId) {
+                // Нашли цель нужного класса - используем её центр
+                targetX = tx;
+                targetY = ty;
+                foundMatchingClass = true;
+                break;
+            }
+        }
+        
+        // Если не нашли цель нужного класса в FOV, используем захваченную цель как есть
+        if (!foundMatchingClass) {
+            // Оставляем targetX/targetY из lockInfo (захваченная цель)
+        }
     }
     // aim_target == 0 (Auto) - используем детектированную точку без изменений
 

@@ -727,8 +727,8 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
 
             // НОВЫЕ ПАРАМЕТРЫ (Sunone)
             aim->detection_resolution = local_cfg.detection_resolution;
-            aim->min_aim_speed = local_cfg.min_aim_speed;
-            aim->max_aim_speed = local_cfg.max_aim_speed;
+            aim->min_sensitivity = local_cfg.min_aim_speed;
+            aim->max_sensitivity = local_cfg.max_aim_speed;
             aim->pixelsmooth_enabled = local_cfg.pixelsmooth_enabled;
             aim->pixelsmooth_value = local_cfg.pixelsmooth_value;
             aim->smooth_factor = local_cfg.smooth_factor;
