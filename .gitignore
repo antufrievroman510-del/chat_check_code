@@ -1,5 +1,5 @@
 ```
-# Compiled files
+# Compiled and build artifacts
 *.o
 *.obj
 *.exe
@@ -7,10 +7,6 @@
 *.so
 *.a
 *.out
-
-# Build directories
-build/
-dist/
 
 # Dependencies
 node_modules/
@@ -22,22 +18,24 @@ __pycache__/
 target/
 .gradle/
 
-# Editor/IDE files
-.vscode/
-.idea/
+# Logs and temp files
+*.log
+*.tmp
 *.swp
 *.swo
-*.tmp
 
-# System files
-.DS_Store
-Thumbs.db
+# Environment
 .env
 .env.local
 *.env.*
 
-# Logs
-*.log
+# Editors
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
 
 # Coverage
 coverage/
