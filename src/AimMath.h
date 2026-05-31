@@ -25,6 +25,7 @@ struct AimConfig {
     float smooth = 1.0f; // 1.0 = мгновенно, >1.0 = плавнее
     int smooth_method = 0; // 0 - Linear, 1 - EaseOut, 2 - Bezier
     float fov = 5.0f; // Радиус круга прицеливания
+    int fireKey = 0; // VK код клавиши выстрела
     bool recoil_control = false;
     float rcs_smooth = 1.0f;
     bool humanize = false;
