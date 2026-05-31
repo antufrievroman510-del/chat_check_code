@@ -20,7 +20,9 @@
 #include "AimMath.h"
 #include "MouseController.h"
 
-// Структура конфигурации для передачи настроек из меню
+// ============================================================
+// Глобальная структура конфигурации
+// ============================================================
 struct AimConfig {
     bool enabled = true;
     int fireKey = VK_RBUTTON;
@@ -33,6 +35,9 @@ struct AimConfig {
     bool lockTarget = true;
 };
 
+// ============================================================
+// Класс Aimbot
+// ============================================================
 class Aimbot {
 public:
     Aimbot();
@@ -47,7 +52,7 @@ public:
     void SendHardwareMove(int x, int y);
     void SendHardwareClick();
 
-    // Настройки (для совместимости с кодом)
+    // Настройки (публичные для совместимости с меню и другими файлами)
     bool aim_enable = true;
     bool aim_target_lock = true;
     int aim_target = 0;  // 0=Auto, 1=Head, 2=Body
@@ -82,7 +87,7 @@ public:
     std::string net_ip = "192.168.1.100";
     int net_port = 3333;
     
-    // Дополнительные настройки для совместимости
+    // Дополнительные настройки
     float min_sensitivity = 0.1f;
     float max_sensitivity = 20.0f;
     float max_move_step = 150.0f;
@@ -115,8 +120,8 @@ public:
     bool wind_mouse_enabled = false;
 
 private:
-    // Конфигурация (теперь приватная, доступ через SetConfig)
-    AimConfig config;
+    // Внутренняя конфигурация
+    AimConfig m_config;
     
     // Методы класса
     std::pair<double, double> degToCounts(double degX, double degY) const;
