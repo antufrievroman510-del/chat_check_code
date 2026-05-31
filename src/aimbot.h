@@ -99,6 +99,20 @@ public:
     float elite_bullet_drop = 9.8f;
     bool pixelsmooth_enabled = true;
     float pixelsmooth_value = 8.0f;
+    
+    // Переменные состояния (публичные для доступа из main.cpp и overlay.cpp)
+    float current_fov = 190.0f;
+    int stat_shots_fired = 0;
+    long long stat_tracking_time_ms = 0;
+    
+    // Elite функции (заглушки для совместимости)
+    bool elite_context_aware = false;
+    bool elite_smoke_vision = false;
+    bool elite_voice_ctrl = false;
+    bool elite_tsp_enabled = false;
+    bool elite_shadow_trainer = false;
+    std::string shadow_webhook = "";
+    bool wind_mouse_enabled = false;
 
 private:
     std::pair<double, double> degToCounts(double degX, double degY) const;
