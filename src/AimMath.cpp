@@ -3,7 +3,7 @@
 // Инициализация генератора случайных чисел
 std::random_device AimMath::rd;
 std::mt19937 AimMath::gen(AimMath::rd());
-std::uniform_real_distribution<> AimMath::dis(-1.0, 1.0);
+std::uniform_real_distribution<float> AimMath::dis(-1.0f, 1.0f);
 
 /**
  * @brief Основная функция расчета движения мыши
