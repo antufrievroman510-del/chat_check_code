@@ -275,6 +275,17 @@ std::vector<Detection> Detector::run_inference(const unsigned char* pixel_data, 
             preprocess_ptr = m_input_tensor_data.data();
         }
         
+        // Создаем копию данных для тензора (ONNXRuntime требует non-const pointer)
+        std::vector<float> input_tensor_data;
+        if (preprocess_ptr == m_input_tensor_data.data()) {
+            // Если использовали m_input_tensor_data, копируем из него
+            input_tensor_data = m_input_tensor_data;
+        } else {
+            // Если использовали resized_tensor_data, копируем из него
+            input_tensor_data.assign(resized_tensor_data.begin(), resized_tensor_data.end());
+        }
+        const float* tensor_data_ptr = input_tensor_data.data();
+        
         auto t1 = std::chrono::steady_clock::now();
 
         // ========================================================================
@@ -284,7 +295,7 @@ std::vector<Detection> Detector::run_inference(const unsigned char* pixel_data, 
         auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
         Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
             memory_info, 
-            preprocess_ptr,  // Используем указатель на подготовленные данные
+            input_tensor_data.data(),  // Non-const pointer
             3 * model_width * model_height, 
             input_shape.data(), 
             input_shape.size());
