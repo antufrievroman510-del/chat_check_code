@@ -1,0 +1,39 @@
+#pragma once
+#include <vector>
+#include <string>
+#include <memory>
+#include <onnxruntime_cxx_api.h>
+#include <dml_provider_factory.h>
+
+struct Detection {
+    int class_id;
+    float confidence;
+    struct { float x, y, w, h; } box;
+    int track_id = -1;
+};
+
+class Detector {
+public:
+    Detector();
+    ~Detector();
+    bool initialize(const std::string& model_path, int force_w = 0, int force_h = 0);
+    std::vector<Detection> run_inference(const unsigned char* pixel_data, int w, int h,
+        float body_conf_threshold, float head_conf_threshold,
+        float nms_threshold, int max_det,
+        bool elite_smoke_vision = false);
+
+    int get_width() const { return model_width; }
+    int get_height() const { return model_height; }
+
+private:
+    std::unique_ptr<Ort::Env> env;
+    Ort::SessionOptions session_options;
+    std::unique_ptr<Ort::Session> session;
+
+    std::vector<const char*> input_names;
+    std::vector<const char*> output_names;
+    std::vector<float> m_input_tensor_data;
+
+    int model_width = 960;   // ÓÂÅËÈ×ÅÍÎ ñ 736 äî 960
+    int model_height = 544;  // ÓÂÅËÈ×ÅÍÎ ñ 416 äî 544 (ñîîòíîøåíèå ~1.76)
+};
