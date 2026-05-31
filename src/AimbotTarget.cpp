@@ -152,7 +152,7 @@ void MultiTargetTracker::update(
             std::vector<char> playerHasHeadPivot(candidates.size(), 0);
             std::vector<double> playerHeadPivotX(candidates.size(), 0.0);
             std::vector<double> playerHeadPivotY(candidates.size(), 0.0);
-            std::vector<double> playerHeadPivotDist(candidates.size(), std::numeric_limits<double>::max());
+            std::vector<double> playerHeadPivotDist(candidates.size(), 1e9); // ~max double
 
             // Dlya kazhdoy golovy ishchem blizhayshee telo
             for (size_t hi = 0; hi < candidates.size(); ++hi) {
@@ -163,7 +163,7 @@ void MultiTargetTracker::update(
                 const double headCy = h.box.y + h.box.height * 0.5;
 
                 size_t bestPlayer = static_cast<size_t>(-1);
-                double bestDist = std::numeric_limits<double>::max();
+                double bestDist = 1e9; // ~max double
 
                 for (size_t pi : playerIdx) {
                     const auto& p = candidates[pi].box;
