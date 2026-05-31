@@ -122,7 +122,7 @@ struct SafeConfig {
     bool elite_tsp_enabled, elite_ballistics_enabled;
     float elite_bullet_speed, elite_bullet_drop;
     bool elite_context_aware, elite_smoke_vision, elite_voice_ctrl, elite_shadow_trainer;
-    char shadow_webhook[256];
+    std::string shadow_webhook;
     float byte_track_thresh;
     int byte_track_buffer;
     float byte_match_thresh;
@@ -719,7 +719,7 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
             aim->elite_smoke_vision = local_cfg.elite_smoke_vision;
             aim->elite_voice_ctrl = local_cfg.elite_voice_ctrl;
             aim->elite_shadow_trainer = local_cfg.elite_shadow_trainer;
-            strncpy(aim->shadow_webhook, local_cfg.shadow_webhook, 255);
+            aim->shadow_webhook = local_cfg.shadow_webhook;
             aim->max_move_step = local_cfg.max_move_step;
             aim->aim_target_lock = local_cfg.aim_target_lock;
             aim->aim_lock_x = local_cfg.aim_lock_x;
@@ -976,7 +976,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             g_safe_cfg.elite_smoke_vision = overlay.elite_smoke_vision;
             g_safe_cfg.elite_voice_ctrl = overlay.elite_voice_ctrl;
             g_safe_cfg.elite_shadow_trainer = overlay.elite_shadow_trainer;
-            strncpy(g_safe_cfg.shadow_webhook, overlay.shadow_webhook, 255);
+            g_safe_cfg.shadow_webhook = overlay.shadow_webhook;
             g_safe_cfg.byte_track_thresh = overlay.byte_track_thresh;
             g_safe_cfg.byte_track_buffer = overlay.byte_track_buffer;
             g_safe_cfg.byte_match_thresh = overlay.byte_match_thresh;

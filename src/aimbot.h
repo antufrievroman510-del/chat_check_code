@@ -115,6 +115,10 @@ public:
     bool wind_mouse_enabled = false;
 
 private:
+    // Конфигурация (теперь приватная, доступ через SetConfig)
+    AimConfig config;
+    
+    // Методы класса
     std::pair<double, double> degToCounts(double degX, double degY) const;
     std::pair<double, double> calcMovement(double targetX, double targetY);
     double calculateSpeedMultiplier(double distance) const;
@@ -126,7 +130,6 @@ private:
     float AddJitter(float value, float amplitude);
 
     // Внутренние переменные
-    AimConfig config;
     MultiTargetTracker m_tracker;
     aim::AimKalman2D m_kalman;
     aim::AimKalmanTelemetry m_lastKalmanTelemetry;
