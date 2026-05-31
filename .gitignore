@@ -2,73 +2,46 @@
 # Compiled and build artifacts
 *.o
 *.obj
-*.out
 *.exe
 *.dll
 *.so
 *.a
+*.out
 
 # Dependencies
+node_modules/
 venv/
 .venv/
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-.venv.bak/
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Build directories
-build/
-dist/
-*.egg-info/
+.mypy_cache/
+.pytest_cache/
+target/
+.gradle/
 
 # Logs and temp files
 *.log
 *.tmp
 *.swp
-*.swo
-*~
 
-# Environment variables
+# Environment
 .env
 .env.local
-.env.*
-!.env.example
+*.env.*
 
 # Editors
 .vscode/
 .idea/
-*.sublime-project
-*.sublime-workspace
-*.swp
-*.swo
 
-# OS generated files
+# OS specific
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Coverage reports
+# Coverage
 coverage/
 htmlcov/
 .coverage
-*.coverage
 
-# Testing
-.pytest_cache/
-.mypy_cache/
-.tox/
-nosetests.xml
-
-# Compression files
+# Compressed files
 *.zip
 *.gz
 *.tar

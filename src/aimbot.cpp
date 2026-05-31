@@ -45,7 +45,7 @@ Aimbot::~Aimbot() {
 }
 
 void Aimbot::SetConfig(const AimConfig& cfg) {
-    config = cfg;
+    m_config = cfg;
     // Синхронизация старого и нового конфига для совместимости
     aim_enable = cfg.enabled;
     smooth_factor = 1.0f / (cfg.smooth > 0.1f ? cfg.smooth : 1.0f);
