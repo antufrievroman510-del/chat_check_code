@@ -1,5 +1,5 @@
 ```
-# Compiled and build artifacts
+# Build artifacts and compiled files
 *.o
 *.obj
 *.exe
@@ -7,34 +7,32 @@
 *.so
 *.a
 *.out
+*.pyc
+__pycache__/
 
-# Dependencies
+# Dependencies and packages
 node_modules/
 venv/
 .venv/
-__pycache__/
-.mypy_cache/
-.pytest_cache/
-target/
-.gradle/
-
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-
-# Environment
 .env
 .env.local
 *.env.*
 
-# Editors
+# Build directories
+build/
+dist/
+target/
+.gradle/
+
+# IDE and editor files
 .vscode/
 .idea/
+*.swp
+*.swo
+*.tmp
 
-# System files
-.DS_Store
-Thumbs.db
+# Logs
+*.log
 
 # Coverage
 coverage/
@@ -64,4 +62,11 @@ htmlcov/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Modules directory (since it appears to contain external libraries)
+source_logic/source_logic/modules/
 ```
