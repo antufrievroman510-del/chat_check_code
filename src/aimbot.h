@@ -36,9 +36,6 @@ public:
     void CloseHardware();
     void SendHardwareMove(int x, int y);
     void SendHardwareClick();
-
-    // Используем структуру AimConfig из AimMath.h
-    void SetConfig(const AimConfig& cfg);
     
     // Настройки (публичные для совместимости с меню и другими файлами)
     bool aim_enable = true;
