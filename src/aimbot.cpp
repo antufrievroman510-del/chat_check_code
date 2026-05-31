@@ -21,16 +21,9 @@ extern std::atomic<bool> g_is_target_locked;
 extern std::atomic<float> g_locked_screen_x;
 extern std::atomic<float> g_locked_screen_y;
 
+// Глобальные переменные для совместимости
 static long long g_first_seen_time = 0;
-static long long g_last_update_time = 0;
 static long long g_last_target_drop_time = 0;
-
-// Состояние для pixelsmooth / сглаживания
-static std::vector<std::pair<int, int>> g_move_history;
-static const int MAX_MOVE_HISTORY = 16;
-static float g_overshoot_x = 0.0f, g_overshoot_y = 0.0f;
-static bool g_in_overshoot = false;
-static long long g_overshoot_start_time = 0;
 
 thread_local std::random_device Aimbot::rd;
 thread_local std::mt19937 Aimbot::gen(rd());
@@ -78,14 +71,6 @@ void Aimbot::ResetTarget() {
     m_kalman.reset();
     m_kalmanInitialized = false;
     m_lastPredictionTime = std::chrono::steady_clock::now();
-
-    windCarryX = windCarryY = 0.0;
-    windVelX = windVelY = 0.0;
-    windNoiseX = windNoiseY = 0.0;
-    windFracX = windFracY = 0.0;
-    windPatternX = windPatternY = 0.0;
-    windPatternPhaseA = windPatternPhaseB = 0.0;
-    windPatternRateA = windPatternRateB = 0.0;
 
     stat_shots_fired = 0;
     stat_tracking_time_ms = 0;
