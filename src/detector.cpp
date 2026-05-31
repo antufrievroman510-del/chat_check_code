@@ -192,13 +192,10 @@ std::vector<Detection> Detector::run_inference(const unsigned char* pixel_data, 
     std::vector<Detection> final_results;
     if (!session) return final_results;
 
-    // Проверка размера изображения (должно совпадать с размером модели)
-    if (w != model_width || h != model_height) {
-        std::cerr << "[Detector] Size mismatch: input " << w << "x" << h 
-                  << ", model " << model_width << "x" << model_height << std::endl;
-        return final_results;
-    }
-
+    // Сохраняем оригинальные размеры для масштабирования координат
+    const int orig_w = w;
+    const int orig_h = h;
+    
     // Применяем снижение порога для Elite Smoke Vision
     float actual_body_thr = elite_smoke_vision ? (body_conf_threshold * 0.75f) : body_conf_threshold;
     float actual_head_thr = elite_smoke_vision ? (head_conf_threshold * 0.75f) : head_conf_threshold;
@@ -210,8 +207,74 @@ std::vector<Detection> Detector::run_inference(const unsigned char* pixel_data, 
 
         // ========================================================================
         // 1. ПРЕПРОЦЕССИНГ: BGRA -> RGB Planar Float32 [0..1]
+        // Если размеры не совпадают - делаем ресайз "на лету" (билинейная интерполяция)
         // ========================================================================
-        PreprocessDirect(pixel_data, m_input_tensor_data, model_width, model_height);
+        std::vector<float> resized_tensor_data;
+        const float* preprocess_ptr = nullptr;
+        
+        if (w != model_width || h != model_height) {
+            // Ресайз изображения под размер модели
+            resized_tensor_data.resize(3 * model_width * model_height);
+            
+            // Билинейная интерполяция для ресайза
+            const float x_ratio = static_cast<float>(w) / model_width;
+            const float y_ratio = static_cast<float>(h) / model_height;
+            const float inv255 = 0.003921568f;
+            
+            float* r_ptr = resized_tensor_data.data();
+            float* g_ptr = resized_tensor_data.data() + (model_width * model_height);
+            float* b_ptr = resized_tensor_data.data() + 2 * (model_width * model_height);
+            
+            for (int my = 0; my < model_height; ++my) {
+                for (int mx = 0; mx < model_width; ++mx) {
+                    // Координаты в исходном изображении
+                    const float ox = x_ratio * mx;
+                    const float oy = y_ratio * my;
+                    
+                    // Целая часть и дробная часть
+                    const int ox_int = static_cast<int>(ox);
+                    const int oy_int = static_cast<int>(oy);
+                    const float ox_frac = ox - ox_int;
+                    const float oy_frac = oy - oy_int;
+                    
+                    // Ограничиваем координаты
+                    const int x0 = (std::min)(ox_int, w - 2);
+                    const int y0 = (std::min)(oy_int, h - 2);
+                    const int x1 = x0 + 1;
+                    const int y1 = y0 + 1;
+                    
+                    // Индексы пикселей в исходном изображении (BGRA)
+                    const int idx00 = (y0 * w + x0) * 4;
+                    const int idx01 = (y0 * w + x1) * 4;
+                    const int idx10 = (y1 * w + x0) * 4;
+                    const int idx11 = (y1 * w + x1) * 4;
+                    
+                    // Билинейная интерполяция для каждого канала
+                    for (int c = 0; c < 3; ++c) {
+                        const float v00 = pixel_data[idx00 + (2 - c)];
+                        const float v01 = pixel_data[idx01 + (2 - c)];
+                        const float v10 = pixel_data[idx10 + (2 - c)];
+                        const float v11 = pixel_data[idx11 + (2 - c)];
+                        
+                        const float v0 = v00 * (1.0f - ox_frac) + v01 * ox_frac;
+                        const float v1 = v10 * (1.0f - ox_frac) + v11 * ox_frac;
+                        const float v = v0 * (1.0f - oy_frac) + v1 * oy_frac;
+                        
+                        const int dst_idx = my * model_width + mx;
+                        if (c == 0) r_ptr[dst_idx] = v * inv255;
+                        else if (c == 1) g_ptr[dst_idx] = v * inv255;
+                        else b_ptr[dst_idx] = v * inv255;
+                    }
+                }
+            }
+            preprocess_ptr = resized_tensor_data.data();
+        }
+        else {
+            // Размеры совпадают - прямая конвертация
+            PreprocessDirect(pixel_data, m_input_tensor_data, model_width, model_height);
+            preprocess_ptr = m_input_tensor_data.data();
+        }
+        
         auto t1 = std::chrono::steady_clock::now();
 
         // ========================================================================
@@ -221,8 +284,8 @@ std::vector<Detection> Detector::run_inference(const unsigned char* pixel_data, 
         auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
         Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
             memory_info, 
-            m_input_tensor_data.data(),
-            m_input_tensor_data.size(), 
+            preprocess_ptr,  // Используем указатель на подготовленные данные
+            3 * model_width * model_height, 
             input_shape.data(), 
             input_shape.size());
 
@@ -318,14 +381,18 @@ std::vector<Detection> Detector::run_inference(const unsigned char* pixel_data, 
             // Фильтрация слишком мелких детектов
             if (bw < 2.0f || bh < 2.0f) continue;
 
-            // Создаем детект
+            // Масштабирование координат обратно к оригинальному размеру изображения
+            const float scale_x = static_cast<float>(orig_w) / model_width;
+            const float scale_y = static_cast<float>(orig_h) / model_height;
+            
+            // Создаем детект с масштабированными координатами
             Detection det;
             det.class_id = cls_id;
             det.confidence = conf;
-            det.box.x = x1;
-            det.box.y = y1;
-            det.box.w = bw;
-            det.box.h = bh;
+            det.box.x = x1 * scale_x;
+            det.box.y = y1 * scale_y;
+            det.box.w = bw * scale_x;
+            det.box.h = bh * scale_y;
             det.track_id = -1;  // Будет назначен ByteTrack'ом
             final_results.push_back(det);
         }
