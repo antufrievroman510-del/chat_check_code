@@ -21,21 +21,6 @@
 #include "MouseController.h"
 
 // ============================================================
-// Глобальная структура конфигурации
-// ============================================================
-struct AimConfig {
-    bool enabled = true;
-    int fireKey = VK_RBUTTON;
-    float fov = 190.0f;
-    float smooth = 8.0f;
-    int targetBone = 0; // 0=Auto, 1=Head, 2=Body
-    bool humanize = true;
-    float humanizeReaction = 25.0f;
-    float humanizeTremor = 0.8f;
-    bool lockTarget = true;
-};
-
-// ============================================================
 // Класс Aimbot
 // ============================================================
 class Aimbot {
@@ -52,6 +37,9 @@ public:
     void SendHardwareMove(int x, int y);
     void SendHardwareClick();
 
+    // Используем структуру AimConfig из AimMath.h
+    void SetConfig(const AimConfig& cfg);
+    
     // Настройки (публичные для совместимости с меню и другими файлами)
     bool aim_enable = true;
     bool aim_target_lock = true;
@@ -120,7 +108,7 @@ public:
     bool wind_mouse_enabled = false;
 
 private:
-    // Внутренняя конфигурация
+    // Внутренняя конфигурация (использует структуру из AimMath.h)
     AimConfig m_config;
     
     // Методы класса

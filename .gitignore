@@ -32,7 +32,7 @@ target/
 .vscode/
 .idea/
 
-# OS specific
+# OS
 .DS_Store
 Thumbs.db
 
