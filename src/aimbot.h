@@ -1,4 +1,6 @@
 ﻿#pragma once
+#ifndef AIMBOT_H
+#define AIMBOT_H
 
 #define NOMINMAX
 #ifndef WIN32_LEAN_AND_MEAN
@@ -151,3 +153,5 @@ private:
     thread_local static std::mt19937 gen;
     thread_local static std::normal_distribution<float> gauss_dist;
 };
+
+#endif // AIMBOT_H
