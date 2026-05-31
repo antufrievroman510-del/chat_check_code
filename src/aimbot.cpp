@@ -11,6 +11,8 @@
 #include "protect.h"
 #include "xorstr.hpp"
 #include "VMProtectSDK.h"
+#include "AimMath.h"
+#include "MouseController.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -38,7 +40,28 @@ typedef UINT(WINAPI* SendInputPtr)(UINT, LPINPUT, int);
 static SendInputPtr DynamicSendInput = nullptr;
 
 // ============================================================
-// Аппаратный вывод (ваш исходный код)
+// Конструктор / Деструктор
+// ============================================================
+Aimbot::Aimbot() {
+    MUTATE_SIGNATURE;
+    ResetTarget();
+}
+
+Aimbot::~Aimbot() {
+    CloseHardware();
+}
+
+void Aimbot::SetConfig(const AimConfig& cfg) {
+    config = cfg;
+    // Синхронизация старого и нового конфига для совместимости
+    aim_enable = cfg.enabled;
+    smooth_factor = 1.0f / (cfg.smooth > 0.1f ? cfg.smooth : 1.0f);
+    fov = cfg.fov;
+    aim_key_main = cfg.fireKey;
+}
+
+// ============================================================
+// Аппаратный вывод (интеграция с MouseController)
 // ============================================================
 void Aimbot::ResetTarget() {
     if (g_is_target_locked.load()) {
@@ -302,21 +325,30 @@ void Aimbot::applyWindMouse(int& dx, int& dy) {
 // ============================================================
 // Основная логика аимбота
 // ============================================================
+// ============================================================
+// Основная логика аимбота (НОВАЯ ИНТЕГРАЦИЯ)
+// ============================================================
 void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int screen_h,
     bool is_new_frame, long long current_time_ms, float zoom_scale) {
     VMProtectBeginMutation("AimbotUpdate");
     MUTATE_SIGNATURE;
+
+    if (!aim_enable) {
+        ResetTarget();
+        VMProtectEnd();
+        return;
+    }
 
     if (g_last_update_time == 0) g_last_update_time = current_time_ms;
     long long delta_t = current_time_ms - g_last_update_time;
     g_last_update_time = current_time_ms;
     latency_hist[hist_offset] = g_last_inference_time.load();
 
-    float center_x = screen_w / 2.0f;
-    float center_y = screen_h / 2.0f;
+    float center_x = static_cast<float>(screen_w) / 2.0f;
+    float center_y = static_cast<float>(screen_h) / 2.0f;
     current_fov = enable_dynamic_fov && g_is_target_locked.load() ? fov * 0.5f : fov;
 
-    // Конвертация в RectF и классы
+    // === Шаг 1: Конвертация детектов в формат для трекера ===
     std::vector<RectF> boxes;
     std::vector<int> classes;
     for (const auto& d : detections) {
@@ -324,6 +356,7 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         float ty = d.box.y + d.box.h / 2.0f;
         float dx = tx - center_x;
         float dy = ty - center_y;
+        // Фильтр по FOV
         if (dx * dx + dy * dy > current_fov * current_fov)
             continue;
         boxes.push_back(RectF(d.box.x, d.box.y, d.box.w, d.box.h));
@@ -331,9 +364,12 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     }
 
     auto observationTime = std::chrono::steady_clock::time_point(std::chrono::milliseconds(current_time_ms));
+    
+    // === Шаг 2: Обновление трекера целей ===
     m_tracker.update(boxes, classes, detection_resolution, detection_resolution,
         disable_headshot, aim_target_lock, observationTime);
 
+    // === Шаг 3: Получение захваченной цели ===
     LockedTargetInfo lockInfo;
     if (!m_tracker.getLockedTarget(lockInfo)) {
         ResetTarget();
@@ -346,6 +382,7 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     g_locked_screen_x.store(static_cast<float>(lockInfo.target.pivotX));
     g_locked_screen_y.store(static_cast<float>(lockInfo.target.pivotY));
 
+    // === Шаг 4: Задержка реакции (Humanizer) ===
     if (humanizer_enable && hum_reaction_delay > 0.0f) {
         if (g_first_seen_time == 0) g_first_seen_time = current_time_ms;
         if (current_time_ms - g_first_seen_time < hum_reaction_delay) {
@@ -354,19 +391,14 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         }
     }
 
+    // === Шаг 5: Предикт движения (Kalman) ===
     auto predicted = predictTargetPosition(lockInfo.target.pivotX, lockInfo.target.pivotY, observationTime);
     double targetX = predicted.first;
     double targetY = predicted.second;
 
-    // Применяем выбор цели (Target zona: Head/Body/Auto)
-    // aim_target: 0=Auto, 1=Head, 2=Body
-    // classId из детекта: 0=Body, 1=Head
-    // При выборе Head или Body - ищем цель соответствующего класса в детекте
+    // === Шаг 6: Выбор зоны прицеливания (Head/Body/Auto) ===
     if (aim_target == 1 || aim_target == 2) {
-        // Принудительный выбор класса: 1=Head->1, 2=Body->0 (соответствует classId детекта)
-        int requiredClassId = (aim_target == 1) ? 1 : 0;  // 1->1 (Head), 2->0 (Body)
-        
-        // Ищем детект с нужным классом среди всех detections
+        int requiredClassId = (aim_target == 1) ? 1 : 0;  // 1=Head, 2=Body->0
         bool foundMatchingClass = false;
         for (const auto& d : detections) {
             float tx = d.box.x + d.box.w / 2.0f;
@@ -377,25 +409,19 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
                 continue;
             
             if (d.class_id == requiredClassId) {
-                // Нашли цель нужного класса - используем её центр
                 targetX = tx;
                 targetY = ty;
                 foundMatchingClass = true;
                 break;
             }
         }
-        
-        // Если не нашли цель нужного класса в FOV, используем захваченную цель как есть
-        if (!foundMatchingClass) {
-            // Оставляем targetX/targetY из lockInfo (захваченная цель)
-        }
     }
-    // aim_target == 0 (Auto) - используем детектированную точку без изменений
 
-    // Применяем дополнительные оффсеты из настроек
+    // === Шаг 7: Дополнительные оффсеты ===
     targetX += static_cast<double>(target_offset_x);
     targetY += static_cast<double>(target_offset_y);
 
+    // === Шаг 8: Баллистика (Elite) ===
     if (elite_ballistics_enabled && lockInfo.target.w > 0) {
         float estimated_distance = 1000.0f / (lockInfo.target.w + 1.0f);
         float time_to_target = estimated_distance / elite_bullet_speed;
@@ -406,6 +432,7 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         targetY -= bullet_drop_px;
     }
 
+    // === Шаг 9: Humanizer (тремор, микро-движения) ===
     if (humanizer_enable && hum_tremor_scale > 0.0f) {
         targetX = AddJitter(static_cast<float>(targetX), hum_tremor_scale * 0.5f);
         targetY = AddJitter(static_cast<float>(targetY), hum_tremor_scale * 0.5f);
@@ -422,25 +449,26 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         }
     }
 
-    // === Pixelsmooth / Bezier сглаживание ===
+    // === Шаг 10: Расчет движения (CalcMovement) ===
     auto mv = calcMovement(targetX, targetY);
     int mx = static_cast<int>(mv.first);
     int my = static_cast<int>(mv.second);
 
-    // max_move_step ограничивает максимальный шаг движения
-    // Минимальная/максимальная скорость контролируется через min_sensitivity/max_sensitivity
+    // Ограничение шага
     if (std::abs(mx) > max_move_step) mx = (mx > 0) ? static_cast<int>(max_move_step) : -static_cast<int>(max_move_step);
     if (std::abs(my) > max_move_step) my = (my > 0) ? static_cast<int>(max_move_step) : -static_cast<int>(max_move_step);
 
+    // RCS
     if (rcs_enable && (GetAsyncKeyState(VK_LBUTTON) & 0x8000)) {
         mx += static_cast<int>(rcs_yaw);
         my += static_cast<int>(rcs_pitch);
     }
 
+    // Lock axes
     if (aim_lock_x) mx = 0;
     if (aim_lock_y) my = 0;
 
-    // Применяем overshoot если включен
+    // === Шаг 11: Overshoot (перелёт с возвратом) ===
     if (humanizer_enable && hum_overshoot_enabled && !g_in_overshoot) {
         float rand_val = static_cast<float>(rand()) / RAND_MAX * 100.0f;
         if (rand_val < hum_overshoot_chance && std::abs(mx) > 2 && std::abs(my) > 2) {
@@ -453,7 +481,7 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
 
     if (g_in_overshoot) {
         long long elapsed = current_time_ms - g_overshoot_start_time;
-        float t = static_cast<float>(elapsed) / 150.0f;  // 150ms на возврат
+        float t = static_cast<float>(elapsed) / 150.0f;
         if (t >= 1.0f) {
             g_in_overshoot = false;
             mx = static_cast<int>(g_overshoot_x * (1.0f - hum_return_speed));
@@ -464,14 +492,12 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         }
     }
 
-    // Добавляем в историю для pixelsmooth
+    // === Шаг 12: Pixelsmooth (сглаживание по истории) ===
     if (pixelsmooth_enabled && pixelsmooth_value > 1.0f) {
         g_move_history.push_back({mx, my});
         if (g_move_history.size() > static_cast<size_t>(pixelsmooth_value)) {
             g_move_history.erase(g_move_history.begin());
         }
-        
-        // Усредняем последние движения
         int sum_x = 0, sum_y = 0;
         for (const auto& m : g_move_history) {
             sum_x += m.first;
@@ -481,7 +507,7 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         my = sum_y / static_cast<int>(g_move_history.size());
     }
 
-    // Применяем сглаживание через lerp
+    // === Шаг 13: Lerp сглаживание ===
     if (smooth_factor > 0.0f && smooth_factor < 1.0f) {
         static int prev_mx = 0, prev_my = 0;
         mx = static_cast<int>(prev_mx * (1.0f - smooth_factor) + mx * smooth_factor);
@@ -490,7 +516,7 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         prev_my = my;
     }
 
-    // Рандомизация пути (path randomization)
+    // === Шаг 14: Path Randomization ===
     if (humanizer_enable && hum_path_randomization > 0.0f) {
         float jitter_x = gauss_dist(gen) * hum_path_randomization;
         float jitter_y = gauss_dist(gen) * hum_path_randomization;
@@ -498,6 +524,7 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         my += static_cast<int>(jitter_y);
     }
 
+    // === Шаг 15: Накопление дробной части ===
     g_frac_x += static_cast<float>(mx);
     g_frac_y += static_cast<float>(my);
     int final_dx = static_cast<int>(g_frac_x);
@@ -511,10 +538,12 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         return;
     }
 
+    // === Шаг 16: Micro-sleep для humanize ===
     if (humanizer_enable) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1 + (rand() % 3)));
     }
 
+    // === Шаг 17: Отправка движения через Hardware ===
     SendHardwareMove(final_dx, final_dy);
     hist_offset = (hist_offset + 1) % 100;
     stat_tracking_time_ms += delta_t;
