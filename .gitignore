@@ -1,3 +1,4 @@
+интеграция-аимбота-и-макку-5bcc0
 # Compiled and build artifacts
 *.o
 *.obj
@@ -61,3 +62,5 @@ htmlcov/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
+Nothing needs to be added to the .gitignore file since the changes only include source code header files (.h) which should not be ignored.
+main
