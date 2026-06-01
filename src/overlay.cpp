@@ -283,7 +283,6 @@ void Overlay::LoadConfig(Aimbot* aim) {
     handlers["aim_smoother"] = [&](const std::string& v) { this->aim_smoother = safe_stof(v); };
     handlers["fov_scan"] = [&](const std::string& v) { this->fov_scan = safe_stof(v); };
     handlers["aim_kill_delay"] = [&](const std::string& v) { this->aim_kill_delay = safe_stof(v); };
-    handlers["obs_bypass"] = [&](const std::string& v) { this->obs_bypass = std::stoi(v); };
     handlers["obs_bypass_enabled"] = [&](const std::string& v) { this->obs_bypass_enabled = std::stoi(v); };
     handlers["menu_scale"] = [&](const std::string& v) { this->menu_scale = safe_stof(v); };
     handlers["hardware_mode_idx"] = [&](const std::string& v) { this->hardware_mode_idx = std::stoi(v); };
@@ -458,7 +457,6 @@ void Overlay::SaveConfig(Aimbot* aim) {
     ss << "aim_smoother=" << this->aim_smoother << "\n";
     ss << "fov_scan=" << this->fov_scan << "\n";
     ss << "aim_kill_delay=" << this->aim_kill_delay << "\n";
-    ss << "obs_bypass=" << this->obs_bypass << "\n";
     ss << "obs_bypass_enabled=" << this->obs_bypass_enabled << "\n";
     ss << "menu_scale=" << this->menu_scale << "\n";
     ss << "hardware_mode_idx=" << this->hardware_mode_idx << "\n";
@@ -617,7 +615,7 @@ void Overlay::ResetDefaults() {
     min_box_area_body = 150.0f; min_box_area_head = 40.0f;
     hit_chance = 90.0f; auto_confidence = false;
     custom_res_w = 1920; custom_res_h = 1080;
-    obs_bypass = true; menu_scale = 100.0f; menu_width = 1150.0f; menu_height = 680.0f;
+    obs_bypass_enabled = false; menu_scale = 100.0f; menu_width = 1150.0f; menu_height = 680.0f;
     this->hardware_mode_idx = 0; com_port = 2; trigger_enable = false; trigger_delay = 0.05f; trigger_target = 0; trigger_key = 0;
     rcs_enable = false; rcs_pitch = 1.0f; rcs_yaw = 0.0f;
     refresh_rate_idx = 0; memory_enemy_frames = 3; enable_pose_adaptive = false;
@@ -1309,12 +1307,12 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     ImGui::Spacing();
     
     // OBS Bypass Toggle - используем obs_bypass для реального скрытия
-    if (DrawToggle("OBS Bypass:", "##obs_bypass", &this->obs_bypass, acc_u32,
+    if (DrawToggle("OBS Bypass:", "##obs_bypass", &this->obs_bypass_enabled, acc_u32,
         is_russian ? u8"Скрыть оверлей при записи/скриншотах" : "Hide overlay during recording/screenshots")) {
         cfg_changed = true;
         // Немедленно применяем изменение
         if (hwnd) {
-            SetWindowDisplayAffinity(hwnd, this->obs_bypass ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE);
+            SetWindowDisplayAffinity(hwnd, this->obs_bypass_enabled ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE);
         }
     }
     
@@ -2008,7 +2006,7 @@ bool Overlay::Initialize() {
     SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
     MARGINS margins = { -1,-1,-1,-1 };
     DwmExtendFrameIntoClientArea(hwnd, &margins);
-    if (obs_bypass) SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE);
+    if (obs_bypass_enabled) SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE);
     if (!CreateDeviceD3D(hwnd)) return false;
     FetchHardwareInfo();
     LoadAuth();
@@ -2556,10 +2554,10 @@ void Overlay::Render(const std::vector<Detection>& detections, int screen_w, int
 
     ImGui::GetIO().FontGlobalScale = menu_scale / 100.0f;
     // OBS Bypass применяется в реальном времени при изменении флага
-    static bool last_obs = !obs_bypass;
-    if (obs_bypass != last_obs) {
-        SetWindowDisplayAffinity(hwnd, obs_bypass ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE);
-        last_obs = obs_bypass;
+    static bool last_obs = !obs_bypass_enabled_enabled;
+    if (obs_bypass_enabled != last_obs) {
+        SetWindowDisplayAffinity(hwnd, obs_bypass_enabled ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE);
+        last_obs = obs_bypass_enabled_enabled;
     }
     ImGui_ImplDX11_NewFrame(); ImGui_ImplWin32_NewFrame();
     POINT m_pt;
