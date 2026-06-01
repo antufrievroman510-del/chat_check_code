@@ -1,13 +1,16 @@
 #pragma once
 #include <Windows.h>
 #include "AimMath.h"
+#include "HardwareController.h"
 
 // Перечисление методов ввода для Mouse Bypass
 enum class MouseMethod {
     Standard,      // Стандартный SendInput (может детектиться)
     GHub_Spoof,    // Эмуляция через Logitech G Hub (скрытый ввод)
     Razer_Spoof,   // Эмуляция через Razer Synapse (скрытый ввод)
-    Driver         // Прямой драйвер (требует подписанного драйвера)
+    Driver,        // Прямой драйвер (требует подписанного драйвера)
+    Makcu_UART,    // Плата Makcu через COM-порт
+    KMBox_Net      // Плата KMbox через сеть
 };
 
 class MouseController {
@@ -27,6 +30,9 @@ public:
 
     // Смена метода ввода на лету
     void SetMethod(MouseMethod method);
+    
+    // Обновление конфигурации HardwareController
+    void UpdateHardwareConfig(const HardwareConfig& config);
 
 private:
     MouseController() = default;
@@ -39,6 +45,8 @@ private:
     void MoveGHubSpoof(int dx, int dy);
     void MoveRazerSpoof(int dx, int dy);
     void MoveDriver(int dx, int dy);
+    void MoveMakcu(int dx, int dy);
+    void MoveKMBox(int dx, int dy);
 
     MouseMethod currentMethod = MouseMethod::Standard;
     bool isInitialized = false;
