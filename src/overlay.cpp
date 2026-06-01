@@ -284,6 +284,7 @@ void Overlay::LoadConfig(Aimbot* aim) {
     handlers["fov_scan"] = [&](const std::string& v) { this->fov_scan = safe_stof(v); };
     handlers["aim_kill_delay"] = [&](const std::string& v) { this->aim_kill_delay = safe_stof(v); };
     handlers["obs_bypass"] = [&](const std::string& v) { this->obs_bypass = std::stoi(v); };
+    handlers["obs_bypass_enabled"] = [&](const std::string& v) { this->obs_bypass_enabled = std::stoi(v); };
     handlers["menu_scale"] = [&](const std::string& v) { this->menu_scale = safe_stof(v); };
     handlers["hardware_mode_idx"] = [&](const std::string& v) { this->hardware_mode_idx = std::stoi(v); };
     handlers["hw_enabled"] = [&](const std::string& v) { this->hw_enabled = std::stoi(v); };
@@ -458,6 +459,7 @@ void Overlay::SaveConfig(Aimbot* aim) {
     ss << "fov_scan=" << this->fov_scan << "\n";
     ss << "aim_kill_delay=" << this->aim_kill_delay << "\n";
     ss << "obs_bypass=" << this->obs_bypass << "\n";
+    ss << "obs_bypass_enabled=" << this->obs_bypass_enabled << "\n";
     ss << "menu_scale=" << this->menu_scale << "\n";
     ss << "hardware_mode_idx=" << this->hardware_mode_idx << "\n";
     ss << "hw_enabled=" << this->hw_enabled << "\n";
@@ -1299,6 +1301,16 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         if (ImGui::SliderInt("##rd_max", &this->random_delay_max, 10, 100, "%d ms")) cfg_changed = true;
         ImGui::PopItemWidth();
         HelpMarker(is_russian ? u8"Мин/макс задержка для рандомизации" : "Min/Max delay for randomization");
+    }
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    // OBS Bypass Toggle
+    if (DrawToggle("OBS Bypass:", "##obs_bypass", &this->obs_bypass_enabled, acc_u32,
+        is_russian ? u8"Скрыть оверлей при записи/скриншотах" : "Hide overlay during recording/screenshots")) {
+        cfg_changed = true;
     }
     
     EndPanel();
