@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #ifndef AIMBOT_H
 #define AIMBOT_H
 
@@ -24,7 +24,7 @@ class Aimbot {
 public:
     Aimbot();
     ~Aimbot();
-    
+
     void SetConfig(const AimConfig& cfg);
     void SyncFromOverlay(class Overlay& overlay);  // Синхронизация с UI в реальном времени
     void Update(const std::vector<Detection>& detections, int screen_w, int screen_h,
@@ -34,17 +34,16 @@ public:
     void CloseHardware();
     void SendHardwareMove(int x, int y);
     void SendHardwareClick();
-    
-    // Настройки (публичные для совместимости с меню и другими файлами)
+
+    // Настройки
     bool aim_enable = true;
     bool aim_target_lock = true;
     int aim_target = 0;  // 0=Auto, 1=Head, 2=Body
     int aim_key_main = VK_RBUTTON;
-    int aim_key_sub = 0;       // Дополнительная клавиша активации
-    int aim_toggle_key = 0;    // Клавиша переключения состояния
+    int aim_key_sub = 0; // ДОБАВЛЕНО: Вторая кнопка активации
     float fov = 190.0f;
     float smooth_factor = 0.15f;
-    int detection_resolution = 320;
+    int detection_resolution = 960;
     bool disable_headshot = false;
     bool humanizer_enable = true;
     float hum_reaction_delay = 25.0f;
@@ -68,11 +67,11 @@ public:
     float kalman_velocity_damping = 0.08f;
     float kalman_max_velocity = 20000.0f;
     int hardware_type = 0;
-    int bypass_mode = 0;      // Режим обхода (0=None, 1=GHub, 2=Razer, 3=Random)
+    int bypass_mode = 0;
     int com_port = 3;
     std::string net_ip = "192.168.1.100";
     int net_port = 3333;
-    
+
     // Дополнительные настройки
     float min_sensitivity = 0.1f;
     float max_sensitivity = 20.0f;
@@ -90,13 +89,11 @@ public:
     float elite_bullet_drop = 9.8f;
     bool pixelsmooth_enabled = true;
     float pixelsmooth_value = 8.0f;
-    
-    // Переменные состояния (публичные для доступа из main.cpp и overlay.cpp)
+
     float current_fov = 190.0f;
     int stat_shots_fired = 0;
     long long stat_tracking_time_ms = 0;
-    
-    // Elite функции (заглушки для совместимости)
+
     bool elite_context_aware = false;
     bool elite_smoke_vision = false;
     bool elite_voice_ctrl = false;
@@ -106,21 +103,16 @@ public:
     bool wind_mouse_enabled = false;
 
 private:
-    // Внутренняя конфигурация (использует структуру из AimMath.h)
     AimConfig m_config;
-    
-    // Методы класса
+
     std::pair<double, double> degToCounts(double degX, double degY) const;
-    // calcMovement УДАЛЕНА - используется AimMath::CalculateMove
-    double calculateSpeedMultiplier(double distance, int screen_h) const;
     double currentDetectionDelaySec() const;
     double currentPredictionLookaheadSec(double detectionDelaySec) const;
     std::pair<double, double> predictTargetPosition(double targetX, double targetY,
         std::chrono::steady_clock::time_point observationTime);
-    void applyWindMouse(int& dx, int& dy);
     float AddJitter(float value, float amplitude);
+    void applyWindMouse(int& dx, int& dy);
 
-    // Внутренние переменные
     MultiTargetTracker m_tracker;
     aim::AimKalman2D m_kalman;
     aim::AimKalmanTelemetry m_lastKalmanTelemetry;
@@ -128,26 +120,25 @@ private:
     double m_lastDetectionDelaySec = 0.0;
     double m_lastPredictionLookaheadSec = 0.0;
     bool m_kalmanInitialized = false;
-    
+
     double prev_target_x = 0.0, prev_target_y = 0.0;
     long long last_target_time = 0;
     float g_frac_x = 0.0f, g_frac_y = 0.0f;
-    
+
     HANDLE hSerial;
     SOCKET udp_socket;
     sockaddr_in udp_addr;
-    
+
     float latency_hist[100] = { 0 };
     int hist_offset = 0;
     long long g_last_update_time = 0;
-    
-    // Состояние для pixelsmooth / overshoot
+
     std::vector<std::pair<int, int>> g_move_history;
     static const int MAX_MOVE_HISTORY = 16;
     float g_overshoot_x = 0.0f, g_overshoot_y = 0.0f;
     bool g_in_overshoot = false;
     long long g_overshoot_start_time = 0;
-    
+
     thread_local static std::random_device rd;
     thread_local static std::mt19937 gen;
     thread_local static std::normal_distribution<float> gauss_dist;
