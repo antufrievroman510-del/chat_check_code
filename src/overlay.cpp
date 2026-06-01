@@ -827,105 +827,111 @@ bool Overlay::BeginPanel(const char* name, ImVec2 size, ImVec4 accent_vec, bool 
 void Overlay::EndPanel() { ImGui::EndChild(); }
 
 // ============================================================
-// RenderAimbotTab (вкладка Aimbot)
+// RenderAimbotTab (вкладка Aimbot) - ПОЛНОСТЬЮ ПЕРЕПИСАНА
+// Все настройки влияют на аимбот в реальном времени
 // ============================================================
 void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& acc_vec, ImU32 acc_u32, bool& cfg_changed) {
     ImGui::Columns(2, nullptr, false);
-    ImGui::SetColumnWidth(0, content_w * 0.45f);
-    ImGui::SetColumnWidth(1, content_w * 0.55f);
+    ImGui::SetColumnWidth(0, content_w * 0.48f);
+    ImGui::SetColumnWidth(1, content_w * 0.52f);
 
     const char* tgts[] = { "Head", "Body", "Auto" };
 
-    if (BeginPanel("Aimbot Core", ImVec2(0, 310), acc_vec, true, &aim_enable, acc_u32)) cfg_changed = true;
+    // === ЛЕВАЯ КОЛОНКА ===
+    
+    // Aimbot Core - Основные настройки
+    if (BeginPanel("Aimbot Core", ImVec2(0, 280), acc_vec, true, &aim_enable, acc_u32)) cfg_changed = true;
     if (DrawKeybinder("Main Bind:", &aim_key_main, 1, u8"Основная кнопка активации.")) cfg_changed = true;
-    if (DrawKeybinder("Sub Bind:", &aim_key_sub, 2, u8"Дополнительная кнопка.")) cfg_changed = true;
-    if (DrawKeybinder("Toggle Core:", &aim_toggle_key, 3, u8"Включение/выключение аимбота.")) cfg_changed = true;
+    if (DrawKeybinder("Toggle Key:", &aim_toggle_key, 3, u8"Включение/выключение аимбота.")) cfg_changed = true;
     if (CustomCombo("Target Part:", "##tgt", &aim_target, tgts, 3, u8"Часть тела для прицеливания.")) cfg_changed = true;
     if (DrawToggle("Keep Current Lock:", "##keep_lock", &aim_target_lock, acc_u32, u8"Не переключаться на другую цель автоматически.")) cfg_changed = true;
     if (CustomSliderInt("Switch Delay:", "##sw_dly", &aim_switch_delay, 0, 1000, "%d ms", acc_vec, u8"Задержка перед переключением на другую цель.")) cfg_changed = true;
     EndPanel();
 
-    if (BeginPanel("Speed Control", ImVec2(0, 160), acc_vec)) cfg_changed = true;
-    if (CustomSliderFloat("Min Sensitivity:", "##min_sp", &min_sensitivity, 0.1f, 20.0f, "%.3f", acc_vec, u8"Минимальная скорость наведения (0.1-20).")) cfg_changed = true;
-    if (CustomSliderFloat("Max Sensitivity:", "##max_sp", &max_sensitivity, 0.1f, 20.0f, "%.3f", acc_vec, u8"Максимальная скорость наведения (потолок, 0.1-20).")) cfg_changed = true;
+    // FOV Settings - Радиус захвата
+    if (BeginPanel("FOV Settings", ImVec2(0, 140), acc_vec)) cfg_changed = true;
+    if (CustomSliderFloat("Aim FOV:", "##f_a", &fov_aimbot, 10.0f, 500.0f, "%.0f px", acc_vec, u8"Радиус аимбота в пикселях.")) cfg_changed = true;
+    if (DrawToggle("Dynamic FOV:", "##dfov", &enable_dynamic_fov, acc_u32, u8"Адаптивный FOV.")) cfg_changed = true;
+    EndPanel();
+
+    // Speed Control - Скорость наведения (ГЛАВНАЯ НАСТРОЙКА!)
+    if (BeginPanel("Speed Control", ImVec2(0, 200), acc_vec)) cfg_changed = true;
+    ImGui::TextColored(acc_vec, "Min Sensitivity:");
+    HelpMarker(u8"Минимальная скорость движения мыши. Чем выше значение, тем быстрее аимбот на близких дистанциях.");
+    if (CustomSliderFloat("##min_sp", "##min_sp_lbl", &min_sensitivity, 0.01f, 5.0f, "%.3f", acc_vec)) cfg_changed = true;
+    
+    ImGui::Spacing();
+    ImGui::TextColored(acc_vec, "Max Sensitivity:");
+    HelpMarker(u8"Максимальная скорость движения мыши. Потолок скорости на дальних дистанциях.");
+    if (CustomSliderFloat("##max_sp", "##max_sp_lbl", &max_sensitivity, 0.1f, 20.0f, "%.3f", acc_vec)) cfg_changed = true;
+    
+    ImGui::Spacing();
+    ImGui::TextColored(acc_vec, "Max Move Step:");
+    HelpMarker(u8"Максимальное смещение мыши за один кадр. Ограничивает резкость движений.");
+    if (CustomSliderFloat("##max_move", "##max_move_lbl", &max_move_step, 10.0f, 500.0f, "%.1f px", acc_vec)) cfg_changed = true;
+    
+    ImGui::Spacing();
     if (CustomSliderInt("Detection Resolution:", "##det_res", &detection_resolution, 160, 960, "%d px", acc_vec, u8"Разрешение детекции для аимбота.")) cfg_changed = true;
     EndPanel();
 
-    if (BeginPanel("Pixelsmooth / Humanizer", ImVec2(0, 240), acc_vec)) cfg_changed = true;
-    if (DrawToggle("Enable Pixelsmooth:", "##pix_en", &pixelsmooth_enabled, acc_u32, u8"Сглаживание движений.")) cfg_changed = true;
-    if (pixelsmooth_enabled) {
-        if (CustomSliderFloat("Smooth Steps:", "##pix_val", &pixelsmooth_value, 2.0f, 32.0f, "%.0f", acc_vec, u8"Количество шагов сглаживания.")) cfg_changed = true;
-        if (CustomSliderFloat("Lerp Factor:", "##smooth_f", &smooth_factor, 0.01f, 0.5f, "%.3f", acc_vec, u8"Фактор плавности (lerp).")) cfg_changed = true;
-    }
-    if (DrawToggle("Humanizer:", "##hum_en", &humanizer_enable, acc_u32, u8"Человеческая рандомизация.")) cfg_changed = true;
-    if (humanizer_enable) {
-        if (CustomSliderFloat("Reaction Delay (ms):", "##hum_react", &hum_reaction_delay, 0.0f, 200.0f, "%.0f ms", acc_vec, u8"Задержка реакции.")) cfg_changed = true;
-        if (CustomSliderFloat("Tremor Scale:", "##hum_tremor", &hum_tremor_scale, 0.0f, 5.0f, "%.2f", acc_vec, u8"Размах дрожания рук.")) cfg_changed = true;
-        if (DrawToggle("Micro Movements:", "##hum_micro", &hum_micro_movements, acc_u32, u8"Микродвижения.")) cfg_changed = true;
-        if (hum_micro_movements) {
-            if (CustomSliderFloat("Micro Amplitude:", "##hum_micro_amp", &hum_micro_amplitude, 0.0f, 3.0f, "%.2f", acc_vec, u8"Амплитуда микродвижений.")) cfg_changed = true;
-        }
-        if (CustomSliderFloat("Path Randomization:", "##hum_path_rand", &hum_path_randomization, 0.0f, 2.0f, "%.2f", acc_vec, u8"Рандомизация пути.")) cfg_changed = true;
-        if (DrawToggle("Overshoot:", "##hum_overshoot_en", &hum_overshoot_enabled, acc_u32, u8"Искусственный перелёт.")) cfg_changed = true;
-        if (hum_overshoot_enabled) {
-            if (CustomSliderFloat("Overshoot Chance (%):", "##hum_overshoot_ch", &hum_overshoot_chance, 0.0f, 50.0f, "%.1f%%", acc_vec, u8"Шанс перелёта.")) cfg_changed = true;
-            if (CustomSliderFloat("Overshoot Amount:", "##hum_overshoot_amt", &hum_overshoot_amount, 1.0f, 3.0f, "%.2f", acc_vec, u8"Множитель перелёта.")) cfg_changed = true;
-            if (CustomSliderFloat("Return Speed:", "##hum_return_sp", &hum_return_speed, 0.1f, 1.0f, "%.2f", acc_vec, u8"Скорость возврата.")) cfg_changed = true;
-        }
-    }
-    EndPanel();
-
-    if (BeginPanel("Kalman Predictor", ImVec2(0, 240), acc_vec, true, &kalman_enable, acc_u32)) cfg_changed = true;
-    if (kalman_enable) {
-        if (CustomSliderFloat("Process Noise Position:", "##k_q", &kalman_q, 0.001f, 1.0f, "%.3f", acc_vec, u8"Шум процесса.")) cfg_changed = true;
-        if (CustomSliderFloat("Measurement Noise:", "##k_r", &kalman_r, 0.01f, 1.0f, "%.2f", acc_vec, u8"Шум измерений.")) cfg_changed = true;
-        if (DrawToggle("Compensate Detection Delay:", "##comp_delay", &kalman_compensate_detection_delay, acc_u32, u8"Учитывать задержку нейросети.")) cfg_changed = true;
-        if (CustomSliderFloat("Additional Prediction (ms):", "##add_pred", &kalman_additional_prediction_ms, -50.0f, 120.0f, "%.0f ms", acc_vec, u8"Дополнительное упреждение.")) cfg_changed = true;
-        if (CustomSliderFloat("Prediction Interval (sec):", "##pred_int", &prediction_interval, 0.0f, 0.2f, "%.3f", acc_vec, u8"Базовое упреждение.")) cfg_changed = true;
-    }
+    // Pixelsmooth / Smoothing - Плавность
+    if (BeginPanel("Pixelsmooth / Smoothing", ImVec2(0, 200), acc_vec, true, &pixelsmooth_enabled, acc_u32)) cfg_changed = true;
+    if (CustomSliderFloat("Smooth Factor:", "##smooth_f", &smooth_factor, 0.01f, 1.0f, "%.3f", acc_vec, u8"Фактор сглаживания. Меньше = плавнее, Больше = быстрее.")) cfg_changed = true;
+    if (CustomSliderFloat("Pixelsmooth Steps:", "##pix_val", &pixelsmooth_value, 1.0f, 32.0f, "%.0f frames", acc_vec, u8"Количество кадров для усреднения движения.")) cfg_changed = true;
+    ImGui::Separator();
+    ImGui::TextWrapped(u8"Эти настройки делают движение прицела более плавным и человечным. Меньший Smooth Factor = более плавное движение.");
     EndPanel();
 
     ImGui::NextColumn();
 
-    if (BeginPanel("Humanizer / Jitter", ImVec2(0, 200), acc_vec, true, &humanizer_enable, acc_u32)) cfg_changed = true;
-    if (humanizer_enable) {
-        if (CustomSliderFloat("Reaction Delay (ms):", "##h_del", &hum_reaction_delay, 0.0f, 100.0f, "%.0f ms", acc_vec, u8"Искусственная задержка.")) cfg_changed = true;
-        if (CustomSliderFloat("Tremor (Jitter):", "##h_trem", &hum_tremor_scale, 0.0f, 5.0f, "%.1f", acc_vec, u8"Амплитуда дрожания.")) cfg_changed = true;
-        if (DrawToggle("Micro Movements:", "##micro_mov", &hum_micro_movements, acc_u32, u8"Случайные микросмещения.")) cfg_changed = true;
-        if (hum_micro_movements && CustomSliderFloat("Micro Amplitude:", "##mic_amp", &hum_micro_amplitude, 0.0f, 3.0f, "%.1f px", acc_vec, u8"Сила микросмещений.")) cfg_changed = true;
-        if (CustomSliderFloat("Reaction Jitter (px):", "##reac_jit", &hum_reaction_jitter, 0.0f, 5.0f, "%.1f px", acc_vec, u8"Отклонение при захвате.")) cfg_changed = true;
-        if (CustomSliderFloat("Path Randomization:", "##path_rand", &hum_path_randomization, 0.0f, 2.0f, "%.2f", acc_vec, u8"Рандомизация траектории.")) cfg_changed = true;
-        if (DrawToggle("Overshoot Enabled:", "##overshoot_en", &hum_overshoot_enabled, acc_u32, u8"Искусственный перелёт.")) cfg_changed = true;
-        if (hum_overshoot_enabled) {
-            if (CustomSliderFloat("Overshoot Chance (%):", "##overshoot_ch", &hum_overshoot_chance, 0.0f, 50.0f, "%.1f %%", acc_vec, u8"Шанс перелёта.")) cfg_changed = true;
-            if (CustomSliderFloat("Overshoot Amount:", "##overshoot_amt", &hum_overshoot_amount, 1.0f, 3.0f, "%.2f x", acc_vec, u8"Множитель перелёта.")) cfg_changed = true;
-            if (CustomSliderFloat("Return Speed:", "##return_spd", &hum_return_speed, 0.5f, 1.0f, "%.2f", acc_vec, u8"Скорость возврата.")) cfg_changed = true;
-        }
+    // === ПРАВАЯ КОЛОНКА ===
+
+    // Humanizer - Человеческая рандомизация
+    if (BeginPanel("Humanizer", ImVec2(0, 280), acc_vec, true, &humanizer_enable, acc_u32)) cfg_changed = true;
+    if (CustomSliderFloat("Reaction Delay:", "##hum_react", &hum_reaction_delay, 0.0f, 200.0f, "%.0f ms", acc_vec, u8"Искусственная задержка реакции.")) cfg_changed = true;
+    if (CustomSliderFloat("Tremor Scale:", "##hum_tremor", &hum_tremor_scale, 0.0f, 5.0f, "%.2f", acc_vec, u8"Размах дрожания рук.")) cfg_changed = true;
+    
+    if (DrawToggle("Micro Movements:", "##hum_micro", &hum_micro_movements, acc_u32, u8"Микродвижения прицела.")) cfg_changed = true;
+    if (hum_micro_movements) {
+        if (CustomSliderFloat("Micro Amplitude:", "##hum_micro_amp", &hum_micro_amplitude, 0.0f, 3.0f, "%.2f px", acc_vec, u8"Амплитуда микродвижений.")) cfg_changed = true;
+    }
+    
+    if (CustomSliderFloat("Path Randomization:", "##hum_path_rand", &hum_path_randomization, 0.0f, 2.0f, "%.2f", acc_vec, u8"Рандомизация траектории.")) cfg_changed = true;
+    if (CustomSliderFloat("Reaction Jitter:", "##reac_jit", &hum_reaction_jitter, 0.0f, 5.0f, "%.1f px", acc_vec, u8"Отклонение при захвате цели.")) cfg_changed = true;
+    
+    if (DrawToggle("Overshoot:", "##hum_overshoot_en", &hum_overshoot_enabled, acc_u32, u8"Искусственный перелёт цели.")) cfg_changed = true;
+    if (hum_overshoot_enabled) {
+        if (CustomSliderFloat("Overshoot Chance:", "##hum_overshoot_ch", &hum_overshoot_chance, 0.0f, 50.0f, "%.1f%%", acc_vec, u8"Шанс перелёта.")) cfg_changed = true;
+        if (CustomSliderFloat("Overshoot Amount:", "##hum_overshoot_amt", &hum_overshoot_amount, 1.0f, 3.0f, "%.2f x", acc_vec, u8"Множитель перелёта.")) cfg_changed = true;
+        if (CustomSliderFloat("Return Speed:", "##hum_return_sp", &hum_return_speed, 0.1f, 1.0f, "%.2f", acc_vec, u8"Скорость возврата после перелёта.")) cfg_changed = true;
     }
     EndPanel();
 
-    if (BeginPanel("Pixelsmooth / Smoothing", ImVec2(0, 220), acc_vec, true, &pixelsmooth_enabled, acc_u32)) cfg_changed = true;
-    if (pixelsmooth_enabled) {
-        if (CustomSliderFloat("Aim Smooth:", "##aim_sm", &aim_smoother, 1.0f, 32.0f, "%.1f", acc_vec, u8"Основная плавность аимбота (1-32).")) cfg_changed = true;
-        if (CustomSliderFloat("Pixelsmooth Value:", "##ps_val", &pixelsmooth_value, 1.0f, 32.0f, "%.0f frames", acc_vec, u8"Количество кадров для усреднения.")) cfg_changed = true;
-        if (CustomSliderFloat("Smooth Factor (Lerp):", "##smooth_f", &smooth_factor, 0.0f, 0.5f, "%.3f", acc_vec, u8"Фактор сглаживания (lerp).")) cfg_changed = true;
-        ImGui::Separator();
-        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), u8"Эти настройки делают движение прицела более плавным и человечным.");
+    // Kalman Predictor - Предикция движения
+    if (BeginPanel("Kalman Predictor", ImVec2(0, 220), acc_vec, true, &kalman_enable, acc_u32)) cfg_changed = true;
+    if (kalman_enable) {
+        if (CustomSliderFloat("Process Noise (Q):", "##k_q", &kalman_q, 0.001f, 1.0f, "%.3f", acc_vec, u8"Шум процесса. Выше = агрессивнее предсказание.")) cfg_changed = true;
+        if (CustomSliderFloat("Measurement Noise (R):", "##k_r", &kalman_r, 0.01f, 1.0f, "%.2f", acc_vec, u8"Шум измерений. Выше = больше доверия к модели.")) cfg_changed = true;
+        if (DrawToggle("Compensate Detection Delay:", "##comp_delay", &kalman_compensate_detection_delay, acc_u32, u8"Учитывать задержку нейросети.")) cfg_changed = true;
+        if (CustomSliderFloat("Additional Prediction:", "##add_pred", &kalman_additional_prediction_ms, -50.0f, 120.0f, "%.0f ms", acc_vec, u8"Дополнительное упреждение в миллисекундах.")) cfg_changed = true;
+        if (CustomSliderFloat("Prediction Interval:", "##pred_int", &prediction_interval, 0.0f, 0.2f, "%.3f sec", acc_vec, u8"Базовое упреждение в секундах.")) cfg_changed = true;
     }
     EndPanel();
 
+    // Recoil Control (RCS) - Контроль отдачи
     if (BeginPanel("Recoil Control (RCS)", ImVec2(0, 150), acc_vec, true, &rcs_enable, acc_u32)) cfg_changed = true;
-    if (CustomSliderFloat("Pitch (down):", "##rcs_p", &rcs_pitch, 0.0f, 10.0f, "%.1f px", acc_vec, u8"Вертикальная компенсация.")) cfg_changed = true;
-    if (CustomSliderFloat("Yaw (L/R):", "##rcs_y", &rcs_yaw, -5.0f, 5.0f, "%.1f px", acc_vec, u8"Горизонтальная компенсация.")) cfg_changed = true;
+    if (CustomSliderFloat("Pitch (Down):", "##rcs_p", &rcs_pitch, 0.0f, 10.0f, "%.1f px", acc_vec, u8"Вертикальная компенсация отдачи.")) cfg_changed = true;
+    if (CustomSliderFloat("Yaw (Left/Right):", "##rcs_y", &rcs_yaw, -5.0f, 5.0f, "%.1f px", acc_vec, u8"Горизонтальная компенсация отдачи.")) cfg_changed = true;
     EndPanel();
 
-    if (BeginPanel("Misc", ImVec2(0, 130), acc_vec)) cfg_changed = true;
+    ImGui::Columns(1);
+    
+    // Misc - Дополнительные настройки
+    if (BeginPanel("Misc", ImVec2(0, 120), acc_vec)) cfg_changed = true;
     if (DrawToggle("Disable Headshot:", "##no_head", &disable_headshot, acc_u32, u8"Запретить прицеливание в голову.")) cfg_changed = true;
     if (DrawToggle("Lock X-Axis:", "##lock_x", &aim_lock_x, acc_u32, u8"Заблокировать горизонтальное перемещение.")) cfg_changed = true;
     if (DrawToggle("Lock Y-Axis:", "##lock_y", &aim_lock_y, acc_u32, u8"Заблокировать вертикальное перемещение.")) cfg_changed = true;
     EndPanel();
-
-    ImGui::Columns(1);
 }
 
 // ============================================================
