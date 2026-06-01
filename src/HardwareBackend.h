@@ -5,12 +5,11 @@
 #include <atomic>
 #include <cstdint>
 
-// Forward declaration для HANDLE и SOCKET чтобы избежать включения windows.h здесь
+// Forward declaration для HANDLE чтобы избежать включения windows.h здесь
 #ifdef _WIN32
     typedef void* HANDLE;
-    typedef unsigned int SOCKET;
 #else
-    typedef int SOCKET;
+    // На не-Windows платформах SOCKET определяется как int
 #endif
 
 enum class HardwareMode {
@@ -72,7 +71,11 @@ private:
 #else
     void* hComPort;
 #endif
-    SOCKET udpSocket;
+#ifdef _WIN32
+    unsigned int udpSocket;  // Используем unsigned int вместо SOCKET для избежания конфликта типов
+#else
+    int udpSocket;
+#endif
     // Используем opaque pointer или forward declaration для sockaddr_in
     // Реальное определение будет в .cpp файле где включен WinHeaders.h
     void* kmboxAddrPtr;  // указатель на sockaddr_in
