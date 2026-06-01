@@ -113,8 +113,9 @@ void Aimbot::SyncFromOverlay(Overlay& overlay) {
     target_offset_y = overlay.aim_offset_y;
     
     // Hardware
-    hardware_type = overlay.hardware_type;
+    hardware_type = overlay.hardware_mode_idx;  // Связываем hardware_mode_idx из UI с hardware_type в aimbot
     com_port = overlay.com_port;
+    bypass_mode = overlay.bypass_mode_idx;      // Добавляем синхронизацию bypass_mode
     
     // Elite / Ballistics
     elite_ballistics_enabled = overlay.elite_ballistics_enabled;
