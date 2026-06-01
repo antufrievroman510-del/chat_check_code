@@ -12,16 +12,6 @@
 #include "network_2pc.h"
 #include "imgui.h"
 #include "implot.h"
-#include <d3d11.h>
-#include <vector>
-#include <string>
-#include <mutex>
-#include <memory>
-#include "detector.h"
-#include "aimbot.h"
-#include "network_2pc.h"
-#include "imgui.h"
-#include "implot.h"
 
 class OneEuroFilter {
 private:

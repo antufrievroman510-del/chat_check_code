@@ -1,6 +1,6 @@
 #pragma once
 
-// Защита от повторного включения и конфликтов Winsock
+// Защита от конфликтов Winsock - должно быть ДО любых других заголовков
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -9,10 +9,19 @@
 #define NOMINMAX
 #endif
 
-// Сначала winsock2.h, потом windows.h, потом ws2tcpip.h
-#include <winsock2.h>
-#include <ws2tcpip.h>
+// Критически важно: определить это перед windows.h чтобы предотвратить автоматическое включение winsock.h
+#ifndef _WINSOCKAPI_
+#define _WINSOCKAPI_
+#endif
+
+// Сначала Windows API
 #include <windows.h>
+
+// Теперь безопасно включаем Winsock2 (после windows.h с защитой _WINSOCKAPI_)
+#include <winsock2.h>
+
+// Затем дополнительные сетевые заголовки
+#include <ws2tcpip.h>
 
 // Стандартные типы для сети
 #include <cstdint>
