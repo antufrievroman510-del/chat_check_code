@@ -29,7 +29,7 @@ HardwareBackend& HardwareBackend::Instance() {
     return instance;
 }
 
-HardwareBackend::HardwareBackend() : hComPort(nullptr), udpSocket(-1), kmboxAddrPtr(nullptr), mackuConnected(false), kmboxConnected(false) {}
+HardwareBackend::HardwareBackend() : hComPort(nullptr), udpSocket(0), kmboxAddrPtr(nullptr), mackuConnected(false), kmboxConnected(false) {}
 
 HardwareBackend::~HardwareBackend() {
     DisconnectMacku();
@@ -154,7 +154,7 @@ bool HardwareBackend::ConnectKMbox(const std::string& ip, int port) {
 #endif
     
     udpSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (udpSocket < 0) {
+    if (udpSocket == 0) {
         std::cerr << "Failed to create UDP socket" << std::endl;
         return false;
     }
@@ -173,7 +173,7 @@ bool HardwareBackend::ConnectKMbox(const std::string& ip, int port) {
 #else
         close(udpSocket);
 #endif
-        udpSocket = -1;
+        udpSocket = 0;
         delete addr;
         kmboxAddrPtr = nullptr;
         return false;
@@ -185,14 +185,14 @@ bool HardwareBackend::ConnectKMbox(const std::string& ip, int port) {
 }
 
 void HardwareBackend::DisconnectKMbox() {
-    if (udpSocket >= 0) {
+    if (udpSocket != 0) {
 #ifdef _WIN32
         closesocket(udpSocket);
         WSACleanup();
 #else
         close(udpSocket);
 #endif
-        udpSocket = -1;
+        udpSocket = 0;
     }
     // Освобождаем память для sockaddr_in
     if (kmboxAddrPtr != nullptr) {
@@ -207,7 +207,7 @@ bool HardwareBackend::IsKMboxConnected() const {
 }
 
 bool HardwareBackend::SendKMboxMove(int x, int y) {
-    if (!kmboxConnected.load() || udpSocket < 0 || kmboxAddrPtr == nullptr) return false;
+    if (!kmboxConnected.load() || udpSocket == 0 || kmboxAddrPtr == nullptr) return false;
     
     // Протокол KMbox Net: отправка структуры движения
     struct KMboxMovePacket {
@@ -231,7 +231,7 @@ bool HardwareBackend::SendKMboxMove(int x, int y) {
 }
 
 bool HardwareBackend::SendKMboxClick(uint8_t button) {
-    if (!kmboxConnected.load() || udpSocket < 0 || kmboxAddrPtr == nullptr) return false;
+    if (!kmboxConnected.load() || udpSocket == 0 || kmboxAddrPtr == nullptr) return false;
     
     // Протокол KMbox Net: клик
     struct KMboxClickPacket {
