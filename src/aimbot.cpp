@@ -21,6 +21,7 @@ extern std::atomic<float> g_last_inference_time;
 extern std::atomic<bool> g_is_target_locked;
 extern std::atomic<float> g_locked_screen_x;
 extern std::atomic<float> g_locked_screen_y;
+extern std::atomic<bool> g_remote_aim_key;  // Глобальная переменная из main.cpp
 
 // Глобальные переменные для совместимости
 static long long g_first_seen_time = 0;
@@ -203,6 +204,10 @@ void Aimbot::CloseHardware() {
 
 void Aimbot::SendHardwareMove(int x, int y) {
     if (x == 0 && y == 0) return;
+    
+    // [DEBUG] Для отладки: раскомментируйте для вывода в консоль
+    // std::cout << "[AIM DEBUG] Move: dx=" << x << " dy=" << y << " hw=" << hardware_type << std::endl;
+    
     if ((hardware_type == 5 || hardware_type == 6) && udp_socket != INVALID_SOCKET) {
         char buffer[64];
         if (hardware_type == 5) snprintf(buffer, sizeof(buffer), XOR("kmnet_move:%d:%d\n"), x, y);
@@ -221,6 +226,7 @@ void Aimbot::SendHardwareMove(int x, int y) {
         return;
     }
 
+    // КРИТИЧНО: Отправка через SendInput для hardware_type=0 (стандартная мышь Windows)
     if (hardware_type == 0 && DynamicSendInput) {
         INPUT input = { 0 };
         input.type = INPUT_MOUSE;
@@ -228,6 +234,8 @@ void Aimbot::SendHardwareMove(int x, int y) {
         input.mi.dy = y;
         input.mi.dwFlags = MOUSEEVENTF_MOVE;
         DynamicSendInput(1, &input, sizeof(INPUT));
+        // [DEBUG] Можно добавить логирование успешной отправки
+        // std::cout << "[AIM DEBUG] SendInput OK: " << x << "," << y << std::endl;
     }
 }
 
