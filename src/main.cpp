@@ -1035,7 +1035,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         if (overlay.apply_hw_flag) {
             overlay.apply_hw_flag = false;
             aim.com_port = overlay.com_port;
-            aim.hardware_type = overlay.hardware_type;
+            aim.hardware_type = overlay.hardware_mode_idx;  // ИСПРАВЛЕНО: было hardware_type (которого не существует)
+            aim.bypass_mode = overlay.bypass_mode_idx;      // Синхронизируем bypass_mode
+            std::cout << "[MAIN] Applying hardware settings: type=" << aim.hardware_type 
+                      << " bypass=" << aim.bypass_mode << std::endl;
             aim.InitHardware();
         }
         if (overlay.apply_res_flag) {

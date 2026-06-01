@@ -129,7 +129,8 @@ void Aimbot::SyncFromOverlay(Overlay& overlay) {
     max_move_step = overlay.max_move_step;
     
     // === КРИТИЧНО: Синхронизация m_config для AimMath::CalculateMove ===
-    m_config.enabled = aim_enable;
+    // Обновляем ВСЕ поля m_config ПЕРЕД каждым вызовом Update()
+    m_config.enabled = aim_enable;              // КРИТИЧНО: должно быть актуальным
     m_config.fov = fov;
     m_config.smooth = smooth_factor;
     m_config.fireKey = aim_key_main;
