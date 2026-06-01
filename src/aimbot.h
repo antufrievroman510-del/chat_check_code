@@ -31,6 +31,7 @@ public:
     ~Aimbot();
     
     void SetConfig(const AimConfig& cfg);
+    void SyncFromOverlay(class Overlay& overlay);  // Синхронизация с UI в реальном времени
     void Update(const std::vector<Detection>& detections, int screen_w, int screen_h,
         bool is_new_frame, long long current_time_ms, float zoom_scale = 1.0f);
     void ResetTarget();
