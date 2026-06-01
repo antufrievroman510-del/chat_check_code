@@ -17,8 +17,13 @@ bool KMboxMouse::Init() {
         return true;
     }
 
-    // Инициализация соединения с KMBox через метод интерфейса
-    bool success = m_kmbox->Init();
+    if (!m_kmbox) {
+        return false;
+    }
+
+    // Инициализация соединения с KMBox через прямой вызов метода подключения
+    // Передаем актуальные IP и порт из настроек обертки
+    bool success = m_kmbox->ConnectToDevice(m_ip, m_port);
     
     if (success) {
         m_initialized = true;
@@ -57,10 +62,19 @@ void KMboxMouse::Shutdown() {
 }
 
 void KMboxMouse::SetConnectionInfo(const std::string& ip, int port) {
+    // Если соединение активно, нужно переподключиться с новыми параметрами
+    bool was_initialized = m_initialized;
+    if (was_initialized) {
+        Shutdown();
+    }
+    
     m_ip = ip;
     m_port = port;
-    // Если устройство уже инициализировано, может потребоваться переподключение
-    // Это можно реализовать вызвав Shutdown() и затем Init(), если нужно применить настройки на лету
+    
+    // Автоматически не подключаем здесь, это сделает вызывающий код через Init()
+    if (was_initialized) {
+        Init();
+    }
 }
 
 } // namespace pwnz_ai
