@@ -18,33 +18,39 @@ set(ONNX_DIR "C:/BOGX_DEV/ONNX_1_18" CACHE PATH "Path to ONNX Runtime")
 set(IMGUI_DIR "C:/BOGX_DEV/Imgui" CACHE PATH "Path to ImGui")
 set(BYTE_TRACK_DIR "C:/BOGX_DEV/byte-track-eigen-main" CACHE PATH "Path to ByteTrack")
 set(EIGEN_DIR "C:/BOGX_DEV/eigen-master" CACHE PATH "Path to Eigen")
+set(HIDAPI_DIR "C:/BOGX_DEV/hid_api" CACHE PATH "Path to HIDAPI")
 
 include_directories("${CMAKE_SOURCE_DIR}")
 include_directories("${ONNX_DIR}/include")
 include_directories("${IMGUI_DIR}")
 include_directories("${BYTE_TRACK_DIR}/include")
 include_directories("${EIGEN_DIR}")
+include_directories("${HIDAPI_DIR}/include")
 
 # [ДОБАВЛЕНО] Исходники ByteTrack-Eigen (KalmanFilter, STrack, BYTETracker, lapjv и т.д.)
 file(GLOB BYTE_TRACK_SOURCES "${BYTE_TRACK_DIR}/src/*.cpp")
 
 add_executable(PWNZ_AI WIN32
-    "src/main.cpp"
-    "src/capture.cpp"
-    "src/capture.h"
-    "src/detector.cpp"
-    "src/detector.h"
-    "src/overlay.cpp"
-    "src/overlay.h"
-    "src/aimbot.h"
-    "src/aimbot.cpp"
-    "src/auth.h"
-    "src/auth.cpp"
-    "src/head_smoother.h"
-    "src/aim_kalman.h"
-    "src/AimbotTarget.cpp"
-    "src/AimbotTarget.h"
-    "src/network_2pc.h"
+    "main.cpp"
+    "capture.cpp"
+    "capture.h"
+    "detector.cpp"
+    "detector.h"
+    "overlay.cpp"
+    "overlay.h"
+    "aimbot.h"
+    "aimbot.cpp"
+    "auth.h"
+    "auth.cpp"
+    "head_smoother.h"
+    "aim_kalman.h"
+    "AimbotTarget.cpp"
+    "AimbotTarget.h"
+    "network_2pc.h"
+    "AimMath.h"
+    "AimMath.cpp"
+    "MouseController.h"
+    "MouseController.cpp"
     "${IMGUI_DIR}/imgui.cpp"
     "${IMGUI_DIR}/imgui_draw.cpp"
     "${IMGUI_DIR}/imgui_widgets.cpp"
@@ -61,7 +67,8 @@ target_link_libraries(PWNZ_AI PRIVATE
     windowsapp.lib
     "${ONNX_DIR}/lib/onnxruntime.lib"
     "${ONNX_DIR}/lib/DirectML.lib"
-    "${CMAKE_SOURCE_DIR}/src/VMProtectSDK64.lib"
+    "${CMAKE_SOURCE_DIR}/VMProtectSDK64.lib"
+    "${HIDAPI_DIR}/x64/hidapi.lib"
 )
 
 set_target_properties(PWNZ_AI PROPERTIES LINK_FLAGS "/DEBUG /OPT:REF /OPT:ICF /SUBSYSTEM:WINDOWS")
@@ -70,4 +77,5 @@ add_custom_command(TARGET PWNZ_AI POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ONNX_DIR}/lib/onnxruntime.dll" $<TARGET_FILE_DIR:PWNZ_AI>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ONNX_DIR}/lib/onnxruntime_providers_shared.dll" $<TARGET_FILE_DIR:PWNZ_AI>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ONNX_DIR}/lib/DirectML.dll" $<TARGET_FILE_DIR:PWNZ_AI>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${HIDAPI_DIR}/x64/hidapi.dll" $<TARGET_FILE_DIR:PWNZ_AI>
 )

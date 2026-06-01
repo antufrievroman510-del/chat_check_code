@@ -218,6 +218,9 @@ CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 //Path to Eigen
 EIGEN_DIR:PATH=C:/BOGX_DEV/eigen-master
 
+//Path to HIDAPI
+HIDAPI_DIR:PATH=C:/BOGX_DEV/hid_api
+
 //Path to ImGui
 IMGUI_DIR:PATH=C:/BOGX_DEV/Imgui
 
