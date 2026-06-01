@@ -232,6 +232,9 @@ public:
     // Test values
     int test_move_x = 50;
     int test_move_y = 50;
+    
+    // Internal buffer for ImGui InputInt (temporary fix)
+    int kmbox_port_tmp = 8888;
 
     // ---- Основные методы ----
     bool Initialize();
