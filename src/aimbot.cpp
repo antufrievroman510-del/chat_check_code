@@ -111,11 +111,19 @@ void Aimbot::SyncFromOverlay(Overlay& overlay) {
     aim_lock_y = overlay.aim_lock_y;
     target_offset_x = overlay.aim_offset_x;
     target_offset_y = overlay.aim_offset_y;
+    enable_dynamic_fov = overlay.enable_dynamic_fov;  // Синхронизация динамического FOV
     
     // Hardware
     hardware_type = overlay.hardware_mode_idx;  // Связываем hardware_mode_idx из UI с hardware_type в aimbot
-    com_port = overlay.com_port;
+    // Парсим COM-порт из строки "COM3" -> 3
+    if (std::string(overlay.com_port_buf).substr(0, 3) == "COM") {
+        com_port = std::stoi(std::string(overlay.com_port_buf).substr(3));
+    } else {
+        com_port = overlay.com_port; // Fallback
+    }
     bypass_mode = overlay.bypass_mode_idx;      // Добавляем синхронизацию bypass_mode
+    net_ip = overlay.kmbox_ip_buf;              // Синхронизация IP для KMbox
+    net_port = overlay.kmbox_port;              // Синхронизация порта для KMbox
     
     // Elite / Ballistics
     elite_ballistics_enabled = overlay.elite_ballistics_enabled;
