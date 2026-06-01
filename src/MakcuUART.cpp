@@ -10,9 +10,29 @@ constexpr unsigned char PACKET_TYPE_MOVE = 0x01;
 constexpr unsigned char PACKET_TYPE_MOVE_ABS = 0x02;
 
 MakcuUART::MakcuUART() 
-    : hComPort(nullptr), isConnected(false), packetDelayMs(1) {}
+    : hComPort(nullptr), isConnected(false), packetDelayMs(1), m_portName("COM3"), m_baudRate(9600) {}
 
 MakcuUART::~MakcuUART() {
+    Shutdown();
+}
+
+// Реализация интерфейса IMouseInput
+bool MakcuUART::Init() {
+    return Connect(m_portName, m_baudRate);
+}
+
+void MakcuUART::Move(int dx, int dy) {
+    MoveMouse(dx, dy);
+}
+
+void MakcuUART::Click(int button) {
+    // В текущей прошивке Makcu нет команды клика через UART.
+    // Можно расширить протокол или оставить заглушку.
+    // Для совместимости с интерфейсом просто возвращаем.
+    (void)button; 
+}
+
+void MakcuUART::Shutdown() {
     Disconnect();
 }
 

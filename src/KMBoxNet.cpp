@@ -13,9 +13,33 @@ constexpr unsigned char KMBOX_HEADER_1 = 0xEB;
 constexpr unsigned char KMBOX_HEADER_2 = 0x90;
 
 KMBoxNet::KMBoxNet() 
-    : hSocket(INVALID_SOCKET), isConnected(false), packetDelayMs(1), winsockInitialized(false) {}
+    : hSocket(INVALID_SOCKET), isConnected(false), packetDelayMs(1), winsockInitialized(false), m_ipAddress("192.168.1.100"), m_port(5555) {}
 
 KMBoxNet::~KMBoxNet() {
+    Shutdown();
+}
+
+// Реализация интерфейса IMouseInput
+bool KMBoxNet::Init() {
+    return ConnectToDevice(m_ipAddress, m_port);
+}
+
+void KMBoxNet::Move(int dx, int dy) {
+    MoveMouse(dx, dy);
+}
+
+void KMBoxNet::Click(int button) {
+    uint8_t btn = 0;
+    if (button == 0) btn = KMBoxButton::LEFT;
+    else if (button == 1) btn = KMBoxButton::RIGHT;
+    else if (button == 2) btn = KMBoxButton::MIDDLE;
+    
+    MouseButton(btn, true);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    MouseButton(btn, false);
+}
+
+void KMBoxNet::Shutdown() {
     Disconnect();
 }
 
