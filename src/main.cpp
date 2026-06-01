@@ -1036,6 +1036,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             overlay.apply_hw_flag = false;
             
             // Синхронизация всех hardware настроек из overlay в aimbot
+            // Aimbot сам распарсит com_port_buf в SyncFromOverlay, но для безопасности продублируем
             aim.com_port = std::atoi(overlay.com_port_buf + 3); // "COM3" -> 3
             aim.hardware_type = overlay.hardware_mode_idx;
             aim.bypass_mode = overlay.bypass_mode_idx;
@@ -1049,6 +1050,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                       << " kmbox_port=" << aim.net_port
                       << std::endl;
             
+            // Пересоздаём устройство ввода с новыми настройками
+            aim.CloseHardware();
             aim.InitHardware();
         }
         if (overlay.apply_res_flag) {
