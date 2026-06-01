@@ -13,6 +13,12 @@ public:
     KMBoxNet();
     ~KMBoxNet();
 
+    // Методы интерфейса IMouseInput (для использования как самостоятельный бэкенд)
+    bool Init();
+    void Move(int dx, int dy);
+    void Click(int button);
+    void Shutdown();
+
     // Инициализация сетевого подключения
     bool ConnectToDevice(const std::string& ipAddress, int port = 5555);
     
@@ -40,6 +46,8 @@ private:
     int packetDelayMs;
     std::mutex mtx;
     bool winsockInitialized;
+    std::string m_ipAddress;  // IP для инициализации через Init()
+    int m_port;               // Порт для инициализации через Init()
 
     // Инициализация WinSock
     bool InitializeWinSock();

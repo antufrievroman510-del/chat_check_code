@@ -17,10 +17,8 @@ bool KMboxMouse::Init() {
         return true;
     }
 
-    // Инициализация соединения с KMBox
-    // Предполагается, что KMBoxNet имеет метод Connect или аналогичный
-    // Если в KMBoxNet логика иная, адаптировать здесь
-    bool success = m_kmbox->Connect(m_ip, m_port);
+    // Инициализация соединения с KMBox через метод интерфейса
+    bool success = m_kmbox->Init();
     
     if (success) {
         m_initialized = true;
@@ -38,8 +36,7 @@ void KMboxMouse::Move(int dx, int dy) {
     }
 
     // Отправка команды перемещения мыши в KMBox
-    // Адаптировать под реальный API KMBoxNet
-    m_kmbox->MoveRelative(dx, dy);
+    m_kmbox->Move(dx, dy);
 }
 
 void KMboxMouse::Click(int button) {
@@ -47,8 +44,7 @@ void KMboxMouse::Click(int button) {
         return;
     }
 
-    // Эмуляция нажатия кнопки
-    // 0 - ЛКМ, 1 - ПКМ, 2 - СКМ (адаптировать под KMBoxNet)
+    // Эмуляция нажатия кнопки через интерфейс KMBoxNet
     m_kmbox->Click(button);
 }
 
