@@ -57,6 +57,8 @@ add_executable(PWNZ_AI WIN32
     "MakcuUART.cpp"
     "KMBoxNet.h"
     "KMBoxNet.cpp"
+    "HardwareBackend.h"
+    "HardwareBackend.cpp"
     "${IMGUI_DIR}/imgui.cpp"
     "${IMGUI_DIR}/imgui_draw.cpp"
     "${IMGUI_DIR}/imgui_widgets.cpp"

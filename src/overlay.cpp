@@ -48,6 +48,7 @@
 #include "xorstr.hpp"
 #include "VMProtectSDK.h"
 #include "head_smoother.h"
+#include "HardwareBackend.h"
 
 extern HeadSmoother g_head_smoother;
 #pragma comment(lib, "dwmapi.lib")
@@ -1221,15 +1222,23 @@ void Overlay::RenderProfileTab(float content_w, float content_h, const ImVec4& a
 }
 
 // ============================================================
+ интеграция-сетевых-компонентов-889bc
+
 // ============================================================
+ main
 // RenderHardwareTab (вкладка Hardware/2PC)
 // ============================================================
 void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& acc_vec, ImU32 acc_u32, bool& cfg_changed) {
     ImGui::Columns(2, nullptr, false);
     ImGui::SetColumnWidth(0, content_w * 0.5f);
 
+интеграция-сетевых-компонентов-889bc
+    // Left Column - Main Settings
+    if (BeginPanel("Hardware Mode Selection", ImVec2(0, 280), acc_vec)) cfg_changed = true;
+
     // === ЛЕВАЯ КОЛОНКА: Основные настройки Hardware ===
     BeginPanel("Hardware Output Mode", ImVec2(0, 280), acc_vec);
+ main
     
     const char* hw_modes[] = {
         "Local Mouse (SendInput)",
@@ -1237,6 +1246,131 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         "KMbox Net (UDP)"
     };
     
+ интеграция-сетевых-компонентов-889bc
+    if (CustomCombo("Mode:", "##hw_mode", &hardware_mode_idx, hw_modes, 3, 
+        is_russian ? u8"Выберите режим работы" : "Select hardware mode")) {
+        cfg_changed = true;
+    }
+    
+    ImGui::Spacing();
+    
+    // Enable Hardware Toggle
+    if (DrawToggle("Enable Hardware:", "##hw_en", &hw_enabled, acc_u32, 
+        is_russian ? u8"Включить аппаратный ввод" : "Enable hardware input")) {
+        cfg_changed = true;
+    }
+    
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    // Bypass Options
+    const char* bypass_modes[] = {
+        "None",
+        "GHub",
+        "Razer",
+        "Random Delay"
+    };
+    
+    if (CustomCombo("Bypass Mode:", "##bypass", &bypass_mode_idx, bypass_modes, 4,
+        is_russian ? u8"Режим обхода античита" : "Anti-cheat bypass mode")) {
+        cfg_changed = true;
+    }
+    
+    if (bypass_mode_idx == 3) { // Random Delay
+        ImGui::Spacing();
+        ImGui::Text(is_russian ? u8"Random Delay (ms):" : "Random Delay (ms):");
+        ImGui::PushItemWidth(100);
+        if (ImGui::SliderInt("##rd_min", &random_delay_min, 1, 50, "%d ms")) cfg_changed = true;
+        ImGui::SameLine();
+        if (ImGui::SliderInt("##rd_max", &random_delay_max, 10, 100, "%d ms")) cfg_changed = true;
+        ImGui::PopItemWidth();
+        HelpMarker(is_russian ? u8"Мин/макс задержка для рандомизации" : "Min/Max delay for randomization");
+    }
+    
+    EndPanel();
+
+    ImGui::NextColumn();
+
+    // Right Column - Device Specific Settings
+    if (hardware_mode_idx == 1) {
+        // Makcu UART Settings
+        if (BeginPanel("Makcu (UART/COM) Settings", ImVec2(0, 280), acc_vec)) cfg_changed = true;
+        
+        ImGui::Text(is_russian ? u8"COM Порт:" : "COM Port:");
+        ImGui::PushItemWidth(150);
+        if (ImGui::InputText("##com_port", com_port_buf, sizeof(com_port_buf))) cfg_changed = true;
+        ImGui::PopItemWidth();
+        HelpMarker(is_russian ? u8"Например: COM3" : "Example: COM3");
+        
+        ImGui::Spacing();
+        
+        const char* baud_rates[] = { "9600", "19200", "38400", "57600", "115200" };
+        int baud_values[] = { 9600, 19200, 38400, 57600, 115200 };
+        
+        ImGui::Text(is_russian ? u8"Baud Rate:" : "Baud Rate:");
+        ImGui::PushItemWidth(150);
+        if (ImGui::Combo("##baud", &baud_rate_idx, baud_rates, IM_ARRAYSIZE(baud_rates))) cfg_changed = true;
+        ImGui::PopItemWidth();
+        
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        
+        auto& hw = HardwareBackend::Instance();
+        bool connected = hw.IsMackuConnected();
+        
+        if (!connected) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
+            if (ImGui::Button("Connect Makcu", ImVec2(150, 35))) {
+                hw.ConnectMacku(com_port_buf, baud_values[baud_rate_idx]);
+            }
+            ImGui::PopStyleColor();
+        } else {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
+            if (ImGui::Button("Disconnect Makcu", ImVec2(150, 35))) {
+                hw.DisconnectMacku();
+            }
+            ImGui::PopStyleColor();
+        }
+        
+        ImGui::SameLine();
+        if (connected) {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "CONNECTED");
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "DISCONNECTED");
+        }
+        
+        EndPanel();
+        
+    } else if (hardware_mode_idx == 2) {
+        // KMbox Net Settings
+        if (BeginPanel("KMbox Net (UDP) Settings", ImVec2(0, 280), acc_vec)) cfg_changed = true;
+        
+        ImGui::Text(is_russian ? u8"IP Адрес:" : "IP Address:");
+        ImGui::PushItemWidth(200);
+        if (ImGui::InputText("##kmbox_ip", kmbox_ip_buf, sizeof(kmbox_ip_buf))) cfg_changed = true;
+        ImGui::PopItemWidth();
+        HelpMarker(is_russian ? u8"Например: 192.168.1.100" : "Example: 192.168.1.100");
+        
+        ImGui::Spacing();
+        
+        ImGui::Text(is_russian ? u8"Порт:" : "Port:");
+        ImGui::PushItemWidth(100);
+        if (ImGui::InputInt("##kmbox_port", &kmbox_port)) cfg_changed = true;
+        ImGui::PopItemWidth();
+        
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        
+        auto& hw = HardwareBackend::Instance();
+        bool connected = hw.IsKMboxConnected();
+        
+        if (!connected) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
+            if (ImGui::Button("Connect KMbox", ImVec2(150, 35))) {
+                hw.ConnectKMbox(kmbox_ip_buf, kmbox_port);
+
     if (CustomCombo("Mouse Method:", "##hw_mode", &hardware_type, hw_modes, 3, 
         is_russian ? u8"Выбор метода ввода мыши." : "Select mouse input method.")) {
         cfg_changed = true;
@@ -1315,23 +1449,52 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
                 // Здесь будет вызов HardwareController::InitializeKMBox(kmbox_ip_buf, kmbox_port)
                 kmbox_connected = true;
                 cfg_changed = true;
+ main
             }
+            ImGui::PopStyleColor();
         } else {
+ интеграция-сетевых-компонентов-889bc
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
+            if (ImGui::Button("Disconnect KMbox", ImVec2(150, 35))) {
+                hw.DisconnectKMbox();
+
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.6f));
             if (ImGui::Button("Disconnect", ImVec2(-1, 35))) {
                 // Здесь будет вызов HardwareController::CloseKMBox()
                 kmbox_connected = false;
                 cfg_changed = true;
+ main
             }
             ImGui::PopStyleColor();
         }
         
         ImGui::SameLine();
+ интеграция-сетевых-компонентов-889bc
+        if (connected) {
+
         if (kmbox_connected) {
+ main
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "CONNECTED");
         } else {
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "DISCONNECTED");
         }
+ интеграция-сетевых-компонентов-889bc
+        
+        EndPanel();
+    } else {
+        // Local Mouse Info
+        if (BeginPanel("Local Mouse (SendInput)", ImVec2(0, 280), acc_vec)) {
+            ImGui::TextColored(acc_vec, is_russian ? u8"Стандартный ввод Windows" : "Standard Windows Input");
+            ImGui::Spacing();
+            ImGui::TextWrapped(is_russian ? 
+                u8"Используется API SendInput для эмуляции мыши.\nНе требует дополнительного оборудования." :
+                "Uses SendInput API for mouse emulation.\nNo additional hardware required.");
+            ImGui::Spacing();
+            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), 
+                is_russian ? u8"⚠ Может определяться античитами" : "⚠ May be detected by anti-cheats");
+        }
+        EndPanel();
+
     }
     
     // Для Local Mouse
@@ -1348,9 +1511,36 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     if (DrawToggle("Enable Hardware", "##en_hw", &enable_hardware, acc_u32,
         is_russian ? u8"Активировать выбранный метод ввода" : "Activate selected input method")) {
         cfg_changed = true;
+ main
     }
+
+    ImGui::Columns(1);
     
+    // Bottom Section - Quick Guide
     ImGui::Spacing();
+ интеграция-сетевых-компонентов-889bc
+    if (BeginPanel(is_russian ? u8"📖 Быстрая инструкция" : "📖 Quick Guide", ImVec2(-1, 120), acc_vec)) {
+        ImGui::Columns(3, nullptr, false);
+        
+        ImGui::TextColored(acc_vec, is_russian ? u8"Makcu:" : "Makcu:");
+        ImGui::TextWrapped(is_russian ? 
+            u8"1. Подключи плату\n2. Узнай COM-порт\n3. Введи порт и Baud\n4. Нажми Connect" :
+            "1. Connect board\n2. Find COM port\n3. Enter port & Baud\n4. Click Connect");
+        
+        ImGui::NextColumn();
+        ImGui::TextColored(acc_vec, is_russian ? u8"KMbox:" : "KMbox:");
+        ImGui::TextWrapped(is_russian ? 
+            u8"1. Подключи к игровому ПК\n2. Настрой сеть\n3. Введи IP и порт\n4. Нажми Connect" :
+            "1. Connect to gaming PC\n2. Configure network\n3. Enter IP & port\n4. Click Connect");
+        
+        ImGui::NextColumn();
+        ImGui::TextColored(acc_vec, is_russian ? u8"Тест:" : "Test:");
+        ImGui::TextWrapped(is_russian ? 
+            u8"Перейди во вкладку 'Check HW'\nИспользуй тестовые кнопки\nДля проверки работы" :
+            "Go to 'Check HW' tab\nUse test buttons\nto verify operation");
+        
+        ImGui::Columns(1);
+
     
     const char* bypass_modes[] = {
         "None (Direct)",
@@ -1363,6 +1553,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     if (CustomCombo("Bypass Mode:", "##bypass", &bypass_mode, bypass_modes, 4,
         is_russian ? u8"Режим обхода античита" : "Anti-cheat bypass mode")) {
         cfg_changed = true;
+ main
     }
     
     if (bypass_mode == 3) {
@@ -1373,6 +1564,8 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     }
     
     EndPanel();
+ интеграция-сетевых-компонентов-889bc
+
     
     ImGui::NextColumn();
     
@@ -1478,6 +1671,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     EndPanel();
 
     ImGui::Columns(1);
+ main
 }
 
 // ============================================================
@@ -1557,29 +1751,234 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     ImGui::Columns(2, nullptr, false);
     ImGui::SetColumnWidth(0, content_w * 0.5f);
 
-    BeginPanel("Stress Test", ImVec2(0, 460), acc_vec);
-    ImGui::TextWrapped(u8"Тест пропускной способности.");
-    if (!is_benchmarking && !bench_done) {
-        if (ImGui::Button("START", ImVec2(200, 40))) { is_benchmarking = true; bench_prog = 0.0f; }
+    // Left Column - Hardware Test Panel
+    if (BeginPanel("Hardware Test Panel", ImVec2(0, 350), acc_vec)) cfg_changed = true;
+    
+    ImGui::TextColored(acc_vec, is_russian ? u8"Тестирование движения:" : "Movement Test:");
+    ImGui::Spacing();
+    
+    ImGui::Text(is_russian ? u8"X:" : "X:");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(100);
+    if (ImGui::InputInt("##test_x", &test_move_x)) cfg_changed = true;
+    ImGui::PopItemWidth();
+    
+    ImGui::SameLine();
+    ImGui::Text(is_russian ? u8"Y:" : "Y:");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(100);
+    if (ImGui::InputInt("##test_y", &test_move_y)) cfg_changed = true;
+    ImGui::PopItemWidth();
+    
+    ImGui::Spacing();
+    
+    auto& hw = HardwareBackend::Instance();
+    
+    // Test Move Button
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 0.8f));
+    if (ImGui::Button(is_russian ? u8"Test Move Mouse" : "Test Move Mouse", ImVec2(200, 40))) {
+        if (hw_enabled) {
+            if (hardware_mode_idx == 1 && hw.IsMackuConnected()) {
+                hw.SendMackuMove(test_move_x, test_move_y);
+            } else if (hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
+                hw.SendKMboxMove(test_move_x, test_move_y);
+            } else if (hardware_mode_idx == 0) {
+                // Local mouse - use SendInput
+                #ifdef _WIN32
+                INPUT input = {};
+                input.type = INPUT_MOUSE;
+                input.mi.dx = test_move_x;
+                input.mi.dy = test_move_y;
+                input.mi.dwFlags = MOUSEEVENTF_MOVE;
+                SendInput(1, &input, sizeof(INPUT));
+                #endif
+            }
+        } else {
+            // Fallback to local input even if hardware not enabled
+            #ifdef _WIN32
+            INPUT input = {};
+            input.type = INPUT_MOUSE;
+            input.mi.dx = test_move_x;
+            input.mi.dy = test_move_y;
+            input.mi.dwFlags = MOUSEEVENTF_MOVE;
+            SendInput(1, &input, sizeof(INPUT));
+            #endif
+        }
     }
-    if (is_benchmarking) {
-        bench_prog += ImGui::GetIO().DeltaTime / 3.0f;
-        ImGui::ProgressBar(bench_prog, ImVec2(-1, 20), "");
-        if (bench_prog >= 1.0f) { is_benchmarking = false; bench_done = true; }
+    ImGui::PopStyleColor();
+    HelpMarker(is_russian ? u8"Сдвинуть курсор на указанные значения" : "Move cursor by specified values");
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    ImGui::TextColored(acc_vec, is_russian ? u8"Тестирование кликов:" : "Click Test:");
+    ImGui::Spacing();
+    
+    // Test Left Click
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.7f, 0.2f, 0.8f));
+    if (ImGui::Button(is_russian ? u8"Test Left Click" : "Test Left Click", ImVec2(200, 35))) {
+        if (hw_enabled) {
+            if (hardware_mode_idx == 1 && hw.IsMackuConnected()) {
+                hw.SendMackuClick(1); // Left click
+            } else if (hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
+                hw.SendKMboxClick(1); // Left click
+            } else {
+                #ifdef _WIN32
+                INPUT inputs[2] = {};
+                inputs[0].type = INPUT_MOUSE;
+                inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+                inputs[1].type = INPUT_MOUSE;
+                inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+                SendInput(2, inputs, sizeof(INPUT));
+                #endif
+            }
+        } else {
+            #ifdef _WIN32
+            INPUT inputs[2] = {};
+            inputs[0].type = INPUT_MOUSE;
+            inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+            inputs[1].type = INPUT_MOUSE;
+            inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+            SendInput(2, inputs, sizeof(INPUT));
+            #endif
+        }
     }
-    if (bench_done) {
-        ImGui::TextColored(ImVec4(0.1f, 1.0f, 0.1f, 1.0f), u8"Тест завершён!");
-        ImGui::Text(u8"Оценка: 8.5/10");
-        if (ImGui::Button(u8"Повторить", ImVec2(150, 30))) bench_done = false;
+    ImGui::PopStyleColor();
+    
+    ImGui::Spacing();
+    
+    // Test Double Click
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.5f, 0.2f, 0.8f));
+    if (ImGui::Button(is_russian ? u8"Test Double Click" : "Test Double Click", ImVec2(200, 35))) {
+        if (hw_enabled) {
+            if (hardware_mode_idx == 1 && hw.IsMackuConnected()) {
+                hw.SendMackuClick(1);
+                Sleep(50);
+                hw.SendMackuClick(1);
+            } else if (hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
+                hw.SendKMboxClick(1);
+                Sleep(50);
+                hw.SendKMboxClick(1);
+            } else {
+                #ifdef _WIN32
+                INPUT inputs[4] = {};
+                inputs[0].type = INPUT_MOUSE;
+                inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+                inputs[1].type = INPUT_MOUSE;
+                inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+                inputs[2].type = INPUT_MOUSE;
+                inputs[2].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+                inputs[3].type = INPUT_MOUSE;
+                inputs[3].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+                SendInput(4, inputs, sizeof(INPUT));
+                #endif
+            }
+        } else {
+            #ifdef _WIN32
+            INPUT inputs[4] = {};
+            inputs[0].type = INPUT_MOUSE;
+            inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+            inputs[1].type = INPUT_MOUSE;
+            inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+            inputs[2].type = INPUT_MOUSE;
+            inputs[2].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+            inputs[3].type = INPUT_MOUSE;
+            inputs[3].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+            SendInput(4, inputs, sizeof(INPUT));
+            #endif
+        }
     }
+    ImGui::PopStyleColor();
+    
     EndPanel();
 
     ImGui::NextColumn();
-    BeginPanel("Hardware Debug", ImVec2(0, 460), acc_vec);
-    if (ImGui::Button(u8"Сдвиг мыши (X+50,Y+50)", ImVec2(250, 40))) {}
+
+    // Right Column - Status & Info
+    BeginPanel("Hardware Status", ImVec2(0, 200), acc_vec);
+    
+    ImGui::TextColored(acc_vec, is_russian ? u8"Текущий режим:" : "Current Mode:");
     ImGui::Spacing();
-    if (ImGui::Button(u8"Тестовый Клик", ImVec2(250, 40))) {}
+    
+    const char* mode_names[] = {
+        "Local Mouse (SendInput)",
+        "Makcu (UART/COM)",
+        "KMbox Net (UDP)"
+    };
+    
+    ImGui::Text("%s", mode_names[hardware_mode_idx]);
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    ImGui::TextColored(acc_vec, is_russian ? u8"Статус оборудования:" : "Hardware Status:");
+    ImGui::Spacing();
+    
+    bool macku_connected = hw.IsMackuConnected();
+    bool kmbox_connected = hw.IsKMboxConnected();
+    
+    if (macku_connected) {
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ Makcu: CONNECTED");
+        ImGui::Text(is_russian ? u8"Порт: %s" : "Port: %s", com_port_buf);
+    } else {
+        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "✗ Makcu: DISCONNECTED");
+    }
+    
+    ImGui::Spacing();
+    
+    if (kmbox_connected) {
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ KMbox: CONNECTED");
+        ImGui::Text(is_russian ? u8"IP: %s:%d" : "IP: %s:%d", kmbox_ip_buf, kmbox_port);
+    } else {
+        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "✗ KMbox: DISCONNECTED");
+    }
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    if (hw_enabled) {
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
+            is_russian ? u8"✅ Hardware ENABLED" : "✅ Hardware ENABLED");
+    } else {
+        ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), 
+            is_russian ? u8"⚠ Hardware DISABLED" : "⚠ Hardware DISABLED");
+    }
+    
     EndPanel();
+    
+    ImGui::Spacing();
+    
+    BeginPanel(is_russian ? u8"📋 Информация" : "📋 Information", ImVec2(0, content_h - 200 - 20), acc_vec);
+    
+    ImGui::TextWrapped(is_russian ? 
+        u8"Для проверки работы:\n"
+        "1. Выбери режим в вкладке 'Hardware/2PC'\n"
+        "2. Подключи устройство (Connect)\n"
+        "3. Включи 'Enable Hardware'\n"
+        "4. Вернись сюда и нажми тестовые кнопки\n"
+        "5. Курсор должен сдвинуться или произойти клик" :
+        "To verify operation:\n"
+        "1. Select mode in 'Hardware/2PC' tab\n"
+        "2. Connect device (Connect button)\n"
+        "3. Enable 'Enable Hardware'\n"
+        "4. Come back here and click test buttons\n"
+        "5. Cursor should move or click should occur");
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), 
+        is_russian ? u8"⚠ Примечание:" : "⚠ Note:");
+    ImGui::TextWrapped(is_russian ? 
+        u8"Если hardware не подключен, тесты будут использовать локальный ввод Windows (SendInput)." :
+        "If hardware is not connected, tests will use local Windows input (SendInput).");
+    
+    EndPanel();
+
     ImGui::Columns(1);
 }
 

@@ -1,3 +1,28 @@
+интеграция-сетевых-компонентов-889bc
+```
+# Build artifacts
+*.o
+*.obj
+*.a
+*.so
+*.dll
+*.exe
+*.out
+
+# CMake build directories
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+compile_commands.json
+
+# Dependencies
+venv/
+.venv/
+__pycache__/
+*.egg-info/
+=======
 интеграция-аимбота-и-макку-5bcc0
 # Compiled and build artifacts
 *.o
@@ -15,11 +40,17 @@ dist/
 build/
 target/
 .gradle/
+ main
 
 # Logs and temp files
 *.log
 *.tmp
+*интеграция-сетевых-компонентов-889bc
+# Editors
+.vscode/
+.idea/
 *.swp
+*.swo
 
 # Environment
 .env
@@ -29,15 +60,26 @@ target/
 # Editors
 .vscode/
 .idea/
+ main
 
 # System files
 .DS_Store
 Thumbs.db
+ интеграция-сетевых-компонентов-889bc
+.env
+.env.local
+*.env.*
+=======
+ main
 
 # Coverage
 coverage/
 htmlcov/
 .coverage
+
+ интеграция-сетевых-компонентов-889bc
+# Original rules preserved
+```
 
 # Compressed files
 *.zip
@@ -63,4 +105,5 @@ htmlcov/
 *.tar.xz
 *.tar.zst
 Nothing needs to be added to the .gitignore file since the changes only include source code header files (.h) which should not be ignored.
+main
 main
