@@ -16,6 +16,11 @@
 #include "AimbotTarget.h"
 #include "AimMath.h"
 #include "MouseController.h"
+#include "IMouseInput.h"
+#include "SendInputMouse.h"
+#include "MakcuMouse.h"
+#include "KMboxMouse.h"
+#include <memory>
 
 // ============================================================
 // Класс Aimbot
@@ -104,6 +109,9 @@ public:
 
 private:
     AimConfig m_config;
+
+    // Полиморфный указатель на метод ввода (интерфейс IMouseInput)
+    std::unique_ptr<IMouseInput> m_mouseInput;
 
     std::pair<double, double> degToCounts(double degX, double degY) const;
     double currentDetectionDelaySec() const;

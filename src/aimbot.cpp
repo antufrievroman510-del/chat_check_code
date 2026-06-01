@@ -174,48 +174,55 @@ bool Aimbot::InitHardware() {
     MUTATE_SIGNATURE;
     CloseHardware();
 
-    if (hardware_type == 0) {
-        HMODULE hUser32 = GetModuleHandleA(XOR("user32.dll"));
-        if (hUser32) {
-            DynamicSendInput = (SendInputPtr)GetProcAddress(hUser32, XOR("SendInput"));
-        }
-        return (DynamicSendInput != nullptr);
+    // Создаём объект метода ввода в зависимости от hardware_type
+    // 0 = SendInput (программный), 1 = Makcu (UART/COM), 2 = KMbox (Network)
+    switch (hardware_type) {
+        case 0: // SendInput (программный ввод)
+            m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
+            break;
+        case 1: // Makcu (аппаратный ввод через COM-порт)
+            {
+                std::string com_port_name = "COM" + std::to_string(com_port);
+                int baud_rate = (bypass_mode == 0) ? 9600 : 115200; // Пример использования bypass_mode для скорости
+                m_mouseInput = std::make_unique<pwnz_ai::MakcuMouse>(com_port_name, baud_rate);
+            }
+            break;
+        case 2: // KMbox (аппаратный ввод через сеть)
+            m_mouseInput = std::make_unique<pwnz_ai::KMboxMouse>(net_ip, net_port);
+            break;
+        default:
+            // Неизвестный тип, используем SendInput по умолчанию
+            m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
+            break;
     }
 
-    if (hardware_type == 5 || hardware_type == 6) {
-        WSADATA wsaData;
-        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) return false;
-        udp_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-        if (udp_socket == INVALID_SOCKET) return false;
-        udp_addr.sin_family = AF_INET;
-        udp_addr.sin_port = htons(net_port);
-        udp_addr.sin_addr.s_addr = inet_addr(net_ip.c_str());
-        return true;
+    // Инициализируем выбранный метод ввода
+    if (!m_mouseInput) {
+        std::cerr << "[Aimbot] Failed to create mouse input object for hardware_type=" << hardware_type << std::endl;
+        return false;
     }
 
-    std::string port = XOR("\\\\.\\COM") + std::to_string(com_port);
-    hSerial = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hSerial == nullptr) return false;
+    bool initResult = m_mouseInput->Init();
+    if (!initResult) {
+        std::cerr << "[Aimbot] Failed to initialize mouse input for hardware_type=" << hardware_type << std::endl;
+        return false;
+    }
 
-    DCB dcbSerialParams = { 0 };
-    dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
-    if (!GetCommState(hSerial, &dcbSerialParams)) return false;
-    dcbSerialParams.BaudRate = CBR_115200;
-    dcbSerialParams.ByteSize = 8;
-    dcbSerialParams.StopBits = ONESTOPBIT;
-    dcbSerialParams.Parity = NOPARITY;
-    if (!SetCommState(hSerial, &dcbSerialParams)) return false;
-
-    const char* initCmd = "km.buttons(1)\r";
-    DWORD bytesWritten;
-    WriteFile(hSerial, initCmd, (DWORD)strlen(initCmd), &bytesWritten, NULL);
-    Sleep(100);
+    std::cout << "[Aimbot] Hardware initialized successfully. Type=" << hardware_type << std::endl;
     return true;
 }
 
 void Aimbot::CloseHardware() {
+    // Закрываем соединение через интерфейс
+    if (m_mouseInput) {
+        m_mouseInput->Shutdown();
+        m_mouseInput.reset();
+    }
+    
+    // Очищаем старые ресурсы (для обратной совместимости)
     if (hSerial != nullptr) { CloseHandle(hSerial); hSerial = nullptr; }
     if (udp_socket != INVALID_SOCKET) { closesocket(udp_socket); udp_socket = INVALID_SOCKET; WSACleanup(); }
+}
 }
 
 void Aimbot::SendHardwareMove(int x, int y) {
@@ -228,6 +235,13 @@ void Aimbot::SendHardwareMove(int x, int y) {
         std::cout << "[AIM DEBUG] SendHardwareMove: dx=" << x << " dy=" << y << " hw=" << hardware_type << std::endl;
     }
     
+    // Используем полиморфный интерфейс для отправки движения
+    if (m_mouseInput) {
+        m_mouseInput->Move(x, y);
+        return;
+    }
+    
+    // Fallback на старый код (для обратной совместимости, если m_mouseInput не создан)
     if ((hardware_type == 5 || hardware_type == 6) && udp_socket != INVALID_SOCKET) {
         char buffer[64];
         if (hardware_type == 5) snprintf(buffer, sizeof(buffer), XOR("kmnet_move:%d:%d\n"), x, y);
@@ -273,6 +287,13 @@ void Aimbot::SendHardwareMove(int x, int y) {
 }
 
 void Aimbot::SendHardwareClick() {
+    // Используем полиморфный интерфейс для клика
+    if (m_mouseInput) {
+        m_mouseInput->Click(0); // 0 = левая кнопка мыши
+        return;
+    }
+
+    // Fallback на старый код (для обратной совместимости)
     if ((hardware_type == 5 || hardware_type == 6) && udp_socket != INVALID_SOCKET) {
         const char* cmd = (hardware_type == 5) ? XOR("kmnet_click\n") : XOR("click\n");
         sendto(udp_socket, cmd, strlen(cmd), 0, (SOCKADDR*)&udp_addr, sizeof(udp_addr));
