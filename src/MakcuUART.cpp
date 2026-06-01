@@ -1,5 +1,5 @@
 #include "MakcuUART.h"
-// WinSocketPrecompiled.h уже подключен в MakcuUART.h
+// Winsock заголовки уже подключены в MakcuUART.h
 #include <thread>
 #include <chrono>
 

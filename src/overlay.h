@@ -1,8 +1,26 @@
 #pragma once
 
-// ВАЖНО: Подключаем наш предкомпилированный заголовок для Winsock ПЕРВЫМ
-#include "WinSocketPrecompiled.h"
+// РљСЂРёС‚РёС‡РµСЃРєРё РІР°Р¶РЅРѕ: РѕРїСЂРµРґРµР»СЏРµРј РјР°РєСЂРѕСЃС‹ Р”Рћ Р»СЋР±С‹С… Р·Р°РіРѕР»РѕРІРєРѕРІ Windows
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
+#include <windows.h>
+
+#include <d3d11.h>
+#include <vector>
+#include <string>
+#include <mutex>
+#include <memory>
+#include "detector.h"
+#include "aimbot.h"
+#include "network_2pc.h"
+#include "imgui.h"
+#include "implot.h"
 #include <d3d11.h>
 #include <vector>
 #include <string>
