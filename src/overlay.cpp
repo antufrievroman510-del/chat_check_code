@@ -389,8 +389,9 @@ void Overlay::LoadConfig(Aimbot* aim) {
     handlers["sticky_threshold"] = [&](const std::string& v) { sticky_threshold = safe_stof(v); };
     handlers["sticky_frames_keep"] = [&](const std::string& v) { sticky_frames_keep = std::stoi(v); };
     handlers["prediction_method"] = [&](const std::string& v) { prediction_method = std::stoi(v); };
-    handlers["min_sensitivity"] = [&](const std::string& v) { min_sensitivity = safe_stof(v); };
+    handlers[("min_sensitivity")] = [&](const std::string& v) { min_sensitivity = safe_stof(v); };
     handlers["max_sensitivity"] = [&](const std::string& v) { max_sensitivity = safe_stof(v); };
+    handlers["detection_resolution"] = [&](const std::string& v) { detection_resolution = std::stoi(v); };
     handlers["kalman_compensate_detection_delay"] = [&](const std::string& v) { kalman_compensate_detection_delay = std::stoi(v); };
     handlers["kalman_additional_prediction_ms"] = [&](const std::string& v) { kalman_additional_prediction_ms = safe_stof(v); };
     handlers["prediction_interval"] = [&](const std::string& v) { prediction_interval = safe_stof(v); };
@@ -554,6 +555,7 @@ void Overlay::SaveConfig(Aimbot* aim) {
     ss << "prediction_method=" << prediction_method << "\n";
     ss << "min_sensitivity=" << min_sensitivity << "\n";
     ss << "max_sensitivity=" << max_sensitivity << "\n";
+    ss << "detection_resolution=" << detection_resolution << "\n";
     ss << "kalman_compensate_detection_delay=" << kalman_compensate_detection_delay << "\n";
     ss << "kalman_additional_prediction_ms=" << kalman_additional_prediction_ms << "\n";
     ss << "prediction_interval=" << prediction_interval << "\n";
@@ -846,6 +848,7 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
     if (BeginPanel("Speed Control", ImVec2(0, 160), acc_vec)) cfg_changed = true;
     if (CustomSliderFloat("Min Sensitivity:", "##min_sp", &min_sensitivity, 0.1f, 20.0f, "%.3f", acc_vec, u8"Минимальная скорость наведения (0.1-20).")) cfg_changed = true;
     if (CustomSliderFloat("Max Sensitivity:", "##max_sp", &max_sensitivity, 0.1f, 20.0f, "%.3f", acc_vec, u8"Максимальная скорость наведения (потолок, 0.1-20).")) cfg_changed = true;
+    if (CustomSliderInt("Detection Resolution:", "##det_res", &detection_resolution, 160, 960, "%d px", acc_vec, u8"Разрешение детекции для аимбота.")) cfg_changed = true;
     EndPanel();
 
     if (BeginPanel("Pixelsmooth / Humanizer", ImVec2(0, 240), acc_vec)) cfg_changed = true;
