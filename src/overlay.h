@@ -228,6 +228,7 @@ public:
     int random_delay_min = 10;
     int random_delay_max = 30;
     bool hw_enabled = false;
+    bool obs_bypass_enabled = false; // OBS Bypass toggle
     
     // Test values
     int test_move_x = 50;
