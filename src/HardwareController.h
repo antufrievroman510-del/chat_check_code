@@ -70,10 +70,6 @@ private:
     HardwareMode current_mode_ = HardwareMode::LocalMouse;
     std::atomic<bool> connected_{false};
     
-    // Дескрипторы для устройств
-    void* hMakcu = nullptr; // Handle для COM порта
-    SOCKET hKMBoxSocket = INVALID_SOCKET; // Сокет для KMbox
-    
     // Критическая секция для потокобезопасности
     CRITICAL_SECTION cs_;
 };

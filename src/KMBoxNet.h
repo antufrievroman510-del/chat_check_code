@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <string>
@@ -14,7 +18,7 @@ public:
     ~KMBoxNet();
 
     // Инициализация сетевого подключения
-    bool Connect(const std::string& ipAddress, int port = 5555);
+    bool ConnectToDevice(const std::string& ipAddress, int port = 5555);
     
     // Закрытие соединения
     void Disconnect();

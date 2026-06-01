@@ -1,5 +1,13 @@
 #include "HardwareController.h"
+#include "MakcuUART.h"
+#include "KMBoxNet.h"
 #include <iostream>
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#include <winsock2.h>
 #include <ws2tcpip.h> // Для сокетов
 
 #pragma comment(lib, "Ws2_32.lib") // Библиотека для сокетов
@@ -8,6 +16,10 @@
 #ifdef HAS_HIDAPI
 #include <hidapi/hidapi.h>
 #endif
+
+// Внутренние экземпляры контроллеров
+static MakcuUART g_makcu;
+static KMBoxNet g_kmbox;
 
 HardwareController& HardwareController::Instance() {
     static HardwareController instance;
@@ -63,66 +75,27 @@ bool HardwareController::Initialize(const HardwareConfig& config) {
 
         case HardwareMode::MakcuUART:
             {
-                // Открытие COM порта
-                std::string portPath = "\\\\.\\" + config.makcu_port;
-                hMakcu = CreateFileA(
-                    portPath.c_str(),
-                    GENERIC_READ | GENERIC_WRITE,
-                    0,
-                    nullptr,
-                    OPEN_EXISTING,
-                    0,
-                    nullptr
-                );
-
-                if (hMakcu != INVALID_HANDLE_VALUE) {
-                    // Настройка baudrate и других параметров
-                    DCB dcb = {0};
-                    dcb.DCBlength = sizeof(DCB);
-                    if (GetCommState((HANDLE)hMakcu, &dcb)) {
-                        dcb.BaudRate = config.makcu_baudrate;
-                        dcb.ByteSize = 8;
-                        dcb.StopBits = ONESTOPBIT;
-                        dcb.Parity = NOPARITY;
-                        SetCommState((HANDLE)hMakcu, &dcb);
-                    }
+                // Подключение через MakcuUART класс
+                if (g_makcu.Connect(config.makcu_port, config.makcu_baudrate)) {
                     connected_ = true;
                     std::cout << "[HW] Mode: Makcu UART on " << config.makcu_port << std::endl;
                 } else {
                     connected_ = false;
-                    std::cerr << "[HW] Makcu COM port open failed: " << GetLastError() << std::endl;
+                    std::cerr << "[HW] Makcu connection failed" << std::endl;
                 }
             }
             break;
 
         case HardwareMode::KMBoxNet:
             {
-                // Инициализация Winsock
-                WSADATA wsaData;
-                if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+                // Подключение через KMBoxNet класс
+                if (g_kmbox.ConnectToDevice(config.kmbox_ip, config.kmbox_port)) {
+                    connected_ = true;
+                    std::cout << "[HW] Mode: KMbox Net connected to " << config.kmbox_ip << ":" << config.kmbox_port << std::endl;
+                } else {
                     connected_ = false;
-                    break;
+                    std::cerr << "[HW] KMbox connection failed" << std::endl;
                 }
-
-                struct addrinfo hints = {}, *result = nullptr;
-                hints.ai_family = AF_INET;
-                hints.ai_socktype = SOCK_STREAM;
-                
-                std::string portStr = std::to_string(config.kmbox_port);
-                if (getaddrinfo(config.kmbox_ip.c_str(), portStr.c_str(), &hints, &result) == 0) {
-                    hKMBoxSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-                    if (hKMBoxSocket != INVALID_SOCKET) {
-                        if (connect(hKMBoxSocket, result->ai_addr, (int)result->ai_addrlen) == 0) {
-                            connected_ = true;
-                            std::cout << "[HW] Mode: KMbox Net connected to " << config.kmbox_ip << ":" << config.kmbox_port << std::endl;
-                        } else {
-                            closesocket(hKMBoxSocket);
-                            hKMBoxSocket = INVALID_SOCKET;
-                            connected_ = false;
-                        }
-                    }
-                }
-                if (result) freeaddrinfo(result);
             }
             break;
     }
@@ -134,17 +107,9 @@ bool HardwareController::Initialize(const HardwareConfig& config) {
 void HardwareController::Shutdown() {
     EnterCriticalSection(&cs_);
     
-    if (hMakcu != nullptr && hMakcu != INVALID_HANDLE_VALUE) {
-        CloseHandle((HANDLE)hMakcu);
-        hMakcu = nullptr;
-    }
-    
-    if (hKMBoxSocket != INVALID_SOCKET) {
-        shutdown(hKMBoxSocket, SD_BOTH);
-        closesocket(hKMBoxSocket);
-        hKMBoxSocket = INVALID_SOCKET;
-        WSACleanup();
-    }
+    // Отключение всех устройств
+    g_makcu.Disconnect();
+    g_kmbox.Disconnect();
 
     connected_ = false;
     LeaveCriticalSection(&cs_);
@@ -229,40 +194,13 @@ void HardwareController::MoveRazer(int dx, int dy) {
 }
 
 void HardwareController::MoveMakcu(int dx, int dy) {
-    if (hMakcu == nullptr || hMakcu == INVALID_HANDLE_VALUE) return;
-
-    // Протокол Makcu (пример):
-    // Команда: 0xAA 0x01 DX DY 0xBB
-    unsigned char buffer[5];
-    buffer[0] = 0xAA; // Start byte
-    buffer[1] = 0x01; // Command: Move
-    buffer[2] = (unsigned char)(dx & 0xFF);
-    buffer[3] = (unsigned char)(dy & 0xFF);
-    buffer[4] = 0xBB; // End byte
-    
-    DWORD bytesWritten;
-    WriteFile((HANDLE)hMakcu, buffer, sizeof(buffer), &bytesWritten, nullptr);
+    // Отправка движения через MakcuUART класс
+    g_makcu.MoveMouse(dx, dy);
 }
 
 void HardwareController::MoveKMBox(int dx, int dy) {
-    if (hKMBoxSocket == INVALID_SOCKET) return;
-
-    // Протокол KMbox Net (JSON или бинарный)
-    // Пример бинарного пакета:
-    struct KMBoxPacket {
-        uint8_t header = 0x5A;
-        uint8_t cmd = 0x01; // Move
-        int16_t dx;
-        int16_t dy;
-        uint8_t checksum;
-    };
-    
-    KMBoxPacket packet;
-    packet.dx = static_cast<int16_t>(dx);
-    packet.dy = static_cast<int16_t>(dy);
-    packet.checksum = packet.header ^ packet.cmd ^ (dx & 0xFF) ^ (dy & 0xFF);
-    
-    send(hKMBoxSocket, (const char*)&packet, sizeof(packet), 0);
+    // Отправка движения через KMBoxNet класс
+    g_kmbox.MoveMouse(dx, dy);
 }
 
 void HardwareController::UpdateConfig(const HardwareConfig& config) {
