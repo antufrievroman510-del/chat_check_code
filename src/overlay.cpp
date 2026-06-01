@@ -119,7 +119,7 @@ void Overlay::DeepCleanTraces() {
             std::string ne_path = std::string(userProfile) + "\\AppData\\Local\\NetEase";
             char double_null_path[MAX_PATH];
             memset(double_null_path, 0, sizeof(double_null_path));
-            strncpy_s(double_null_path, ne_path.c_str(), ne_path.length());
+            strncpy_s(double_null_path, sizeof(double_null_path), ne_path.c_str(), _TRUNCATE);
             fo.pFrom = double_null_path;
             SHFileOperationA(&fo);
             free(userProfile);
