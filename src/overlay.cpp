@@ -906,8 +906,9 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
 
     if (BeginPanel("Pixelsmooth / Smoothing", ImVec2(0, 220), acc_vec, true, &pixelsmooth_enabled, acc_u32)) cfg_changed = true;
     if (pixelsmooth_enabled) {
+        if (CustomSliderFloat("Aim Smooth:", "##aim_sm", &aim_smoother, 1.0f, 32.0f, "%.1f", acc_vec, u8"Основная плавность аимбота (1-32).")) cfg_changed = true;
         if (CustomSliderFloat("Pixelsmooth Value:", "##ps_val", &pixelsmooth_value, 1.0f, 32.0f, "%.0f frames", acc_vec, u8"Количество кадров для усреднения.")) cfg_changed = true;
-        if (CustomSliderFloat("Smooth Factor (Lerp):", "##smooth_f", &smooth_factor, 0.0f, 0.5f, "%.3f", acc_vec, u8"Фактор сглаживания (0-0.5).")) cfg_changed = true;
+        if (CustomSliderFloat("Smooth Factor (Lerp):", "##smooth_f", &smooth_factor, 0.0f, 0.5f, "%.3f", acc_vec, u8"Фактор сглаживания (lerp).")) cfg_changed = true;
         ImGui::Separator();
         ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), u8"Эти настройки делают движение прицела более плавным и человечным.");
     }

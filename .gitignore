@@ -1,3 +1,4 @@
+```
 # Compiled and build artifacts
 *.o
 *.obj
@@ -8,41 +9,34 @@
 *.out
 
 # Dependencies
-node_modules/
 venv/
 .venv/
 __pycache__/
+*.egg-info/
 dist/
 build/
 target/
-.gradle/
 
 # Logs and temp files
 *.log
 *.tmp
 *.swp
 
+# Editors
+.vscode/
+.idea/
+
 # Environment
 .env
 .env.local
 *.env.*
-
-# Editors
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# System
-.DS_Store
-Thumbs.db
 
 # Coverage
 coverage/
 htmlcov/
 .coverage
 
-# Compressed files
+# Compression
 *.zip
 *.gz
 *.tar
@@ -65,3 +59,4 @@ htmlcov/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
+```

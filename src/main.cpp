@@ -731,7 +731,9 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
             aim->max_sensitivity = local_cfg.max_sensitivity;
             aim->pixelsmooth_enabled = local_cfg.pixelsmooth_enabled;
             aim->pixelsmooth_value = local_cfg.pixelsmooth_value;
-            aim->smooth_factor = local_cfg.smooth_factor;
+            // Конвертируем aim_smoother (значение из меню 1-32) в smooth_factor (0-1)
+            // Чем больше aim_smoother, тем меньше smooth_factor (более плавное движение)
+            aim->smooth_factor = 1.0f / (local_cfg.aim_smoother > 0.5f ? local_cfg.aim_smoother : 1.0f);
             aim->humanizer_enable = local_cfg.humanizer_enable;
             aim->hum_reaction_delay = local_cfg.hum_reaction_delay;
             aim->hum_tremor_scale = local_cfg.hum_tremor_scale;
