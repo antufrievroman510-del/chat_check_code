@@ -10,6 +10,7 @@
 #endif
 
 // Критически важно: определить это перед windows.h чтобы предотвратить автоматическое включение winsock.h
+// Это предотвращает включение старого winsock.h (версия 1) когда нам нужен winsock2.h (версия 2)
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
 #endif

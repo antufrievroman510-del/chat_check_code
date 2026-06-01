@@ -4,8 +4,10 @@
 #include <vector>
 #include <atomic>
 
+// Не включаем windows.h напрямую - WinHeaders.h сделает это правильно без конфликтов
+// forward declaration для HANDLE
 #ifdef _WIN32
-    #include <windows.h>
+    typedef void* HANDLE;
 #endif
 
 enum class HardwareMode {
@@ -63,10 +65,12 @@ private:
     ~HardwareBackend();
 
 #ifdef _WIN32
-    HANDLE hComPort = INVALID_HANDLE_VALUE;
+    HANDLE hComPort;
+#else
+    void* hComPort;
 #endif
-    int udpSocket = -1;
-    struct sockaddr_in kmboxAddr {};
-    std::atomic<bool> mackuConnected{false};
-    std::atomic<bool> kmboxConnected{false};
+    int udpSocket;
+    struct sockaddr_in kmboxAddr;
+    std::atomic<bool> mackuConnected;
+    std::atomic<bool> kmboxConnected;
 };

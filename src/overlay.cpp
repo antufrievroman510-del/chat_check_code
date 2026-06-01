@@ -1407,8 +1407,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             ImGui::TextColored(acc_vec, is_russian ? u8"Стандартный ввод Windows" : "Standard Windows Input");
             ImGui::Spacing();
             ImGui::TextWrapped(is_russian ? 
-                u8"Используется API SendInput для эмуляции мыши.
-Не требует дополнительного оборудования." :
+                u8"Используется API SendInput для эмуляции мыши.\nНе требует дополнительного оборудования." :
                 "Uses SendInput API for mouse emulation.\nNo additional hardware required.");
             ImGui::Spacing();
             ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),

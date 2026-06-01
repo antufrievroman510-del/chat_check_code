@@ -177,7 +177,7 @@ bool Aimbot::InitHardware() {
 
     std::string port = XOR("\\\\.\\COM") + std::to_string(com_port);
     hSerial = CreateFileA(port.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hSerial == INVALID_HANDLE_VALUE) return false;
+    if (hSerial == nullptr) return false;
 
     DCB dcbSerialParams = { 0 };
     dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
@@ -196,7 +196,7 @@ bool Aimbot::InitHardware() {
 }
 
 void Aimbot::CloseHardware() {
-    if (hSerial != INVALID_HANDLE_VALUE) { CloseHandle(hSerial); hSerial = INVALID_HANDLE_VALUE; }
+    if (hSerial != nullptr) { CloseHandle(hSerial); hSerial = nullptr; }
     if (udp_socket != INVALID_SOCKET) { closesocket(udp_socket); udp_socket = INVALID_SOCKET; WSACleanup(); }
 }
 
