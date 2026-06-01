@@ -3,11 +3,14 @@
 #include <string>
 #include <vector>
 #include <atomic>
+#include <cstdint>
 
-// Не включаем windows.h напрямую - WinHeaders.h сделает это правильно без конфликтов
-// forward declaration для HANDLE
+// Forward declaration для HANDLE и SOCKET чтобы избежать включения windows.h здесь
 #ifdef _WIN32
     typedef void* HANDLE;
+    typedef unsigned int SOCKET;
+#else
+    typedef int SOCKET;
 #endif
 
 enum class HardwareMode {
@@ -69,8 +72,10 @@ private:
 #else
     void* hComPort;
 #endif
-    int udpSocket;
-    struct sockaddr_in kmboxAddr;
+    SOCKET udpSocket;
+    // Используем opaque pointer или forward declaration для sockaddr_in
+    // Реальное определение будет в .cpp файле где включен WinHeaders.h
+    void* kmboxAddrPtr;  // указатель на sockaddr_in
     std::atomic<bool> mackuConnected;
     std::atomic<bool> kmboxConnected;
 };

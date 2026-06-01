@@ -48,7 +48,7 @@
 #include "xorstr.hpp"
 #include "VMProtectSDK.h"
 #include "head_smoother.h"
-// HardwareBackend.h уже включен через WinHeaders.h в overlay.h
+#include "HardwareBackend.h"
 
 extern HeadSmoother g_head_smoother;
 #pragma comment(lib, "dwmapi.lib")

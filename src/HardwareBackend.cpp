@@ -1,3 +1,5 @@
+// Включаем WinHeaders.h ПЕРЕД HardwareBackend.h чтобы все типы Windows были определены
+#include "WinHeaders.h"
 #include "HardwareBackend.h"
 #include <cstring>
 #include <iostream>
@@ -11,10 +13,6 @@
     #include <unistd.h>
 #else
     #pragma comment(lib, "ws2_32.lib")
-    #ifndef _SSIZE_T_DEFINED
-        #define _SSIZE_T_DEFINED
-        typedef SSIZE_T ssize_t;
-    #endif
 #endif
 
 HardwareBackend& HardwareBackend::Instance() {
@@ -22,7 +20,7 @@ HardwareBackend& HardwareBackend::Instance() {
     return instance;
 }
 
-HardwareBackend::HardwareBackend() : hComPort(nullptr), udpSocket(-1), mackuConnected(false), kmboxConnected(false) {}
+HardwareBackend::HardwareBackend() : hComPort(nullptr), udpSocket(-1), kmboxAddrPtr(nullptr), mackuConnected(false), kmboxConnected(false) {}
 
 HardwareBackend::~HardwareBackend() {
     DisconnectMacku();
@@ -152,11 +150,14 @@ bool HardwareBackend::ConnectKMbox(const std::string& ip, int port) {
         return false;
     }
     
-    memset(&kmboxAddr, 0, sizeof(kmboxAddr));
-    kmboxAddr.sin_family = AF_INET;
-    kmboxAddr.sin_port = htons(port);
+    // Создаем sockaddr_in на куче чтобы избежать проблемы с incomplete type в заголовке
+    kmboxAddrPtr = new sockaddr_in();
+    sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(kmboxAddrPtr);
+    memset(addr, 0, sizeof(*addr));
+    addr->sin_family = AF_INET;
+    addr->sin_port = htons(port);
     
-    if (inet_pton(AF_INET, ip.c_str(), &kmboxAddr.sin_addr) <= 0) {
+    if (inet_pton(AF_INET, ip.c_str(), &addr->sin_addr) <= 0) {
         std::cerr << "Invalid IP address: " << ip << std::endl;
 #ifdef _WIN32
         closesocket(udpSocket);
@@ -164,6 +165,8 @@ bool HardwareBackend::ConnectKMbox(const std::string& ip, int port) {
         close(udpSocket);
 #endif
         udpSocket = -1;
+        delete addr;
+        kmboxAddrPtr = nullptr;
         return false;
     }
     
@@ -182,6 +185,11 @@ void HardwareBackend::DisconnectKMbox() {
 #endif
         udpSocket = -1;
     }
+    // Освобождаем память для sockaddr_in
+    if (kmboxAddrPtr != nullptr) {
+        delete reinterpret_cast<sockaddr_in*>(kmboxAddrPtr);
+        kmboxAddrPtr = nullptr;
+    }
     kmboxConnected = false;
 }
 
@@ -190,7 +198,7 @@ bool HardwareBackend::IsKMboxConnected() const {
 }
 
 bool HardwareBackend::SendKMboxMove(int x, int y) {
-    if (!kmboxConnected.load() || udpSocket < 0) return false;
+    if (!kmboxConnected.load() || udpSocket < 0 || kmboxAddrPtr == nullptr) return false;
     
     // Протокол KMbox Net: отправка структуры движения
     struct KMboxMovePacket {
@@ -206,14 +214,15 @@ bool HardwareBackend::SendKMboxMove(int x, int y) {
     packet.move_x = static_cast<int16_t>(x);
     packet.move_y = static_cast<int16_t>(y);
     
+    sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(kmboxAddrPtr);
     ssize_t sent = sendto(udpSocket, reinterpret_cast<char*>(&packet), sizeof(packet), 0,
-                          reinterpret_cast<struct sockaddr*>(&kmboxAddr), sizeof(kmboxAddr));
+                          reinterpret_cast<struct sockaddr*>(addr), sizeof(*addr));
     
     return sent == sizeof(packet);
 }
 
 bool HardwareBackend::SendKMboxClick(uint8_t button) {
-    if (!kmboxConnected.load() || udpSocket < 0) return false;
+    if (!kmboxConnected.load() || udpSocket < 0 || kmboxAddrPtr == nullptr) return false;
     
     // Протокол KMbox Net: клик
     struct KMboxClickPacket {
@@ -226,8 +235,9 @@ bool HardwareBackend::SendKMboxClick(uint8_t button) {
     KMboxClickPacket packet;
     packet.button = button;
     
+    sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(kmboxAddrPtr);
     ssize_t sent = sendto(udpSocket, reinterpret_cast<char*>(&packet), sizeof(packet), 0,
-                          reinterpret_cast<struct sockaddr*>(&kmboxAddr), sizeof(kmboxAddr));
+                          reinterpret_cast<struct sockaddr*>(addr), sizeof(*addr));
     
     return sent == sizeof(packet);
 }
