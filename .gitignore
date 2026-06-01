@@ -1,1 +1,49 @@
-Nothing needs to be added to the .gitignore file since only a source code file (src/HardwareBackend.cpp) was modified and there are no build artifacts, dependencies, or temporary files in the changes.
+# Compiled and build artifacts
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.out
+*.class
+*.pyc
+__pycache__/
+
+# Dependencies
+node_modules/
+venv/
+.venv/
+.env
+.env.local
+*.env.*
+
+# Build directories
+build/
+dist/
+target/
+.gradle/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Caching
+.mypy_cache/
+.pytest_cache/

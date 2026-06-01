@@ -26,3 +26,6 @@
 // Стандартные типы для сети
 #include <cstdint>
 #include <string>
+
+// Включаем HardwareBackend.h здесь, чтобы он был доступен везде где есть WinHeaders.h
+#include "HardwareBackend.h"

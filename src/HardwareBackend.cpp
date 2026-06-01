@@ -6,7 +6,10 @@
     #include <winsock2.h>
     #include <ws2tcpip.h>
     #pragma comment(lib, "ws2_32.lib")
-    typedef int ssize_t; // Define ssize_t for Windows
+    #ifndef _SSIZE_T_DEFINED
+        #define _SSIZE_T_DEFINED
+        typedef SSIZE_T ssize_t;
+    #endif
 #else
     #include <sys/socket.h>
     #include <netinet/in.h>
