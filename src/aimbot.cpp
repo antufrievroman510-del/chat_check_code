@@ -48,7 +48,8 @@ void Aimbot::SetConfig(const AimConfig& cfg) {
     m_config = cfg;
     // Синхронизация старого и нового конфига для совместимости
     aim_enable = cfg.enabled;
-    smooth_factor = 1.0f / (cfg.smooth > 0.1f ? cfg.smooth : 1.0f);
+    // Прямое использование smooth из конфига (без двойной конвертации)
+    smooth_factor = cfg.smooth;
     fov = cfg.fov;
     aim_key_main = cfg.fireKey;
 }
@@ -66,6 +67,10 @@ void Aimbot::ResetTarget() {
     g_first_seen_time = 0;
     last_target_time = 0;
     g_frac_x = 0.0f; g_frac_y = 0.0f;
+    g_move_history.clear();
+    g_overshoot_x = 0.0f; g_overshoot_y = 0.0f;
+    g_in_overshoot = false;
+    g_overshoot_start_time = 0;
 
     m_tracker.reset();
     m_kalman.reset();
@@ -494,11 +499,13 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
 
     // === Шаг 13: Lerp сглаживание ===
     if (smooth_factor > 0.0f && smooth_factor < 1.0f) {
-        static int prev_mx = 0, prev_my = 0;
-        mx = static_cast<int>(prev_mx * (1.0f - smooth_factor) + mx * smooth_factor);
-        my = static_cast<int>(prev_my * (1.0f - smooth_factor) + my * smooth_factor);
-        prev_mx = mx;
-        prev_my = my;
+        mx = static_cast<int>(g_frac_x * (1.0f - smooth_factor) + mx * smooth_factor);
+        my = static_cast<int>(g_frac_y * (1.0f - smooth_factor) + my * smooth_factor);
+        g_frac_x = static_cast<float>(mx);
+        g_frac_y = static_cast<float>(my);
+    } else {
+        g_frac_x = static_cast<float>(mx);
+        g_frac_y = static_cast<float>(my);
     }
 
     // === Шаг 14: Path Randomization ===
