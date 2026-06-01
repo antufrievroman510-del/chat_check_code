@@ -616,7 +616,7 @@ void Overlay::ResetDefaults() {
     hit_chance = 90.0f; auto_confidence = false;
     custom_res_w = 1920; custom_res_h = 1080;
     obs_bypass = true; menu_scale = 100.0f; menu_width = 1150.0f; menu_height = 680.0f;
-    hardware_mode_idx = 0; this->com_port = 2; trigger_enable = false; trigger_delay = 0.05f; this->trigger_target = 0; this->trigger_key = 0;
+    hardware_mode_idx = 0; com_port = 2; trigger_enable = false; trigger_delay = 0.05f; trigger_target = 0; trigger_key = 0;
     rcs_enable = false; rcs_pitch = 1.0f; rcs_yaw = 0.0f;
     refresh_rate_idx = 0; memory_enemy_frames = 3; enable_pose_adaptive = false;
     accent_color[0] = 0.0f; accent_color[1] = 0.8f; accent_color[2] = 1.0f;
@@ -1261,7 +1261,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         "KMbox Net (UDP)"
     };
     
-    if (CustomCombo("Mode:", "##hw_mode", &this->hardware_mode_idx, hw_modes, 3, 
+    if (CustomCombo("Mode:", "##hw_mode", &hardware_mode_idx, hw_modes, 3, 
         is_russian ? u8"Выберите режим работы" : "Select hardware mode")) {
         cfg_changed = true;
     }
@@ -1269,7 +1269,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     ImGui::Spacing();
     
     // Enable Hardware Toggle
-    if (DrawToggle("Enable Hardware:", "##hw_en", &this->hw_enabled, acc_u32, 
+    if (DrawToggle("Enable Hardware:", "##hw_en", &hw_enabled, acc_u32, 
         is_russian ? u8"Включить аппаратный ввод" : "Enable hardware input")) {
         cfg_changed = true;
     }
@@ -1285,18 +1285,18 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         "Random Delay"
     };
     
-    if (CustomCombo("Bypass Mode:", "##bypass", &this->bypass_mode_idx, bypass_modes, 4,
+    if (CustomCombo("Bypass Mode:", "##bypass", &bypass_mode_idx, bypass_modes, 4,
         is_russian ? u8"Режим обхода античита" : "Anti-cheat bypass mode")) {
         cfg_changed = true;
     }
     
-    if (this->bypass_mode_idx == 3) { // Random Delay
+    if (bypass_mode_idx == 3) { // Random Delay
         ImGui::Spacing();
         ImGui::Text(is_russian ? u8"Random Delay (ms):" : "Random Delay (ms):");
         ImGui::PushItemWidth(100);
-        if (ImGui::SliderInt("##rd_min", &this->random_delay_min, 1, 50, "%d ms")) cfg_changed = true;
+        if (ImGui::SliderInt("##rd_min", &random_delay_min, 1, 50, "%d ms")) cfg_changed = true;
         ImGui::SameLine();
-        if (ImGui::SliderInt("##rd_max", &this->random_delay_max, 10, 100, "%d ms")) cfg_changed = true;
+        if (ImGui::SliderInt("##rd_max", &random_delay_max, 10, 100, "%d ms")) cfg_changed = true;
         ImGui::PopItemWidth();
         HelpMarker(is_russian ? u8"Мин/макс задержка для рандомизации" : "Min/Max delay for randomization");
     }
@@ -1306,13 +1306,13 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     ImGui::NextColumn();
 
     // Right Column - Device Specific Settings
-    if (this->hardware_mode_idx == 1) {
+    if (hardware_mode_idx == 1) {
         // Makcu UART Settings
         if (BeginPanel("Makcu (UART/COM) Settings", ImVec2(0, 280), acc_vec)) cfg_changed = true;
         
         ImGui::Text(is_russian ? u8"COM Порт:" : "COM Port:");
         ImGui::PushItemWidth(150);
-        if (ImGui::InputText("##com_port", this->com_port_buf, sizeof(this->com_port_buf))) cfg_changed = true;
+        if (ImGui::InputText("##com_port", com_port_buf, sizeof(com_port_buf))) cfg_changed = true;
         ImGui::PopItemWidth();
         HelpMarker(is_russian ? u8"Например: COM3" : "Example: COM3");
         
@@ -1323,7 +1323,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         
         ImGui::Text(is_russian ? u8"Baud Rate:" : "Baud Rate:");
         ImGui::PushItemWidth(150);
-        if (ImGui::Combo("##baud", &this->baud_rate_idx, baud_rates, IM_ARRAYSIZE(baud_rates))) cfg_changed = true;
+        if (ImGui::Combo("##baud", &baud_rate_idx, baud_rates, IM_ARRAYSIZE(baud_rates))) cfg_changed = true;
         ImGui::PopItemWidth();
         
         ImGui::Spacing();
@@ -1336,7 +1336,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         if (!connected) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
             if (ImGui::Button("Connect Makcu", ImVec2(150, 35))) {
-                hw.ConnectMacku(this->com_port_buf, baud_values[this->baud_rate_idx]);
+                hw.ConnectMacku(com_port_buf, baud_values[baud_rate_idx]);
             }
             ImGui::PopStyleColor();
         } else {
@@ -1356,13 +1356,13 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         
         EndPanel();
         
-    } else if (this->hardware_mode_idx == 2) {
+    } else if (hardware_mode_idx == 2) {
         // KMbox Net Settings
         if (BeginPanel("KMbox Net (UDP) Settings", ImVec2(0, 280), acc_vec)) cfg_changed = true;
         
         ImGui::Text(is_russian ? u8"IP Адрес:" : "IP Address:");
         ImGui::PushItemWidth(200);
-        if (ImGui::InputText("##kmbox_ip", this->kmbox_ip_buf, sizeof(this->kmbox_ip_buf))) cfg_changed = true;
+        if (ImGui::InputText("##kmbox_ip", kmbox_ip_buf, sizeof(kmbox_ip_buf))) cfg_changed = true;
         ImGui::PopItemWidth();
         HelpMarker(is_russian ? u8"Например: 192.168.1.100" : "Example: 192.168.1.100");
         
@@ -1370,7 +1370,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         
         ImGui::Text(is_russian ? u8"Порт:" : "Port:");
         ImGui::PushItemWidth(100);
-        if (ImGui::InputInt("##kmbox_port", &this->kmbox_port)) cfg_changed = true;
+        if (ImGui::InputInt("##kmbox_port", &kmbox_port)) cfg_changed = true;
         ImGui::PopItemWidth();
         
         ImGui::Spacing();
@@ -1383,7 +1383,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         if (!connected) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
             if (ImGui::Button("Connect KMbox", ImVec2(150, 35))) {
-                hw.ConnectKMbox(this->kmbox_ip_buf, this->kmbox_port);
+                hw.ConnectKMbox(kmbox_ip_buf, kmbox_port);
             }
             ImGui::PopStyleColor();
         } else {
@@ -1532,14 +1532,14 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     ImGui::Text(is_russian ? u8"X:" : "X:");
     ImGui::SameLine();
     ImGui::PushItemWidth(100);
-    if (ImGui::InputInt("##test_x", &this->test_move_x)) cfg_changed = true;
+    if (ImGui::InputInt("##test_x", &test_move_x)) cfg_changed = true;
     ImGui::PopItemWidth();
     
     ImGui::SameLine();
     ImGui::Text(is_russian ? u8"Y:" : "Y:");
     ImGui::SameLine();
     ImGui::PushItemWidth(100);
-    if (ImGui::InputInt("##test_y", &this->test_move_y)) cfg_changed = true;
+    if (ImGui::InputInt("##test_y", &test_move_y)) cfg_changed = true;
     ImGui::PopItemWidth();
     
     ImGui::Spacing();
@@ -1549,18 +1549,18 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     // Test Move Button
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 0.8f));
     if (ImGui::Button(is_russian ? u8"Test Move Mouse" : "Test Move Mouse", ImVec2(200, 40))) {
-        if (this->hw_enabled) {
-            if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
-                hw.SendMackuMove(this->test_move_x, this->test_move_y);
-            } else if (this->hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
-                hw.SendKMboxMove(this->test_move_x, this->test_move_y);
-            } else if (this->hardware_mode_idx == 0) {
+        if (hw_enabled) {
+            if (hardware_mode_idx == 1 && hw.IsMackuConnected()) {
+                hw.SendMackuMove(test_move_x, test_move_y);
+            } else if (hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
+                hw.SendKMboxMove(test_move_x, test_move_y);
+            } else if (hardware_mode_idx == 0) {
                 // Local mouse - use SendInput
                 #ifdef _WIN32
                 INPUT input = {};
                 input.type = INPUT_MOUSE;
-                input.mi.dx = this->test_move_x;
-                input.mi.dy = this->test_move_y;
+                input.mi.dx = test_move_x;
+                input.mi.dy = test_move_y;
                 input.mi.dwFlags = MOUSEEVENTF_MOVE;
                 SendInput(1, &input, sizeof(INPUT));
                 #endif
@@ -1570,8 +1570,8 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
             #ifdef _WIN32
             INPUT input = {};
             input.type = INPUT_MOUSE;
-            input.mi.dx = this->test_move_x;
-            input.mi.dy = this->test_move_y;
+            input.mi.dx = test_move_x;
+            input.mi.dy = test_move_y;
             input.mi.dwFlags = MOUSEEVENTF_MOVE;
             SendInput(1, &input, sizeof(INPUT));
             #endif
@@ -1590,10 +1590,10 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     // Test Left Click
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.7f, 0.2f, 0.8f));
     if (ImGui::Button(is_russian ? u8"Test Left Click" : "Test Left Click", ImVec2(200, 35))) {
-        if (this->hw_enabled) {
-            if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
+        if (hw_enabled) {
+            if (hardware_mode_idx == 1 && hw.IsMackuConnected()) {
                 hw.SendMackuClick(1); // Left click
-            } else if (this->hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
+            } else if (hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
                 hw.SendKMboxClick(1); // Left click
             } else {
                 #ifdef _WIN32
@@ -1623,12 +1623,12 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     // Test Double Click
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.5f, 0.2f, 0.8f));
     if (ImGui::Button(is_russian ? u8"Test Double Click" : "Test Double Click", ImVec2(200, 35))) {
-        if (this->hw_enabled) {
-            if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
+        if (hw_enabled) {
+            if (hardware_mode_idx == 1 && hw.IsMackuConnected()) {
                 hw.SendMackuClick(1);
                 Sleep(50);
                 hw.SendMackuClick(1);
-            } else if (this->hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
+            } else if (hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
                 hw.SendKMboxClick(1);
                 Sleep(50);
                 hw.SendKMboxClick(1);
@@ -1679,7 +1679,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
         "KMbox Net (UDP)"
     };
     
-    ImGui::Text("%s", mode_names[this->hardware_mode_idx]);
+    ImGui::Text("%s", mode_names[hardware_mode_idx]);
     
     ImGui::Spacing();
     ImGui::Separator();
@@ -1693,7 +1693,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     
     if (macku_connected) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ Makcu: CONNECTED");
-        ImGui::Text(is_russian ? u8"Порт: %s" : "Port: %s", this->com_port_buf);
+        ImGui::Text(is_russian ? u8"Порт: %s" : "Port: %s", com_port_buf);
     } else {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "✗ Makcu: DISCONNECTED");
     }
@@ -1702,7 +1702,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     
     if (kmbox_connected) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ KMbox: CONNECTED");
-        ImGui::Text(is_russian ? u8"IP: %s:%d" : "IP: %s:%d", this->kmbox_ip_buf, this->kmbox_port);
+        ImGui::Text(is_russian ? u8"IP: %s:%d" : "IP: %s:%d", kmbox_ip_buf, kmbox_port);
     } else {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "✗ KMbox: DISCONNECTED");
     }
@@ -1711,7 +1711,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     ImGui::Separator();
     ImGui::Spacing();
     
-    if (this->hw_enabled) {
+    if (hw_enabled) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
             is_russian ? u8"✅ Hardware ENABLED" : "✅ Hardware ENABLED");
     } else {
@@ -2466,7 +2466,7 @@ void Overlay::RenderMenu(const std::vector<Detection>& detections, Aimbot* aim, 
         "Makcu / Pico (COM)", "MoBox (COM)", "KMBox Net / DMA (UDP)",
         "Generic 2PC (UDP)", "Makcu (UDP)", "Makcu (COM stealth)"
     };
-    char status_text[128]; snprintf(status_text, sizeof(status_text), "( Bypass: %s )", hw_names_full[this->hardware_mode_idx]);
+    char status_text[128]; snprintf(status_text, sizeof(status_text), "( Bypass: %s )", hw_names_full[hardware_mode_idx]);
     float stat_w = ImGui::CalcTextSize(status_text).x; float center_x = ImGui::GetWindowWidth() / 2.0f;
     ImGui::SameLine(center_x - (stat_w / 2.0f)); ImGui::SetCursorPosY(14.0f);
     float r, g, b; ImGui::ColorConvertHSVtoRGB(fmod(time_sec * 0.3f, 1.0f), 0.7f, 1.0f, r, g, b);
