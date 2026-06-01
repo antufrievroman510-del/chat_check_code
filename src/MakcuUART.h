@@ -12,6 +12,12 @@ public:
     MakcuUART();
     ~MakcuUART();
 
+    // Методы интерфейса IMouseInput (для использования как самостоятельный бэкенд)
+    bool Init();
+    void Move(int dx, int dy);
+    void Click(int button);
+    void Shutdown();
+
     // Инициализация COM-порта
     bool Connect(const std::string& portName, int baudRate = 9600);
     
@@ -36,6 +42,8 @@ private:
     bool isConnected;
     int packetDelayMs;
     std::mutex mtx;
+    std::string m_portName;   // Имя порта для инициализации через Init()
+    int m_baudRate;           // Скорость для инициализации через Init()
 
     // Внутренняя отправка байтов
     bool WriteBytes(const unsigned char* data, size_t length);
