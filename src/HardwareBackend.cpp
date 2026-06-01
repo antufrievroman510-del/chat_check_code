@@ -29,8 +29,6 @@ HardwareBackend& HardwareBackend::Instance() {
     return instance;
 }
 
-HardwareBackend::HardwareBackend() : hComPort(nullptr), udpSocket(0), kmboxAddrPtr(nullptr), mackuConnected(false), kmboxConnected(false) {}
-
 HardwareBackend::~HardwareBackend() {
     DisconnectMacku();
     DisconnectKMbox();
