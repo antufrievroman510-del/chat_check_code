@@ -1,3 +1,4 @@
+```
 # Compiled and build artifacts
 *.o
 *.obj
@@ -6,21 +7,14 @@
 *.so
 *.a
 *.out
-*.class
-*.pyc
-__pycache__/
 
 # Dependencies
 node_modules/
 venv/
 .venv/
-.env
-.env.local
-*.env.*
-
-# Build directories
-build/
-dist/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
 target/
 .gradle/
 
@@ -29,21 +23,16 @@ target/
 *.tmp
 *.swp
 
+# Environment
+.env
+.env.local
+*.env.*
+
 # Editors
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# System files
-.DS_Store
-Thumbs.db
-
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# Caching
-.mypy_cache/
-.pytest_cache/
+# Build directories
+build/
+dist/
+```

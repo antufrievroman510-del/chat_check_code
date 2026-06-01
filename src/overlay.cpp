@@ -1426,36 +1426,20 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         
         ImGui::TextColored(acc_vec, is_russian ? u8"Makcu:" : "Makcu:");
         ImGui::TextWrapped(is_russian ? 
-            u8"1. Подключи плату
-2. Узнай COM-порт
-3. Введи порт и Baud
-4. Нажми Connect" :
-            "1. Connect board
-2. Find COM port
-3. Enter port & Baud
-4. Click Connect");
+            u8"1. Подключи плату\n2. Узнай COM-порт\n3. Введи порт и Baud\n4. Нажми Connect" :
+            "1. Connect board\n2. Find COM port\n3. Enter port & Baud\n4. Click Connect");
         
         ImGui::NextColumn();
         ImGui::TextColored(acc_vec, is_russian ? u8"KMbox:" : "KMbox:");
         ImGui::TextWrapped(is_russian ? 
-            u8"1. Подключи к игровому ПК
-2. Настрой сеть
-3. Введи IP и порт
-4. Нажми Connect" :
-            "1. Connect to gaming PC
-2. Configure network
-3. Enter IP & port
-4. Click Connect");
+            u8"1. Подключи к игровому ПК\n2. Настрой сеть\n3. Введи IP и порт\n4. Нажми Connect" :
+            "1. Connect to gaming PC\n2. Configure network\n3. Enter IP & port\n4. Click Connect");
         
         ImGui::NextColumn();
         ImGui::TextColored(acc_vec, is_russian ? u8"Тест:" : "Test:");
         ImGui::TextWrapped(is_russian ? 
-            u8"Перейди во вкладку 'Check HW'
-Используй тестовые кнопки
-Для проверки работы" :
-            "Go to 'Check HW' tab
-Use test buttons
-to verify operation");
+            u8"Перейди во вкладку 'Check HW'\nИспользуй тестовые кнопки\nДля проверки работы" :
+            "Go to 'Check HW' tab\nUse test buttons\nto verify operation");
         
         ImGui::Columns(1);
     }

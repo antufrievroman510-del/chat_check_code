@@ -1,34 +1,10 @@
 #pragma once
 
 #include "WinHeaders.h"
+#include "HardwareBackend.h"
 
 #include <string>
 #include <atomic>
-
-// Режимы работы оборудования
-enum class HardwareMode {
-    LocalMouse = 0,       // Стандартная SendInput (ОС видит движение)
-    GHubBypass = 1,       // Эмуляция через Logitech GHub (требует DLL)
-    RazerBypass = 2,      // Эмуляция через Razer Synapse (требует DLL)
-    MakcuUART = 3,        // Плата Makcu через COM-порт/UART
-    KMBoxNet = 4          // Плата KMbox через сеть (LAN)
-};
-
-struct HardwareConfig {
-    HardwareMode mode = HardwareMode::LocalMouse;
-    
-    // Настройки для Makcu
-    std::string makcu_port = "COM3";
-    int makcu_baudrate = 9600;
-
-    // Настройки для KMbox Net
-    std::string kmbox_ip = "192.168.1.100";
-    int kmbox_port = 5555;
-    
-    // Общие настройки
-    bool enable_smoothing = true;
-    float smoothing_factor = 5.0f;
-};
 
 class HardwareController {
 public:
@@ -67,7 +43,7 @@ private:
     void MoveMakcu(int dx, int dy);
     void MoveKMBox(int dx, int dy);
 
-    HardwareConfig current_config_;
+    ::HardwareConfig current_config_;
     HardwareMode current_mode_ = HardwareMode::LocalMouse;
     std::atomic<bool> connected_{false};
     

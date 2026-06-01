@@ -26,17 +26,17 @@ void MouseController::Initialize(MouseMethod method) {
     isInitialized = true;
 
     // Инициализация HardwareController для режимов Makcu/KMBox
-    HardwareConfig hwConfig;
-    hwConfig.mode = HardwareMode::LocalMouse;
+    ::HardwareConfig hwConfig;
+    hwConfig.mode = static_cast<HardwareMode>(0); // LocalMouse
     
     switch (method) {
         case MouseMethod::Makcu_UART:
-            hwConfig.mode = HardwareMode::MakcuUART;
-            hwConfig.makcu_port = "COM3";
-            hwConfig.makcu_baudrate = 9600;
+            hwConfig.mode = HardwareMode::MackuUART;
+            hwConfig.com_port = "COM3";
+            hwConfig.baud_rate = 9600;
             break;
         case MouseMethod::KMBox_Net:
-            hwConfig.mode = HardwareMode::KMBoxNet;
+            hwConfig.mode = HardwareMode::KMboxNet;
             hwConfig.kmbox_ip = "192.168.1.100";
             hwConfig.kmbox_port = 5555;
             break;
@@ -223,18 +223,18 @@ void MouseController::SetMethod(MouseMethod method) {
     currentMethod = method;
     
     // Переинициализация HardwareController если сменился режим
-    HardwareConfig hwConfig;
-    hwConfig.mode = HardwareMode::LocalMouse;
+    ::HardwareConfig hwConfig;
+    hwConfig.mode = static_cast<HardwareMode>(0); // LocalMouse
     
     switch (method) {
         case MouseMethod::Makcu_UART:
-            hwConfig.mode = HardwareMode::MakcuUART;
-            hwConfig.makcu_port = "COM3";
-            hwConfig.makcu_baudrate = 9600;
+            hwConfig.mode = HardwareMode::MackuUART;
+            hwConfig.com_port = "COM3";
+            hwConfig.baud_rate = 9600;
             HardwareController::Instance().Initialize(hwConfig);
             break;
         case MouseMethod::KMBox_Net:
-            hwConfig.mode = HardwareMode::KMBoxNet;
+            hwConfig.mode = HardwareMode::KMboxNet;
             hwConfig.kmbox_ip = "192.168.1.100";
             hwConfig.kmbox_port = 5555;
             HardwareController::Instance().Initialize(hwConfig);
@@ -244,6 +244,6 @@ void MouseController::SetMethod(MouseMethod method) {
     }
 }
 
-void MouseController::UpdateHardwareConfig(const HardwareConfig& config) {
+void MouseController::UpdateHardwareConfig(const ::HardwareConfig& config) {
     HardwareController::Instance().UpdateConfig(config);
 }
