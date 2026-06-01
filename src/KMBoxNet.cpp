@@ -1,4 +1,5 @@
 #include "KMBoxNet.h"
+// WinSocketPrecompiled.h уже подключен в KMBoxNet.h
 #include <thread>
 #include <chrono>
 #include <cstring>

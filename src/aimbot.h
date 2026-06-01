@@ -2,13 +2,9 @@
 #ifndef AIMBOT_H
 #define AIMBOT_H
 
-#define NOMINMAX
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN 
-#endif
+// ВАЖНО: Подключаем наш предкомпилированный заголовок для Winsock ПЕРВЫМ
+#include "WinSocketPrecompiled.h"
 
-#include <winsock2.h>
-#include <windows.h>
 #include <vector>
 #include <string>
 #include <random>

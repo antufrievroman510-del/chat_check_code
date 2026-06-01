@@ -1,6 +1,5 @@
 #include "MakcuUART.h"
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+// WinSocketPrecompiled.h уже подключен в MakcuUART.h
 #include <thread>
 #include <chrono>
 

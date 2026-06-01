@@ -1,7 +1,8 @@
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+// ВАЖНО: Подключаем наш предкомпилированный заголовок для Winsock ПЕРВЫМ
+#include "WinSocketPrecompiled.h"
+
 #include <string>
 #include <mutex>
 

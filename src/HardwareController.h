@@ -1,6 +1,8 @@
 #pragma once
 
-#include <Windows.h>
+// ВАЖНО: Подключаем наш предкомпилированный заголовок для Winsock ПЕРВЫМ
+#include "WinSocketPrecompiled.h"
+
 #include <string>
 #include <atomic>
 

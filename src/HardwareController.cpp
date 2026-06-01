@@ -1,16 +1,8 @@
 #include "HardwareController.h"
+// WinSocketPrecompiled.h уже подключен в HardwareController.h
 #include "MakcuUART.h"
 #include "KMBoxNet.h"
 #include <iostream>
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-
-#include <winsock2.h>
-#include <ws2tcpip.h> // Для сокетов
-
-#pragma comment(lib, "Ws2_32.lib") // Библиотека для сокетов
 
 // Заглушки для HIDAPI (будут реализованы при наличии библиотеки)
 #ifdef HAS_HIDAPI

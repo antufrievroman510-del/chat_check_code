@@ -1,1 +1,51 @@
-Nothing should be ignored since only source code files (.cpp and .h) were modified.
+```
+# Precompiled headers
+*.h.gch
+*.hpp.gch
+*.h.pch
+*.hpp.pch
+
+# Build artifacts
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.exe
+*.out
+
+# Debug and release builds
+Debug/
+Release/
+x64/
+x86/
+build/
+dist/
+
+# Dependencies
+node_modules/
+vendor/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+```
