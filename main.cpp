@@ -719,7 +719,7 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
             aim->elite_smoke_vision = local_cfg.elite_smoke_vision;
             aim->elite_voice_ctrl = local_cfg.elite_voice_ctrl;
             aim->elite_shadow_trainer = local_cfg.elite_shadow_trainer;
-            strncpy(aim->shadow_webhook, local_cfg.shadow_webhook, 255);
+            aim->shadow_webhook = local_cfg.shadow_webhook;
             aim->max_move_step = local_cfg.max_move_step;
             aim->aim_target_lock = local_cfg.aim_target_lock;
             aim->aim_lock_x = local_cfg.aim_lock_x;
