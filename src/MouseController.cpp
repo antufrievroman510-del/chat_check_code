@@ -1,4 +1,5 @@
 #include "MouseController.h"
+#include "HardwareController.h"
 #include <iostream>
 
 // Singleton instance
@@ -24,15 +25,33 @@ void MouseController::Initialize(MouseMethod method) {
     currentMethod = method;
     isInitialized = true;
 
-    // В будущем здесь можно добавить:
-    // - Проверку наличия драйвера G Hub / Razer Synapse
-    // - Загрузку библиотек для эмуляции
-    // - Инициализацию драйвера для прямого ввода
+    // Инициализация HardwareController для режимов Makcu/KMBox
+    HardwareConfig hwConfig;
+    hwConfig.mode = HardwareMode::LocalMouse;
     
+    switch (method) {
+        case MouseMethod::Makcu_UART:
+            hwConfig.mode = HardwareMode::MakcuUART;
+            hwConfig.makcu_port = "COM3";
+            hwConfig.makcu_baudrate = 9600;
+            break;
+        case MouseMethod::KMBox_Net:
+            hwConfig.mode = HardwareMode::KMBoxNet;
+            hwConfig.kmbox_ip = "192.168.1.100";
+            hwConfig.kmbox_port = 5555;
+            break;
+        default:
+            break;
+    }
+    
+    HardwareController::Instance().Initialize(hwConfig);
+
     std::cout << "[MouseController] Initialized with method: " 
               << (method == MouseMethod::Standard ? "Standard" : 
                   method == MouseMethod::GHub_Spoof ? "GHub Spoof" :
-                  method == MouseMethod::Razer_Spoof ? "Razer Spoof" : "Driver")
+                  method == MouseMethod::Razer_Spoof ? "Razer Spoof" :
+                  method == MouseMethod::Driver ? "Driver" :
+                  method == MouseMethod::Makcu_UART ? "Makcu UART" : "KMBox Net")
               << std::endl;
 }
 
@@ -66,6 +85,12 @@ void MouseController::MoveMouse(float deltaX, float deltaY) {
             break;
         case MouseMethod::Driver:
             MoveDriver(dx, dy);
+            break;
+        case MouseMethod::Makcu_UART:
+            MoveMakcu(dx, dy);
+            break;
+        case MouseMethod::KMBox_Net:
+            MoveKMBox(dx, dy);
             break;
     }
 }
@@ -130,6 +155,20 @@ void MouseController::MoveDriver(int dx, int dy) {
 }
 
 /**
+ * @brief Движение через плату Makcu (UART/COM)
+ */
+void MouseController::MoveMakcu(int dx, int dy) {
+    HardwareController::Instance().MoveMouse(dx, dy);
+}
+
+/**
+ * @brief Движение через плату KMbox (Network)
+ */
+void MouseController::MoveKMBox(int dx, int dy) {
+    HardwareController::Instance().MoveMouse(dx, dy);
+}
+
+/**
  * @brief Нажатие кнопки мыши
  */
 void MouseController::PressButton(int buttonCode) {
@@ -182,4 +221,29 @@ void MouseController::ReleaseButton(int buttonCode) {
  */
 void MouseController::SetMethod(MouseMethod method) {
     currentMethod = method;
+    
+    // Переинициализация HardwareController если сменился режим
+    HardwareConfig hwConfig;
+    hwConfig.mode = HardwareMode::LocalMouse;
+    
+    switch (method) {
+        case MouseMethod::Makcu_UART:
+            hwConfig.mode = HardwareMode::MakcuUART;
+            hwConfig.makcu_port = "COM3";
+            hwConfig.makcu_baudrate = 9600;
+            HardwareController::Instance().Initialize(hwConfig);
+            break;
+        case MouseMethod::KMBox_Net:
+            hwConfig.mode = HardwareMode::KMBoxNet;
+            hwConfig.kmbox_ip = "192.168.1.100";
+            hwConfig.kmbox_port = 5555;
+            HardwareController::Instance().Initialize(hwConfig);
+            break;
+        default:
+            break;
+    }
+}
+
+void MouseController::UpdateHardwareConfig(const HardwareConfig& config) {
+    HardwareController::Instance().UpdateConfig(config);
 }

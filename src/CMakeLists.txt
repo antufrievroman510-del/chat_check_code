@@ -51,6 +51,8 @@ add_executable(PWNZ_AI WIN32
     "AimMath.cpp"
     "MouseController.h"
     "MouseController.cpp"
+    "HardwareController.h"
+    "HardwareController.cpp"
     "${IMGUI_DIR}/imgui.cpp"
     "${IMGUI_DIR}/imgui_draw.cpp"
     "${IMGUI_DIR}/imgui_widgets.cpp"
