@@ -66,6 +66,7 @@ public:
     float kalman_velocity_damping = 0.08f;
     float kalman_max_velocity = 20000.0f;
     int hardware_type = 0;
+    int bypass_mode = 0;      // Режим обхода (0=None, 1=GHub, 2=Razer, 3=Random)
     int com_port = 3;
     std::string net_ip = "192.168.1.100";
     int net_port = 3333;
