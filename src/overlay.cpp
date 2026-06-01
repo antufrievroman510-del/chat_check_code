@@ -1222,14 +1222,23 @@ void Overlay::RenderProfileTab(float content_w, float content_h, const ImVec4& a
 }
 
 // ============================================================
+ интеграция-сетевых-компонентов-889bc
+
+// ============================================================
+ main
 // RenderHardwareTab (вкладка Hardware/2PC)
 // ============================================================
 void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& acc_vec, ImU32 acc_u32, bool& cfg_changed) {
     ImGui::Columns(2, nullptr, false);
     ImGui::SetColumnWidth(0, content_w * 0.5f);
 
+интеграция-сетевых-компонентов-889bc
     // Left Column - Main Settings
     if (BeginPanel("Hardware Mode Selection", ImVec2(0, 280), acc_vec)) cfg_changed = true;
+
+    // === ЛЕВАЯ КОЛОНКА: Основные настройки Hardware ===
+    BeginPanel("Hardware Output Mode", ImVec2(0, 280), acc_vec);
+ main
     
     const char* hw_modes[] = {
         "Local Mouse (SendInput)",
@@ -1237,6 +1246,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         "KMbox Net (UDP)"
     };
     
+ интеграция-сетевых-компонентов-889bc
     if (CustomCombo("Mode:", "##hw_mode", &hardware_mode_idx, hw_modes, 3, 
         is_russian ? u8"Выберите режим работы" : "Select hardware mode")) {
         cfg_changed = true;
@@ -1360,22 +1370,115 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
             if (ImGui::Button("Connect KMbox", ImVec2(150, 35))) {
                 hw.ConnectKMbox(kmbox_ip_buf, kmbox_port);
+
+    if (CustomCombo("Mouse Method:", "##hw_mode", &hardware_type, hw_modes, 3, 
+        is_russian ? u8"Выбор метода ввода мыши." : "Select mouse input method.")) {
+        cfg_changed = true;
+    }
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    // Настройки для Makcu UART
+    if (hardware_type == 1) {
+        ImGui::TextColored(acc_vec, "Makcu UART Settings:");
+        ImGui::Spacing();
+        
+        static char com_port_buf[32] = "COM3";
+        static int baud_rate = 115200;
+        
+        ImGui::InputText("COM Port", com_port_buf, sizeof(com_port_buf));
+        HelpMarker(is_russian ? u8"Порт Makcu платы (например COM3)" : "Makcu COM port (e.g. COM3)");
+        
+        const char* baud_rates[] = { "9600", "19200", "38400", "57600", "115200" };
+        static int baud_idx = 4;
+        if (ImGui::Combo("Baud Rate", &baud_idx, baud_rates, 5)) {
+            baud_rate = std::atoi(baud_rates[baud_idx]);
+        }
+        
+        ImGui::Spacing();
+        
+        // Статус подключения и кнопки управления
+        static bool makcu_connected = false;
+        
+        if (!makcu_connected) {
+            if (ImGui::Button("Connect Makcu", ImVec2(-1, 35))) {
+                // Здесь будет вызов HardwareController::InitializeMakcu(com_port_buf, baud_rate)
+                makcu_connected = true;
+                cfg_changed = true;
             }
-            ImGui::PopStyleColor();
         } else {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
-            if (ImGui::Button("Disconnect KMbox", ImVec2(150, 35))) {
-                hw.DisconnectKMbox();
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.6f));
+            if (ImGui::Button("Disconnect", ImVec2(-1, 35))) {
+                // Здесь будет вызов HardwareController::CloseMakcu()
+                makcu_connected = false;
+                cfg_changed = true;
             }
             ImGui::PopStyleColor();
         }
         
         ImGui::SameLine();
-        if (connected) {
+        if (makcu_connected) {
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "CONNECTED");
         } else {
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "DISCONNECTED");
         }
+    }
+    
+    // Настройки для KMbox Net
+    if (hardware_type == 2) {
+        ImGui::TextColored(acc_vec, "KMbox Net Settings:");
+        ImGui::Spacing();
+        
+        static char kmbox_ip_buf[64] = "192.168.1.100";
+        static int kmbox_port = 5555;
+        
+        ImGui::InputText("IP Address", kmbox_ip_buf, sizeof(kmbox_ip_buf));
+        ImGui::SameLine();
+        ImGui::InputInt("Port", &kmbox_port);
+        HelpMarker(is_russian ? u8"IP и порт KMbox Net устройства" : "KMbox Net IP and port");
+        
+        ImGui::Spacing();
+        
+        // Статус подключения и кнопки управления
+        static bool kmbox_connected = false;
+        
+        if (!kmbox_connected) {
+            if (ImGui::Button("Connect KMbox", ImVec2(-1, 35))) {
+                // Здесь будет вызов HardwareController::InitializeKMBox(kmbox_ip_buf, kmbox_port)
+                kmbox_connected = true;
+                cfg_changed = true;
+ main
+            }
+            ImGui::PopStyleColor();
+        } else {
+ интеграция-сетевых-компонентов-889bc
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
+            if (ImGui::Button("Disconnect KMbox", ImVec2(150, 35))) {
+                hw.DisconnectKMbox();
+
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.6f));
+            if (ImGui::Button("Disconnect", ImVec2(-1, 35))) {
+                // Здесь будет вызов HardwareController::CloseKMBox()
+                kmbox_connected = false;
+                cfg_changed = true;
+ main
+            }
+            ImGui::PopStyleColor();
+        }
+        
+        ImGui::SameLine();
+ интеграция-сетевых-компонентов-889bc
+        if (connected) {
+
+        if (kmbox_connected) {
+ main
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "CONNECTED");
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "DISCONNECTED");
+        }
+ интеграция-сетевых-компонентов-889bc
         
         EndPanel();
     } else {
@@ -1391,12 +1494,31 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
                 is_russian ? u8"⚠ Может определяться античитами" : "⚠ May be detected by anti-cheats");
         }
         EndPanel();
+
+    }
+    
+    // Для Local Mouse
+    if (hardware_type == 0) {
+        ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "Using standard Windows SendInput API");
+        ImGui::TextDisabled(is_russian ? u8"Никаких дополнительных настроек не требуется" : "No additional configuration required");
+    }
+    
+    EndPanel();
+    
+    // === ЛЕВАЯ КОЛОНКА: Опции безопасности ===
+    BeginPanel("Bypass Options", ImVec2(0, 200), acc_vec);
+    
+    if (DrawToggle("Enable Hardware", "##en_hw", &enable_hardware, acc_u32,
+        is_russian ? u8"Активировать выбранный метод ввода" : "Activate selected input method")) {
+        cfg_changed = true;
+ main
     }
 
     ImGui::Columns(1);
     
     // Bottom Section - Quick Guide
     ImGui::Spacing();
+ интеграция-сетевых-компонентов-889bc
     if (BeginPanel(is_russian ? u8"📖 Быстрая инструкция" : "📖 Quick Guide", ImVec2(-1, 120), acc_vec)) {
         ImGui::Columns(3, nullptr, false);
         
@@ -1418,8 +1540,138 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             "Go to 'Check HW' tab\nUse test buttons\nto verify operation");
         
         ImGui::Columns(1);
+
+    
+    const char* bypass_modes[] = {
+        "None (Direct)",
+        "GHub Emulation",
+        "Razer Emulation",
+        "Random Delay"
+    };
+    
+    static int bypass_mode = 0;
+    if (CustomCombo("Bypass Mode:", "##bypass", &bypass_mode, bypass_modes, 4,
+        is_russian ? u8"Режим обхода античита" : "Anti-cheat bypass mode")) {
+        cfg_changed = true;
+ main
     }
+    
+    if (bypass_mode == 3) {
+        static int delay_ms = 5;
+        if (CustomSliderInt("Delay (ms):", "##dly", &delay_ms, 1, 50, "%d ms", acc_vec)) {
+            cfg_changed = true;
+        }
+    }
+    
     EndPanel();
+ интеграция-сетевых-компонентов-889bc
+
+    
+    ImGui::NextColumn();
+    
+    // === ПРАВАЯ КОЛОНКА: Тестирование Hardware ===
+    BeginPanel("Hardware Test Panel", ImVec2(0, 350), acc_vec);
+    
+    ImGui::TextColored(acc_vec, is_russian ? u8"Проверка работы устройства:" : "Hardware functionality test:");
+    ImGui::Spacing();
+    
+    // Тест движения мыши
+    if (ImGui::Button("Test Move: X+50, Y+50", ImVec2(-1, 45))) {
+        if (enable_hardware) {
+            // Вызов HardwareController::Move(50, 50)
+            // В зависимости от hardware_type отправит на Makcu/KMbox или локально
+            if (hardware_type == 0) {
+                // Local SendInput
+            } else if (hardware_type == 1) {
+                // Makcu UART move
+            } else if (hardware_type == 2) {
+                // KMbox Net move
+            }
+        } else {
+            // Предупреждение что hardware не включен
+        }
+    }
+    HelpMarker(is_russian ? u8"Тестовое движение мыши на 50 пикселей" : "Test mouse move by 50 pixels");
+    
+    ImGui::Spacing();
+    
+    // Тест клика мыши
+    if (ImGui::Button("Test Left Click", ImVec2(-1, 45))) {
+        if (enable_hardware) {
+            // Вызов HardwareController::Click(MOUSE_LEFT)
+        }
+    }
+    HelpMarker(is_russian ? u8"Тест левого клика мыши" : "Test left mouse button click");
+    
+    ImGui::Spacing();
+    
+    // Тест двойного клика
+    if (ImGui::Button("Test Double Click", ImVec2(-1, 45))) {
+        if (enable_hardware) {
+            // Вызов HardwareController::DoubleClick()
+        }
+    }
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    // Статистика
+    ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "Statistics:");
+    ImGui::Text("Hardware Type: %s", hw_modes[hardware_type]);
+    ImGui::Text("Status: %s", enable_hardware ? "ACTIVE" : "INACTIVE");
+    
+    EndPanel();
+    
+    // === ПРАВАЯ КОЛОНКА: Информация и обучение ===
+    BeginPanel("Info & Guide", ImVec2(0, content_h - 350 - 20), acc_vec);
+    
+    if (hardware_type == 1) {
+        ImGui::TextColored(acc_vec, "Makcu Setup Guide:");
+        ImGui::BulletText("1. Connect Makcu board via USB");
+        ImGui::BulletText("2. Install CH340/CP2102 drivers");
+        ImGui::BulletText("3. Find COM port in Device Manager");
+        ImGui::BulletText("4. Set correct Baud Rate (115200)");
+        ImGui::BulletText("5. Click 'Connect Makcu'");
+        ImGui::Spacing();
+        ImGui::TextDisabled("For 2PC: Use USB-over-Network to share the device");
+    }
+    else if (hardware_type == 2) {
+        ImGui::TextColored(acc_vec, "KMbox Net Setup Guide:");
+        ImGui::BulletText("1. Connect KMbox to PC #2 (game PC)");
+        ImGui::BulletText("2. Configure network settings");
+        ImGui::BulletText("3. Enter IP address and port");
+        ImGui::BulletText("4. Click 'Connect KMbox'");
+        ImGui::Spacing();
+        ImGui::TextDisabled("Ensure both PCs are on same network");
+    }
+    else {
+        ImGui::TextColored(acc_vec, "Local Mouse Mode:");
+        ImGui::BulletText("Uses standard Windows API");
+        ImGui::BulletText("No external hardware required");
+        ImGui::BulletText("May be detected by some anti-cheats");
+    }
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    if (ImGui::Button(is_russian ? u8"Открыть полное руководство" : "Open Full Tutorial", ImVec2(-1, 35))) {
+        show_hw_tutorial = true;
+    }
+    
+    EndPanel();
+    
+    ImGui::Columns(1);
+}
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
+    if (ImGui::Button("RESET TO DEFAULTS", ImVec2(200, 40))) { ResetDefaults(); cfg_changed = true; }
+    ImGui::PopStyleColor(2);
+    EndPanel();
+
+    ImGui::Columns(1);
+ main
 }
 
 // ============================================================
