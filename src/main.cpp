@@ -999,6 +999,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             g_safe_cfg.pixelsmooth_enabled = overlay.pixelsmooth_enabled;
             g_safe_cfg.pixelsmooth_value = overlay.pixelsmooth_value;
             g_safe_cfg.smooth_factor = overlay.smooth_factor;
+            // Синхронизация новых полей Sunone
+            g_safe_cfg.min_sensitivity = overlay.min_sensitivity;
+            g_safe_cfg.max_sensitivity = overlay.max_sensitivity;
+            g_safe_cfg.detection_resolution = overlay.detection_resolution;
         }
         if (overlay.is_authenticated) {
             auto now_time = std::chrono::steady_clock::now();
