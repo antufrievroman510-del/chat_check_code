@@ -1,11 +1,11 @@
 ﻿#define WINVER 0x0601
 #define _WIN32_WINNT 0x0601
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
+
+// ВАЖНО: Подключаем наш предкомпилированный заголовок для Winsock ПЕРВЫМ
+#include "WinSocketPrecompiled.h"
 
 #include <iostream>
 #include <chrono>
-#include <windows.h>
 #include <vector>
 #include <thread>  
 #include <mutex>   

@@ -1,5 +1,8 @@
 #pragma once
-#include <windows.h>
+
+// ВАЖНО: Подключаем наш предкомпилированный заголовок для Winsock ПЕРВЫМ
+#include "WinSocketPrecompiled.h"
+
 #include <d3d11.h>
 #include <dxgi1_2.h>
 #include <mutex>
