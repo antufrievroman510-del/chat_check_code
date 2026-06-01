@@ -639,6 +639,14 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
         // ИСПРАВЛЕНИЕ: Проверяем overlay->aim_enable вместо local_cfg.aim_enable
         // Потому что SyncFromOverlay уже синхронизировал все настройки из overlay
         bool currently_aiming = (IsAimKeyPressed(overlay) || g_remote_aim_key.load()) && overlay->aim_enable;
+        
+        // [DEBUG] Логирование состояния аимбота для отладки
+        // if (currently_aiming) {
+        //     std::cout << "[AIM DEBUG] Aim active! Key=" << IsAimKeyPressed(overlay) 
+        //               << " Remote=" << g_remote_aim_key.load() 
+        //               << " Enable=" << overlay->aim_enable 
+        //               << " HW_Type=" << aim->hardware_type << std::endl;
+        // }
 
         if (local_cfg.com_port != last_com_port) {
             aim->com_port = local_cfg.com_port;
@@ -804,15 +812,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             overlay.SaveConfig(&aim);
         }
         overlay.is_first_frame_init = true;
-        aim.hardware_type = overlay.hardware_type;
+        aim.hardware_type = overlay.hardware_mode_idx;  // Исправлено: было hardware_type
         aim.com_port = overlay.com_port;
         
         // ИСПРАВЛЕНИЕ: Гарантируем инициализацию SendInput для hardware_type=0
         // Это критично для работы трекинга через стандартную мышь Windows
-        if (overlay.hardware_mode_idx == 0) {
-            aim.hardware_type = 0;
+        std::cout << "[INIT] Hardware type: " << aim.hardware_type << std::endl;
+        if (aim.InitHardware()) {
+            std::cout << "[INIT] Hardware initialized successfully" << std::endl;
+        } else {
+            std::cout << "[INIT] WARNING: Hardware initialization failed!" << std::endl;
         }
-        aim.InitHardware();
 
         int start_w, start_h; GetModelSize(overlay.ai_model, start_w, start_h);
         std::string model_to_load = model_files[overlay.ai_model];
