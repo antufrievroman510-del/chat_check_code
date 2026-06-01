@@ -864,8 +864,9 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
     // === ЛЕВАЯ КОЛОНКА ===
     
     // Aimbot Core - Основные настройки
-    if (BeginPanel("Aimbot Core", ImVec2(0, 280), acc_vec, true, &aim_enable, acc_u32)) cfg_changed = true;
+    if (BeginPanel("Aimbot Core", ImVec2(0, 320), acc_vec, true, &aim_enable, acc_u32)) cfg_changed = true;
     if (DrawKeybinder("Main Bind:", &aim_key_main, 1, u8"Основная кнопка активации.")) cfg_changed = true;
+    if (DrawKeybinder("Second Bind:", &aim_key_sub, 2, u8"Вторая кнопка активации (опционально).")) cfg_changed = true;
     if (DrawKeybinder("Toggle Key:", &aim_toggle_key, 3, u8"Включение/выключение аимбота.")) cfg_changed = true;
     if (CustomCombo("Target Part:", "##tgt", &aim_target, tgts, 3, u8"Часть тела для прицеливания.")) cfg_changed = true;
     if (DrawToggle("Keep Current Lock:", "##keep_lock", &aim_target_lock, acc_u32, u8"Не переключаться на другую цель автоматически.")) cfg_changed = true;
@@ -1258,7 +1259,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     if (BeginPanel("Hardware Output Mode", ImVec2(0, 280), acc_vec)) cfg_changed = true;
     
     const char* hw_modes[] = {
-        "Local Mouse (SendInput)",
+        "Local Mouse (SendInput) [UNSAFE]",
         "Makcu (UART/COM)",
         "KMbox Net (UDP)"
     };
@@ -1420,15 +1421,15 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         EndPanel();
     } else {
         // Local Mouse Info
-        if (BeginPanel("Local Mouse (SendInput)", ImVec2(0, 280), acc_vec)) {
+        if (BeginPanel("Local Mouse (SendInput) [UNSAFE]", ImVec2(0, 280), acc_vec)) {
             ImGui::TextColored(acc_vec, is_russian ? u8"Стандартный ввод Windows" : "Standard Windows Input");
             ImGui::Spacing();
             ImGui::TextWrapped(is_russian ? 
                 u8"Используется API SendInput для эмуляции мыши.\nНе требует дополнительного оборудования." :
                 "Uses SendInput API for mouse emulation.\nNo additional hardware required.");
             ImGui::Spacing();
-            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
-                is_russian ? u8"⚠ Может определяться античитами" : "⚠ May be detected by anti-cheats");
+            ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f),
+                is_russian ? u8"⚠ ОПАСНО: Может определяться античитами!" : "⚠ DANGEROUS: May be detected by anti-cheats!");
             EndPanel();
         }
     }
@@ -1690,7 +1691,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     ImGui::Spacing();
     
     const char* mode_names[] = {
-        "Local Mouse (SendInput)",
+        "Local Mouse (SendInput) [UNSAFE]",
         "Makcu (UART/COM)",
         "KMbox Net (UDP)"
     };
