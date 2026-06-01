@@ -48,7 +48,7 @@
 #include "xorstr.hpp"
 #include "VMProtectSDK.h"
 #include "head_smoother.h"
-#include "HardwareBackend.h"
+// HardwareBackend.h уже включен через WinHeaders.h в overlay.h
 
 extern HeadSmoother g_head_smoother;
 #pragma comment(lib, "dwmapi.lib")
@@ -285,6 +285,16 @@ void Overlay::LoadConfig(Aimbot* aim) {
     handlers["obs_bypass"] = [&](const std::string& v) { obs_bypass = std::stoi(v); };
     handlers["menu_scale"] = [&](const std::string& v) { menu_scale = safe_stof(v); };
     handlers["hardware_mode_idx"] = [&](const std::string& v) { hardware_mode_idx = std::stoi(v); };
+    handlers["hw_enabled"] = [&](const std::string& v) { hw_enabled = std::stoi(v); };
+    handlers["bypass_mode_idx"] = [&](const std::string& v) { bypass_mode_idx = std::stoi(v); };
+    handlers["baud_rate_idx"] = [&](const std::string& v) { baud_rate_idx = std::stoi(v); };
+    handlers["com_port_buf"] = [&](const std::string& v) { strncpy(com_port_buf, v.c_str(), sizeof(com_port_buf) - 1); };
+    handlers["kmbox_ip_buf"] = [&](const std::string& v) { strncpy(kmbox_ip_buf, v.c_str(), sizeof(kmbox_ip_buf) - 1); };
+    handlers["kmbox_port"] = [&](const std::string& v) { kmbox_port = std::stoi(v); };
+    handlers["random_delay_min"] = [&](const std::string& v) { random_delay_min = std::stoi(v); };
+    handlers["random_delay_max"] = [&](const std::string& v) { random_delay_max = std::stoi(v); };
+    handlers["test_move_x"] = [&](const std::string& v) { test_move_x = std::stoi(v); };
+    handlers["test_move_y"] = [&](const std::string& v) { test_move_y = std::stoi(v); };
     handlers["com_port"] = [&](const std::string& v) { com_port = std::stoi(v); };
     handlers["aim_deadzone"] = [&](const std::string& v) { aim_deadzone = safe_stof(v); };
     handlers["draw_crosshair"] = [&](const std::string& v) { draw_crosshair = std::stoi(v); };
@@ -449,6 +459,16 @@ void Overlay::SaveConfig(Aimbot* aim) {
     ss << "obs_bypass=" << obs_bypass << "\n";
     ss << "menu_scale=" << menu_scale << "\n";
     ss << "hardware_mode_idx=" << hardware_mode_idx << "\n";
+    ss << "hw_enabled=" << hw_enabled << "\n";
+    ss << "bypass_mode_idx=" << bypass_mode_idx << "\n";
+    ss << "baud_rate_idx=" << baud_rate_idx << "\n";
+    ss << "com_port_buf=" << com_port_buf << "\n";
+    ss << "kmbox_ip_buf=" << kmbox_ip_buf << "\n";
+    ss << "kmbox_port=" << kmbox_port << "\n";
+    ss << "random_delay_min=" << random_delay_min << "\n";
+    ss << "random_delay_max=" << random_delay_max << "\n";
+    ss << "test_move_x=" << test_move_x << "\n";
+    ss << "test_move_y=" << test_move_y << "\n";
     ss << "com_port=" << com_port << "\n";
     ss << "aim_deadzone=" << aim_deadzone << "\n";
     ss << "draw_crosshair=" << draw_crosshair << "\n";
