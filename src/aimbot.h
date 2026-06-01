@@ -130,8 +130,8 @@ private:
     long long last_target_time = 0;
     float g_frac_x = 0.0f, g_frac_y = 0.0f;
     
-    HANDLE hSerial = INVALID_HANDLE_VALUE;
-    SOCKET udp_socket = INVALID_SOCKET;
+    HANDLE hSerial;
+    SOCKET udp_socket;
     sockaddr_in udp_addr;
     
     float latency_hist[100] = { 0 };

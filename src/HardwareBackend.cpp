@@ -2,25 +2,27 @@
 #include <cstring>
 #include <iostream>
 
-#ifdef _WIN32
-    #include <winsock2.h>
-    #include <ws2tcpip.h>
+// WinHeaders.h уже включает всё необходимое для Windows (windows.h, winsock2.h, ws2tcpip.h)
+// Поэтому не нужно включать их повторно здесь - это вызовет конфликты переопределения
+#ifndef _WIN32
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <unistd.h>
+#else
     #pragma comment(lib, "ws2_32.lib")
     #ifndef _SSIZE_T_DEFINED
         #define _SSIZE_T_DEFINED
         typedef SSIZE_T ssize_t;
     #endif
-#else
-    #include <sys/socket.h>
-    #include <netinet/in.h>
-    #include <arpa/inet.h>
-    #include <unistd.h>
 #endif
 
 HardwareBackend& HardwareBackend::Instance() {
     static HardwareBackend instance;
     return instance;
 }
+
+HardwareBackend::HardwareBackend() : hComPort(nullptr), udpSocket(-1), mackuConnected(false), kmboxConnected(false) {}
 
 HardwareBackend::~HardwareBackend() {
     DisconnectMacku();
@@ -34,7 +36,7 @@ bool HardwareBackend::ConnectMacku(const std::string& port, int baud) {
     std::string fullPort = "\\\\.\\" + port;
     hComPort = CreateFileA(fullPort.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
     
-    if (hComPort == INVALID_HANDLE_VALUE) {
+    if (hComPort == (HANDLE)-1) {
         std::cerr << "Failed to open COM port: " << port << std::endl;
         return false;
     }
@@ -43,7 +45,7 @@ bool HardwareBackend::ConnectMacku(const std::string& port, int baud) {
     dcb.DCBlength = sizeof(DCB);
     if (!GetCommState(hComPort, &dcb)) {
         CloseHandle(hComPort);
-        hComPort = INVALID_HANDLE_VALUE;
+        hComPort = nullptr;
         return false;
     }
     
@@ -54,7 +56,7 @@ bool HardwareBackend::ConnectMacku(const std::string& port, int baud) {
     
     if (!SetCommState(hComPort, &dcb)) {
         CloseHandle(hComPort);
-        hComPort = INVALID_HANDLE_VALUE;
+        hComPort = nullptr;
         return false;
     }
     
@@ -78,9 +80,9 @@ bool HardwareBackend::ConnectMacku(const std::string& port, int baud) {
 
 void HardwareBackend::DisconnectMacku() {
 #ifdef _WIN32
-    if (hComPort != INVALID_HANDLE_VALUE) {
+    if (hComPort != nullptr) {
         CloseHandle(hComPort);
-        hComPort = INVALID_HANDLE_VALUE;
+        hComPort = nullptr;
     }
 #endif
     mackuConnected = false;

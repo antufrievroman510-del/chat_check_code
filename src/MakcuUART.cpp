@@ -10,7 +10,7 @@ constexpr unsigned char PACKET_TYPE_MOVE = 0x01;
 constexpr unsigned char PACKET_TYPE_MOVE_ABS = 0x02;
 
 MakcuUART::MakcuUART() 
-    : hComPort(INVALID_HANDLE_VALUE), isConnected(false), packetDelayMs(1) {}
+    : hComPort(nullptr), isConnected(false), packetDelayMs(1) {}
 
 MakcuUART::~MakcuUART() {
     Disconnect();
@@ -36,7 +36,7 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
         nullptr     // No template file
     );
 
-    if (hComPort == INVALID_HANDLE_VALUE) {
+    if (hComPort == nullptr) {
         return false;
     }
 
@@ -72,9 +72,9 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
 void MakcuUART::Disconnect() {
     std::lock_guard<std::mutex> lock(mtx);
     
-    if (hComPort != INVALID_HANDLE_VALUE) {
+    if (hComPort != nullptr) {
         CloseHandle(hComPort);
-        hComPort = INVALID_HANDLE_VALUE;
+        hComPort = nullptr;
     }
     isConnected = false;
 }
@@ -84,7 +84,7 @@ bool MakcuUART::IsConnected() const {
 }
 
 bool MakcuUART::MoveMouse(int dx, int dy) {
-    if (!isConnected || hComPort == INVALID_HANDLE_VALUE) {
+    if (!isConnected || hComPort == nullptr) {
         return false;
     }
 
@@ -111,7 +111,7 @@ bool MakcuUART::MoveMouse(int dx, int dy) {
 }
 
 bool MakcuUART::MoveMouseAbsolute(int x, int y, int width, int height) {
-    if (!isConnected || hComPort == INVALID_HANDLE_VALUE) {
+    if (!isConnected || hComPort == nullptr) {
         return false;
     }
 
