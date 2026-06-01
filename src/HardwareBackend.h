@@ -11,6 +11,8 @@
 enum class HardwareMode {
     None = 0,
     LocalMouse, // SendInput
+    GHub,       // Logitech G Hub HID
+    Razer,      // Razer Synapse HID
     MackuUART,  // COM Port
     KMboxNet    // UDP
 };
