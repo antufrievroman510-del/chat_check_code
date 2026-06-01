@@ -223,7 +223,6 @@ void Aimbot::CloseHardware() {
     if (hSerial != nullptr) { CloseHandle(hSerial); hSerial = nullptr; }
     if (udp_socket != INVALID_SOCKET) { closesocket(udp_socket); udp_socket = INVALID_SOCKET; WSACleanup(); }
 }
-}
 
 void Aimbot::SendHardwareMove(int x, int y) {
     if (x == 0 && y == 0) return;

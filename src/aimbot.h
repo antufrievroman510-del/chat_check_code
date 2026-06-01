@@ -45,7 +45,8 @@ public:
     bool aim_target_lock = true;
     int aim_target = 0;  // 0=Auto, 1=Head, 2=Body
     int aim_key_main = VK_RBUTTON;
-    int aim_key_sub = 0; // ДОБАВЛЕНО: Вторая кнопка активации
+    int aim_key_sub = 0; // Вторая кнопка активации
+    int aim_toggle_key = 0; // Клавиша переключения вкл/выкл аимбота
     float fov = 190.0f;
     float smooth_factor = 0.15f;
     int detection_resolution = 960;
@@ -114,6 +115,7 @@ private:
     std::unique_ptr<IMouseInput> m_mouseInput;
 
     std::pair<double, double> degToCounts(double degX, double degY) const;
+    double calculateSpeedMultiplier(double distance, int screen_h) const;
     double currentDetectionDelaySec() const;
     double currentPredictionLookaheadSec(double detectionDelaySec) const;
     std::pair<double, double> predictTargetPosition(double targetX, double targetY,
