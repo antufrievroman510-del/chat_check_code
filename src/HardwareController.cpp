@@ -1,5 +1,4 @@
 #include "HardwareController.h"
-// Winsock заголовки уже подключены в HardwareController.h
 #include "MakcuUART.h"
 #include "KMBoxNet.h"
 #include <iostream>
