@@ -109,8 +109,8 @@ private:
     
     // Методы класса
     std::pair<double, double> degToCounts(double degX, double degY) const;
-    std::pair<double, double> calcMovement(double targetX, double targetY);
-    double calculateSpeedMultiplier(double distance) const;
+    std::pair<double, double> calcMovement(double targetX, double targetY, int screen_w, int screen_h);
+    double calculateSpeedMultiplier(double distance, int screen_h) const;
     double currentDetectionDelaySec() const;
     double currentPredictionLookaheadSec(double detectionDelaySec) const;
     std::pair<double, double> predictTargetPosition(double targetX, double targetY,

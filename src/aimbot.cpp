@@ -205,8 +205,12 @@ void Aimbot::CloseHardware() {
 void Aimbot::SendHardwareMove(int x, int y) {
     if (x == 0 && y == 0) return;
     
-    // [DEBUG] Для отладки: раскомментируйте для вывода в консоль
-    // std::cout << "[AIM DEBUG] Move: dx=" << x << " dy=" << y << " hw=" << hardware_type << std::endl;
+    // [DEBUG] Логирование отправки движения
+    static int move_count = 0;
+    move_count++;
+    if (move_count % 10 == 0) {  // Логируем каждый 10-й вызов чтобы не спамить
+        std::cout << "[AIM DEBUG] SendHardwareMove: dx=" << x << " dy=" << y << " hw=" << hardware_type << std::endl;
+    }
     
     if ((hardware_type == 5 || hardware_type == 6) && udp_socket != INVALID_SOCKET) {
         char buffer[64];
@@ -233,9 +237,12 @@ void Aimbot::SendHardwareMove(int x, int y) {
         input.mi.dx = x;
         input.mi.dy = y;
         input.mi.dwFlags = MOUSEEVENTF_MOVE;
-        DynamicSendInput(1, &input, sizeof(INPUT));
-        // [DEBUG] Можно добавить логирование успешной отправки
-        // std::cout << "[AIM DEBUG] SendInput OK: " << x << "," << y << std::endl;
+        UINT result = DynamicSendInput(1, &input, sizeof(INPUT));
+        if (move_count % 10 == 0) {
+            std::cout << "[AIM DEBUG] SendInput OK: sent=" << result << " dx=" << x << " dy=" << y << std::endl;
+        }
+    } else if (hardware_type == 0 && !DynamicSendInput) {
+        std::cerr << "[AIM ERROR] SendInput is NULL! Hardware not initialized?" << std::endl;
     }
 }
 
@@ -278,13 +285,13 @@ std::pair<double, double> Aimbot::degToCounts(double degX, double degY) const {
     return { cx, cy };
 }
 
-double Aimbot::calculateSpeedMultiplier(double distance) const {
+double Aimbot::calculateSpeedMultiplier(double distance, int screen_h) const {
     // Расчет скорости наводки на основе min_sensitivity и max_sensitivity
     // min_sensitivity - минимальная скорость (ползунок 0.1-20)
     // max_sensitivity - максимальный потолок скорости (чтобы выше не улетала)
     
-    float max_distance = static_cast<float>(detection_resolution) / 2.0f;
-    float dist_ratio = distance / max_distance;
+    float max_distance = static_cast<float>(screen_h) / 2.0f;
+    float dist_ratio = static_cast<float>(distance) / max_distance;
     float norm = (dist_ratio < 0.0f) ? 0.0f : ((dist_ratio > 1.0f) ? 1.0f : dist_ratio);
     
     // Плавная кривая скорости между min_sensitivity и max_sensitivity
@@ -365,18 +372,28 @@ std::pair<double, double> Aimbot::predictTargetPosition(double targetX, double t
     return { predictedX, predictedY };
 }
 
-std::pair<double, double> Aimbot::calcMovement(double targetX, double targetY) {
-    double centerX = static_cast<double>(detection_resolution) / 2.0;
-    double centerY = static_cast<double>(detection_resolution) / 2.0;
+std::pair<double, double> Aimbot::calcMovement(double targetX, double targetY, int screen_w, int screen_h) {
+    // ИСПРАВЛЕНИЕ: Центр экрана считается от screen_w/screen_h, а НЕ от detection_resolution!
+    // detection_resolution - это размер модели (например 960x544), а targetX/targetY - координаты на экране
+    double centerX = static_cast<double>(screen_w) / 2.0;
+    double centerY = static_cast<double>(screen_h) / 2.0;
+    
     double offX = targetX - centerX;
     double offY = targetY - centerY;
     double distance = std::hypot(offX, offY);
     
     // Получаем множитель скорости на основе расстояния
-    double speed = calculateSpeedMultiplier(distance);
+    // Используем screen_h для расчета max_distance (половина высоты экрана)
+    float max_distance = static_cast<float>(screen_h) / 2.0f;
+    float dist_ratio = static_cast<float>(distance) / max_distance;
+    float norm = (dist_ratio < 0.0f) ? 0.0f : ((dist_ratio > 1.0f) ? 1.0f : dist_ratio);
+    
+    // Плавная кривая скорости между min_sensitivity и max_sensitivity
+    float speed = min_sensitivity + (max_sensitivity - min_sensitivity) * norm;
+    if (speed > max_sensitivity) speed = max_sensitivity;
+    if (speed < min_sensitivity) speed = min_sensitivity;
     
     // Преобразуем смещение в пиксели движения напрямую
-    // speed уже содержит нужную нам скорость перемещения
     double moveX = offX * speed;
     double moveY = offY * speed;
     
@@ -530,7 +547,8 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     }
 
     // === Шаг 10: Расчет движения (CalcMovement) ===
-    auto mv = calcMovement(targetX, targetY);
+    // Передаем screen_w/screen_h для правильного расчета центра экрана
+    auto mv = calcMovement(targetX, targetY, screen_w, screen_h);
     int mx = static_cast<int>(mv.first);
     int my = static_cast<int>(mv.second);
 

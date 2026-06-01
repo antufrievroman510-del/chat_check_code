@@ -159,9 +159,27 @@ std::mutex g_cfg_mutex;
 // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 bool IsAimKeyPressed(Overlay* overlay) {
     MUTATE_SIGNATURE;
-    if (overlay->aim_key_main != 0 && (GetAsyncKeyState(overlay->aim_key_main) & 0x8000)) return true;
-    if (overlay->aim_key_sub != 0 && (GetAsyncKeyState(overlay->aim_key_sub) & 0x8000)) return true;
-    return false;
+    bool key_pressed = false;
+    
+    if (overlay->aim_key_main != 0 && (GetAsyncKeyState(overlay->aim_key_main) & 0x8000)) {
+        key_pressed = true;
+    }
+    if (overlay->aim_key_sub != 0 && (GetAsyncKeyState(overlay->aim_key_sub) & 0x8000)) {
+        key_pressed = true;
+    }
+    
+    // [DEBUG] Логирование нажатия клавиш аима
+    static bool last_key_state = false;
+    if (key_pressed && !last_key_state) {
+        std::cout << "[AIM KEY] Aim key PRESSED! Main=" << overlay->aim_key_main 
+                  << " Sub=" << overlay->aim_key_sub << std::endl;
+    }
+    if (!key_pressed && last_key_state) {
+        std::cout << "[AIM KEY] Aim key RELEASED" << std::endl;
+    }
+    last_key_state = key_pressed;
+    
+    return key_pressed;
 }
 
 void GetModelSize(int model_idx, int& out_w, int& out_h) {
@@ -641,12 +659,18 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
         bool currently_aiming = (IsAimKeyPressed(overlay) || g_remote_aim_key.load()) && overlay->aim_enable;
         
         // [DEBUG] Логирование состояния аимбота для отладки
-        // if (currently_aiming) {
-        //     std::cout << "[AIM DEBUG] Aim active! Key=" << IsAimKeyPressed(overlay) 
-        //               << " Remote=" << g_remote_aim_key.load() 
-        //               << " Enable=" << overlay->aim_enable 
-        //               << " HW_Type=" << aim->hardware_type << std::endl;
-        // }
+        static bool debug_logged = false;
+        if (currently_aiming && !debug_logged) {
+            std::cout << "[AIM DEBUG] Aim ACTIVATED! Key=" << IsAimKeyPressed(overlay) 
+                      << " Remote=" << g_remote_aim_key.load() 
+                      << " Enable=" << overlay->aim_enable 
+                      << " HW_Type=" << aim->hardware_type << std::endl;
+            debug_logged = true;
+        }
+        if (!currently_aiming && debug_logged) {
+            std::cout << "[AIM DEBUG] Aim DEACTIVATED" << std::endl;
+            debug_logged = false;
+        }
 
         if (local_cfg.com_port != last_com_port) {
             aim->com_port = local_cfg.com_port;
@@ -721,6 +745,10 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
 
             // Настройки уже синхронизированы через SyncFromOverlay(*overlay) выше
             // Здесь только уникальные параметры которые могут отличаться от UI
+            
+            std::cout << "[AIM DEBUG] Calling Update() with detections=" << current_det.size() 
+                      << " screen=" << g_capture_w << "x" << g_capture_h 
+                      << " new_frame=" << is_new_frame << std::endl;
             
             aim->Update(current_det, g_capture_w, g_capture_h, is_new_frame, current_time_ms, g_current_zoom.load());
             Sleep(1);
@@ -820,8 +848,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::cout << "[INIT] Hardware type: " << aim.hardware_type << std::endl;
         if (aim.InitHardware()) {
             std::cout << "[INIT] Hardware initialized successfully" << std::endl;
+            if (aim.hardware_type == 0) {
+                std::cout << "[INIT] SendInput is ready for hardware_type=0" << std::endl;
+            }
         } else {
             std::cout << "[INIT] WARNING: Hardware initialization failed!" << std::endl;
+            if (aim.hardware_type == 0) {
+                std::cerr << "[INIT] CRITICAL: SendInput will NOT work!" << std::endl;
+            }
         }
 
         int start_w, start_h; GetModelSize(overlay.ai_model, start_w, start_h);
