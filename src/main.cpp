@@ -1034,11 +1034,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         was_menu_open = current_menu_state;
         if (overlay.apply_hw_flag) {
             overlay.apply_hw_flag = false;
-            aim.com_port = overlay.com_port;
-            aim.hardware_type = overlay.hardware_mode_idx;  // ИСПРАВЛЕНО: было hardware_type (которого не существует)
-            aim.bypass_mode = overlay.bypass_mode_idx;      // Синхронизируем bypass_mode
+            
+            // Синхронизация всех hardware настроек из overlay в aimbot
+            aim.com_port = std::atoi(overlay.com_port_buf + 3); // "COM3" -> 3
+            aim.hardware_type = overlay.hardware_mode_idx;
+            aim.bypass_mode = overlay.bypass_mode_idx;
+            aim.net_ip = overlay.kmbox_ip_buf;
+            aim.net_port = overlay.kmbox_port;
+            
             std::cout << "[MAIN] Applying hardware settings: type=" << aim.hardware_type 
-                      << " bypass=" << aim.bypass_mode << std::endl;
+                      << " com_port=" << aim.com_port
+                      << " bypass=" << aim.bypass_mode
+                      << " kmbox_ip=" << aim.net_ip
+                      << " kmbox_port=" << aim.net_port
+                      << std::endl;
+            
             aim.InitHardware();
         }
         if (overlay.apply_res_flag) {
