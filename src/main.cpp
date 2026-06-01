@@ -633,6 +633,11 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
             std::lock_guard<std::mutex> lock(g_cfg_mutex);
             memcpy(&local_cfg, &g_safe_cfg, sizeof(SafeConfig));
         }
+        
+        // СИНХРОНИЗАЦИЯ В РЕАЛЬНОМ ВРЕМЕНИ: копируем настройки из Overlay напрямую
+        // Это обеспечивает мгновенную реакцию на изменение ползунков в меню
+        aim->SyncFromOverlay(*overlay);
+        
         bool currently_aiming = (IsAimKeyPressed(overlay) || g_remote_aim_key.load()) && local_cfg.aim_enable;
 
         if (local_cfg.com_port != last_com_port) {
@@ -697,62 +702,9 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
             auto now = std::chrono::steady_clock::now();
             long long current_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
 
-            // ========== ПЕРЕДАЧА ПАРАМЕТРОВ В АИМБОТ (только существующие поля) ==========
-            aim->aim_target = local_cfg.aim_target;
-            aim->target_offset_x = local_cfg.aim_offset_x;
-            aim->target_offset_y = local_cfg.aim_offset_y;
-            aim->fov = local_cfg.fov_aimbot;
-            aim->rcs_enable = local_cfg.rcs_enable;
-            aim->rcs_pitch = local_cfg.rcs_pitch;
-            aim->rcs_yaw = local_cfg.rcs_yaw;
-            aim->humanizer_enable = local_cfg.humanizer_enable;
-            aim->hum_reaction_delay = local_cfg.hum_reaction_delay;
-            aim->hum_tremor_scale = local_cfg.hum_tremor_scale;
-            aim->hum_micro_movements = local_cfg.hum_micro_movements;
-            aim->hum_micro_amplitude = local_cfg.hum_micro_amplitude;
-            aim->hum_reaction_jitter = local_cfg.hum_reaction_jitter;
-            aim->elite_tsp_enabled = local_cfg.elite_tsp_enabled;
-            aim->elite_ballistics_enabled = local_cfg.elite_ballistics_enabled;
-            aim->elite_bullet_speed = local_cfg.elite_bullet_speed;
-            aim->elite_bullet_drop = local_cfg.elite_bullet_drop;
-            aim->elite_context_aware = local_cfg.elite_context_aware;
-            aim->elite_smoke_vision = local_cfg.elite_smoke_vision;
-            aim->elite_voice_ctrl = local_cfg.elite_voice_ctrl;
-            aim->elite_shadow_trainer = local_cfg.elite_shadow_trainer;
-            aim->shadow_webhook = local_cfg.shadow_webhook;
-            aim->max_move_step = local_cfg.max_move_step;
-            aim->aim_target_lock = local_cfg.aim_target_lock;
-            aim->aim_lock_x = local_cfg.aim_lock_x;
-            aim->aim_lock_y = local_cfg.aim_lock_y;
-
-            // НОВЫЕ ПАРАМЕТРЫ (Sunone)
-            aim->detection_resolution = local_cfg.detection_resolution;
-            aim->min_sensitivity = local_cfg.min_sensitivity;
-            aim->max_sensitivity = local_cfg.max_sensitivity;
-            aim->pixelsmooth_enabled = local_cfg.pixelsmooth_enabled;
-            aim->pixelsmooth_value = local_cfg.pixelsmooth_value;
-            // Прямая передача smooth_factor из меню (уже в правильном диапазоне 0.01-0.5)
-            aim->smooth_factor = local_cfg.smooth_factor;
-            aim->humanizer_enable = local_cfg.humanizer_enable;
-            aim->hum_reaction_delay = local_cfg.hum_reaction_delay;
-            aim->hum_tremor_scale = local_cfg.hum_tremor_scale;
-            aim->hum_micro_movements = local_cfg.hum_micro_movements;
-            aim->hum_micro_amplitude = local_cfg.hum_micro_amplitude;
-            aim->hum_path_randomization = local_cfg.hum_path_randomization;
-            aim->hum_overshoot_enabled = local_cfg.hum_overshoot_enabled;
-            aim->hum_overshoot_chance = local_cfg.hum_overshoot_chance;
-            aim->hum_overshoot_amount = local_cfg.hum_overshoot_amount;
-            aim->hum_return_speed = local_cfg.hum_return_speed;
-            aim->kalman_enabled = local_cfg.kalman_enable;
-            aim->kalman_process_noise_position = local_cfg.kalman_q;
-            aim->kalman_measurement_noise = local_cfg.kalman_r;
-            aim->kalman_compensate_detection_delay = local_cfg.kalman_compensate_detection_delay;
-            aim->kalman_additional_prediction_ms = local_cfg.kalman_additional_prediction_ms;
-            aim->prediction_interval = local_cfg.prediction_interval;
-            aim->disable_headshot = local_cfg.disable_headshot;
-            aim->wind_mouse_enabled = false;  // пока отключено
-            aim->max_move_step = local_cfg.max_move_step;
-
+            // Настройки уже синхронизированы через SyncFromOverlay(*overlay) выше
+            // Здесь только уникальные параметры которые могут отличаться от UI
+            
             aim->Update(current_det, g_capture_w, g_capture_h, is_new_frame, current_time_ms, g_current_zoom.load());
             Sleep(1);
         }

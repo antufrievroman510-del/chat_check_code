@@ -55,6 +55,76 @@ void Aimbot::SetConfig(const AimConfig& cfg) {
 }
 
 // ============================================================
+// Синхронизация с Overlay в реальном времени
+// ============================================================
+void Aimbot::SyncFromOverlay(Overlay& overlay) {
+    // Копируем все настройки из Overlay напрямую в Aimbot
+    // Это обеспечивает мгновенное применение изменений из меню
+    
+    // Основные настройки
+    aim_enable = overlay.aim_enable;
+    aim_target = overlay.aim_target;
+    aim_key_main = overlay.aim_key_main;
+    aim_target_lock = overlay.aim_target_lock;
+    
+    // FOV и чувствительность
+    fov = overlay.fov_aimbot;
+    min_sensitivity = overlay.min_sensitivity;
+    max_sensitivity = overlay.max_sensitivity;
+    detection_resolution = overlay.detection_resolution;
+    
+    // Humanizer
+    humanizer_enable = overlay.humanizer_enable;
+    hum_reaction_delay = overlay.hum_reaction_delay;
+    hum_tremor_scale = overlay.hum_tremor_scale;
+    hum_micro_movements = overlay.hum_micro_movements;
+    hum_micro_amplitude = overlay.hum_micro_amplitude;
+    hum_reaction_jitter = overlay.hum_reaction_jitter;
+    hum_path_randomization = overlay.hum_path_randomization;
+    hum_overshoot_enabled = overlay.hum_overshoot_enabled;
+    hum_overshoot_chance = overlay.hum_overshoot_chance;
+    hum_overshoot_amount = overlay.hum_overshoot_amount;
+    hum_return_speed = overlay.hum_return_speed;
+    
+    // Pixelsmooth / Smoothing
+    pixelsmooth_enabled = overlay.pixelsmooth_enabled;
+    pixelsmooth_value = overlay.pixelsmooth_value;
+    smooth_factor = overlay.smooth_factor;
+    
+    // Kalman Predictor
+    kalman_enabled = overlay.kalman_enable;
+    kalman_process_noise_position = overlay.kalman_q * 1000.0f;  // Масштабирование
+    kalman_measurement_noise = overlay.kalman_r * 100.0f;
+    kalman_compensate_detection_delay = overlay.kalman_compensate_detection_delay;
+    kalman_additional_prediction_ms = overlay.kalman_additional_prediction_ms;
+    prediction_interval = overlay.prediction_interval;
+    
+    // Recoil Control
+    rcs_enable = overlay.rcs_enable;
+    rcs_pitch = overlay.rcs_pitch;
+    rcs_yaw = overlay.rcs_yaw;
+    
+    // Misc
+    disable_headshot = overlay.disable_headshot;
+    aim_lock_x = overlay.aim_lock_x;
+    aim_lock_y = overlay.aim_lock_y;
+    target_offset_x = overlay.aim_offset_x;
+    target_offset_y = overlay.aim_offset_y;
+    
+    // Hardware
+    hardware_type = overlay.hardware_type;
+    com_port = overlay.com_port;
+    
+    // Elite / Ballistics
+    elite_ballistics_enabled = overlay.elite_ballistics_enabled;
+    elite_bullet_speed = overlay.elite_bullet_speed;
+    elite_bullet_drop = overlay.elite_bullet_drop;
+    
+    // Max move step (критичная настройка скорости)
+    max_move_step = overlay.max_move_step;
+}
+
+// ============================================================
 // Аппаратный вывод (интеграция с MouseController)
 // ============================================================
 void Aimbot::ResetTarget() {
