@@ -1389,13 +1389,12 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             ImGui::TextWrapped(is_russian ? 
                 u8"Используется API SendInput для эмуляции мыши.
 Не требует дополнительного оборудования." :
-                "Uses SendInput API for mouse emulation.
-No additional hardware required.");
+                "Uses SendInput API for mouse emulation.\nNo additional hardware required.");
             ImGui::Spacing();
-            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), 
+            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
                 is_russian ? u8"⚠ Может определяться античитами" : "⚠ May be detected by anti-cheats");
+            EndPanel();
         }
-        EndPanel();
     }
     
     ImGui::Columns(1);
