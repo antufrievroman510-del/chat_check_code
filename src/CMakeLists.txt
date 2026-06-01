@@ -70,7 +70,7 @@ add_executable(PWNZ_AI WIN32
 
 target_link_libraries(PWNZ_AI PRIVATE
     d3d11.lib dxgi.lib d3dcompiler.lib dwmapi.lib setupapi.lib user32.lib gdi32.lib
-    windowsapp.lib
+    windowsapp.lib ws2_32.lib
     "${ONNX_DIR}/lib/onnxruntime.lib"
     "${ONNX_DIR}/lib/DirectML.lib"
     "${CMAKE_SOURCE_DIR}/VMProtectSDK64.lib"

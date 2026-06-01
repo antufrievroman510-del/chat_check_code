@@ -33,7 +33,7 @@ bool KMBoxNet::InitializeWinSock() {
     return true;
 }
 
-bool KMBoxNet::Connect(const std::string& ipAddress, int port) {
+bool KMBoxNet::ConnectToDevice(const std::string& ipAddress, int port) {
     std::lock_guard<std::mutex> lock(mtx);
 
     if (isConnected) {
@@ -62,7 +62,7 @@ bool KMBoxNet::Connect(const std::string& ipAddress, int port) {
     }
 
     // Подключение
-    if (connect(hSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) != 0) {
+    if (::connect(hSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) != 0) {
         closesocket(hSocket);
         hSocket = INVALID_SOCKET;
         return false;
