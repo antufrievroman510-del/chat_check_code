@@ -125,6 +125,19 @@ void Aimbot::SyncFromOverlay(Overlay& overlay) {
     
     // Max move step (критичная настройка скорости)
     max_move_step = overlay.max_move_step;
+    
+    // === КРИТИЧНО: Синхронизация m_config для AimMath::CalculateMove ===
+    m_config.enabled = aim_enable;
+    m_config.fov = fov;
+    m_config.smooth = smooth_factor;
+    m_config.fireKey = aim_key_main;
+    m_config.aimbone = aim_target;
+    m_config.recoil_control = rcs_enable;
+    m_config.rcs_smooth = 1.0f;
+    m_config.humanize = humanizer_enable;
+    m_config.humanize_strength = hum_tremor_scale;
+    m_config.prediction = kalman_enabled;
+    m_config.bullet_speed = elite_bullet_speed;
 }
 
 // ============================================================
@@ -372,33 +385,7 @@ std::pair<double, double> Aimbot::predictTargetPosition(double targetX, double t
     return { predictedX, predictedY };
 }
 
-std::pair<double, double> Aimbot::calcMovement(double targetX, double targetY, int screen_w, int screen_h) {
-    // ИСПРАВЛЕНИЕ: Центр экрана считается от screen_w/screen_h, а НЕ от detection_resolution!
-    // detection_resolution - это размер модели (например 960x544), а targetX/targetY - координаты на экране
-    double centerX = static_cast<double>(screen_w) / 2.0;
-    double centerY = static_cast<double>(screen_h) / 2.0;
-    
-    double offX = targetX - centerX;
-    double offY = targetY - centerY;
-    double distance = std::hypot(offX, offY);
-    
-    // Получаем множитель скорости на основе расстояния
-    // Используем screen_h для расчета max_distance (половина высоты экрана)
-    float max_distance = static_cast<float>(screen_h) / 2.0f;
-    float dist_ratio = static_cast<float>(distance) / max_distance;
-    float norm = (dist_ratio < 0.0f) ? 0.0f : ((dist_ratio > 1.0f) ? 1.0f : dist_ratio);
-    
-    // Плавная кривая скорости между min_sensitivity и max_sensitivity
-    float speed = min_sensitivity + (max_sensitivity - min_sensitivity) * norm;
-    if (speed > max_sensitivity) speed = max_sensitivity;
-    if (speed < min_sensitivity) speed = min_sensitivity;
-    
-    // Преобразуем смещение в пиксели движения напрямую
-    double moveX = offX * speed;
-    double moveY = offY * speed;
-    
-    return { moveX, moveY };
-}
+// ФУНКЦИЯ calcMovement УДАЛЕНА - ТЕПЕРЬ ИСПОЛЬЗУЕТСЯ AimMath::CalculateMove()
 
 float Aimbot::AddJitter(float value, float amplitude) {
     if (amplitude <= 0.0f) return value;
@@ -463,7 +450,9 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     auto observationTime = std::chrono::steady_clock::time_point(std::chrono::milliseconds(current_time_ms));
     
     // === Шаг 2: Обновление трекера целей ===
-    m_tracker.update(boxes, classes, detection_resolution, detection_resolution,
+    // ИСПРАВЛЕНИЕ: Передаем screen_w/screen_h вместо detection_resolution!
+    std::cout << "[AIM DEBUG] Valid targets in FOV: " << boxes.size() << std::endl;
+    m_tracker.update(boxes, classes, screen_w, screen_h,
         disable_headshot, aim_target_lock, observationTime);
 
     // === Шаг 3: Получение захваченной цели ===
@@ -546,23 +535,36 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         }
     }
 
-    // === Шаг 10: Расчет движения (CalcMovement) ===
-    // Передаем screen_w/screen_h для правильного расчета центра экрана
-    auto mv = calcMovement(targetX, targetY, screen_w, screen_h);
-    int mx = static_cast<int>(mv.first);
-    int my = static_cast<int>(mv.second);
+    // === Шаг 10: НОВАЯ МАТЕМАТИКА (AimMath::CalculateMove) ===
+    // Удаляем весь старый спагетти-код (Lerp, Smooth, Steps)
+    // Вызываем единую функцию расчета
+    AimResult result = AimMath::CalculateMove(
+        center_x, 
+        center_y, 
+        static_cast<float>(targetX), 
+        static_cast<float>(targetY), 
+        m_config, 
+        key_pressed
+    );
 
-    // Ограничение шага
+    // Лог результатов расчета
+    std::cout << "[AIM DEBUG] Result DX: " << result.deltaX << " DY: " << result.deltaY << std::endl;
+
+    // Получаем дельты из результата
+    int mx = static_cast<int>(result.deltaX);
+    int my = static_cast<int>(result.deltaY);
+
+    // Ограничение шага (осталось от старой логики, но теперь применяется после AimMath)
     if (std::abs(mx) > max_move_step) mx = (mx > 0) ? static_cast<int>(max_move_step) : -static_cast<int>(max_move_step);
     if (std::abs(my) > max_move_step) my = (my > 0) ? static_cast<int>(max_move_step) : -static_cast<int>(max_move_step);
 
-    // RCS
+    // RCS (компенсация отдачи)
     if (rcs_enable && (GetAsyncKeyState(VK_LBUTTON) & 0x8000)) {
         mx += static_cast<int>(rcs_yaw);
         my += static_cast<int>(rcs_pitch);
     }
 
-    // Lock axes
+    // Lock axes (блокировка осей)
     if (aim_lock_x) mx = 0;
     if (aim_lock_y) my = 0;
 
@@ -624,27 +626,20 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         my += static_cast<int>(jitter_y);
     }
 
-    // === Шаг 15: Накопление дробной части ===
-    g_frac_x += static_cast<float>(mx);
-    g_frac_y += static_cast<float>(my);
-    int final_dx = static_cast<int>(g_frac_x);
-    int final_dy = static_cast<int>(g_frac_y);
-    g_frac_x -= static_cast<float>(final_dx);
-    g_frac_y -= static_cast<float>(final_dy);
-
-    if (final_dx == 0 && final_dy == 0) {
+    // === Шаг 15: Отправка движения через Hardware (напрямую из AimResult) ===
+    // УДАЛЕНЫ: Pixelsmooth, Lerp, Path Randomization, Overshoot - теперь это делает AimMath
+    if (mx == 0 && my == 0) {
+        // Цель в FOV, но движение 0 - возможно FOV мал или Smooth огромный
+        if (key_pressed) {
+            std::cout << "[AIM DEBUG] Movement is 0. Check FOV/Smooth settings." << std::endl;
+        }
         hist_offset = (hist_offset + 1) % 100;
         VMProtectEnd();
         return;
     }
 
-    // === Шаг 16: Micro-sleep для humanize ===
-    if (humanizer_enable) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1 + (rand() % 3)));
-    }
-
-    // === Шаг 17: Отправка движения через Hardware ===
-    SendHardwareMove(final_dx, final_dy);
+    // === Шаг 16: Отправка движения через Hardware ===
+    SendHardwareMove(mx, my);
     hist_offset = (hist_offset + 1) % 100;
     stat_tracking_time_ms += delta_t;
 

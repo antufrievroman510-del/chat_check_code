@@ -12,27 +12,40 @@
 venv/
 .venv/
 __pycache__/
+.mypy_cache/
+.pytest_cache/
+node_modules/
 
 # Logs and temp files
 *.log
 *.tmp
 *.swp
 
-# Editors
-.vscode/
-.idea/
-
 # Environment
 .env
 .env.local
 *.env.*
 
+# Editors
+.vscode/
+.idea/
+
 # Build directories
 build/
 dist/
 target/
+.gradle/
 
-# Compression files
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
+
+# Compressed files
 *.zip
 *.gz
 *.tar
