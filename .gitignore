@@ -1,1 +1,1 @@
-Nothing needs to be added to the .gitignore file since only a source code file (src/overlay.cpp) was modified and there are no build artifacts, dependencies, or temporary files in the changes.
+Nothing should be ignored based on the provided file changes. The only added file is a source header file (`src/IMouseInput.h`), which should not be ignored. There are no build artifacts, dependencies, or temporary files in the changes that warrant adding ignore rules.
