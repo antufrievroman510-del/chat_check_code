@@ -28,11 +28,8 @@ static long long g_first_seen_time = 0;
 static long long g_last_target_drop_time = 0;
 
 thread_local std::random_device Aimbot::rd;
-thread_local std::mt19937 Aimbot::gen(rd());
+thread_local std::mt19937 Aimbot::gen(Aimbot::rd());
 thread_local std::normal_distribution<float> Aimbot::gauss_dist(0.0f, 1.0f);
-
-typedef UINT(WINAPI* SendInputPtr)(UINT, LPINPUT, int);
-static SendInputPtr DynamicSendInput = nullptr;
 
 // ============================================================
 // Конструктор / Деструктор
@@ -234,88 +231,32 @@ void Aimbot::SendHardwareMove(int x, int y) {
         std::cout << "[AIM DEBUG] SendHardwareMove: dx=" << x << " dy=" << y << " hw=" << hardware_type << std::endl;
     }
     
-    // Используем полиморфный интерфейс для отправки движения
+    // ИСПОЛЬЗУЕМ ТОЛЬКО полиморфный интерфейс для отправки движения
     if (m_mouseInput) {
         m_mouseInput->Move(x, y);
         return;
     }
     
-    // Fallback на старый код (для обратной совместимости, если m_mouseInput не создан)
-    if ((hardware_type == 5 || hardware_type == 6) && udp_socket != INVALID_SOCKET) {
-        char buffer[64];
-        if (hardware_type == 5) snprintf(buffer, sizeof(buffer), XOR("kmnet_move:%d:%d\n"), x, y);
-        else snprintf(buffer, sizeof(buffer), XOR("move:%d:%d\n"), x, y);
-        sendto(udp_socket, buffer, strlen(buffer), 0, (SOCKADDR*)&udp_addr, sizeof(udp_addr));
-        return;
-    }
-
-    if (hSerial != INVALID_HANDLE_VALUE) {
-        std::string data;
-        if (hardware_type == 1) data = std::to_string(x) + XOR(":") + std::to_string(y) + XOR("\n");
-        else if (hardware_type == 2) data = XOR("km.move(") + std::to_string(x) + XOR(",") + std::to_string(y) + XOR(")\r\n");
-        else if (hardware_type == 3) data = XOR("m,") + std::to_string(x) + XOR(",") + std::to_string(y) + XOR("\r\n");
-        else if (hardware_type == 4) data = XOR("move,") + std::to_string(x) + XOR(",") + std::to_string(y) + XOR("\r\n");
-        DWORD bytesWritten; WriteFile(hSerial, data.c_str(), data.length(), &bytesWritten, NULL);
-        return;
-    }
-
-    // КРИТИЧНО: Отправка через SendInput для hardware_type=0 (стандартная мышь Windows)
-    // Реализация с учётом bypass_mode (GHub, Razer, Random Delay)
-    if (hardware_type == 0 && DynamicSendInput) {
-        INPUT input = { 0 };
-        input.type = INPUT_MOUSE;
-        input.mi.dx = x;
-        input.mi.dy = y;
-        input.mi.dwFlags = MOUSEEVENTF_MOVE;
-        
-        // Применяем режим обхода если выбран
-        if (bypass_mode == 3) { // Random Delay
-            static std::random_device rd;
-            static std::mt19937 gen(rd());
-            int delay = std::uniform_int_distribution<>(5, 15)(gen);
-            Sleep(delay);
-        }
-        
-        UINT result = DynamicSendInput(1, &input, sizeof(INPUT));
-        if (move_count % 10 == 0) {
-            std::cout << "[AIM DEBUG] SendInput OK: sent=" << result << " dx=" << x << " dy=" << y << std::endl;
-        }
-    } else if (hardware_type == 0 && !DynamicSendInput) {
-        std::cerr << "[AIM ERROR] SendInput is NULL! Hardware not initialized?" << std::endl;
+    // Fallback: если m_mouseInput не создан, создаём его заново
+    std::cerr << "[AIM WARNING] m_mouseInput is null! Re-initializing..." << std::endl;
+    InitHardware();
+    if (m_mouseInput) {
+        m_mouseInput->Move(x, y);
     }
 }
 
 void Aimbot::SendHardwareClick() {
-    // Используем полиморфный интерфейс для клика
+    // ИСПОЛЬЗУЕМ ТОЛЬКО полиморфный интерфейс для клика
     if (m_mouseInput) {
         m_mouseInput->Click(0); // 0 = левая кнопка мыши
         return;
     }
 
-    // Fallback на старый код (для обратной совместимости)
-    if ((hardware_type == 5 || hardware_type == 6) && udp_socket != INVALID_SOCKET) {
-        const char* cmd = (hardware_type == 5) ? XOR("kmnet_click\n") : XOR("click\n");
-        sendto(udp_socket, cmd, strlen(cmd), 0, (SOCKADDR*)&udp_addr, sizeof(udp_addr));
-        return;
-    }
-
-    if (hSerial != INVALID_HANDLE_VALUE) {
-        std::string data;
-        if (hardware_type == 1) data = XOR("c\n");
-        else if (hardware_type == 2) data = XOR("km.click(0)\r\n");
-        else if (hardware_type == 3) data = XOR("c\n");
-        else if (hardware_type == 4) data = XOR("click\r\n");
-        DWORD bytesWritten; WriteFile(hSerial, data.c_str(), data.length(), &bytesWritten, NULL);
-        return;
-    }
-
-    if (hardware_type == 0 && DynamicSendInput) {
-        INPUT input[2] = { 0 };
-        input[0].type = INPUT_MOUSE;
-        input[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
-        input[1].type = INPUT_MOUSE;
-        input[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
-        DynamicSendInput(2, input, sizeof(INPUT));
+    // Fallback: если m_mouseInput не создан, создаём его заново
+    std::cerr << "[AIM WARNING] m_mouseInput is null for click! Re-initializing..." << std::endl;
+    InitHardware();
+    if (m_mouseInput) {
+        m_mouseInput->Click(0);
     }
 }
 
