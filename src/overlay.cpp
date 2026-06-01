@@ -1555,6 +1555,20 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         ImGui::Columns(1);
     }
     EndPanel();
+    
+    // === КНОПКА ПРИМЕНЕНИЯ НАСТРОЕК HARDWARE ===
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    ImGui::SetCursorPosX((content_w - 200.0f) * 0.5f); // Центрируем кнопку
+    if (ImGui::Button("APPLY HARDWARE SETTINGS", ImVec2(200, 40))) {
+        this->apply_hw_flag = true;
+        std::cout << "[OVERLAY] Hardware apply button pressed!" << std::endl;
+    }
+    HelpMarker(is_russian ? 
+        u8"Применить настройки hardware:\n- Режим ввода (SendInput/Makcu/KMbox)\n- COM-порт или IP/порт\n- Bypass режим\n\nПосле нажатия аимбот перезапустит hardware модуль." :
+        "Apply hardware settings:\n- Input mode (SendInput/Makcu/KMbox)\n- COM port or IP/port\n- Bypass mode\n\nAimbot will restart hardware module after pressing.");
 }
 
 // ============================================================
