@@ -31,7 +31,7 @@ bool HardwareController::Initialize(const ::HardwareConfig& config) {
             std::cout << "[HW] Mode: Local Mouse (SendInput)" << std::endl;
             break;
 
-        case HardwareMode::GHubBypass:
+        case HardwareMode::GHub:
 #ifdef HAS_HIDAPI
             // Попытка инициализации HID для GHub
             if (hid_init() == 0) {
@@ -49,7 +49,7 @@ bool HardwareController::Initialize(const ::HardwareConfig& config) {
 #endif
             break;
 
-        case HardwareMode::RazerBypass:
+        case HardwareMode::Razer:
 #ifdef HAS_HIDAPI
             // Аналогично для Razer
             if (hid_init() == 0) {
@@ -64,20 +64,20 @@ bool HardwareController::Initialize(const ::HardwareConfig& config) {
 #endif
             break;
 
-        case HardwareMode::MakcuUART:
+        case HardwareMode::MackuUART:
             {
                 // Подключение через MakcuUART класс
                 if (g_makcu.Connect(config.com_port, config.baud_rate)) {
                     connected_ = true;
-                    std::cout << "[HW] Mode: Makcu UART on " << config.com_port << std::endl;
+                    std::cout << "[HW] Mode: Macku UART on " << config.com_port << std::endl;
                 } else {
                     connected_ = false;
-                    std::cerr << "[HW] Makcu connection failed" << std::endl;
+                    std::cerr << "[HW] Macku connection failed" << std::endl;
                 }
             }
             break;
 
-        case HardwareMode::KMBoxNet:
+        case HardwareMode::KMboxNet:
             {
                 // Подключение через KMBoxNet класс
                 if (g_kmbox.ConnectToDevice(config.kmbox_ip, config.kmbox_port)) {
@@ -115,16 +115,16 @@ void HardwareController::MoveMouse(int dx, int dy) {
         case HardwareMode::LocalMouse:
             MoveLocal(dx, dy);
             break;
-        case HardwareMode::GHubBypass:
+        case HardwareMode::GHub:
             MoveGHub(dx, dy);
             break;
-        case HardwareMode::RazerBypass:
+        case HardwareMode::Razer:
             MoveRazer(dx, dy);
             break;
-        case HardwareMode::MakcuUART:
+        case HardwareMode::MackuUART:
             MoveMakcu(dx, dy);
             break;
-        case HardwareMode::KMBoxNet:
+        case HardwareMode::KMboxNet:
             MoveKMBox(dx, dy);
             break;
     }
