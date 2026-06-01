@@ -13,6 +13,7 @@
 #include "VMProtectSDK.h"
 #include "AimMath.h"
 #include "MouseController.h"
+#include "overlay.h"  // [ДОБАВЛЕНО] Для типа Overlay в SyncFromOverlay()
 
 #pragma comment(lib, "ws2_32.lib")
 
