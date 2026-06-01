@@ -2,8 +2,16 @@
 #ifndef AIMBOT_H
 #define AIMBOT_H
 
-// ВАЖНО: Подключаем наш предкомпилированный заголовок для Winsock ПЕРВЫМ
-#include "WinSocketPrecompiled.h"
+// Критически важно: определяем макросы ДО любых заголовков Windows
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
+#include <windows.h>
 
 #include <vector>
 #include <string>

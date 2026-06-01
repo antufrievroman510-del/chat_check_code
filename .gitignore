@@ -1,51 +1,42 @@
 ```
-# Precompiled headers
-*.h.gch
-*.hpp.gch
-*.h.pch
-*.hpp.pch
-
-# Build artifacts
+# Compiled and build artifacts
 *.o
 *.obj
-*.a
-*.lib
-*.so
-*.dll
 *.exe
+*.dll
+*.so
+*.a
 *.out
 
-# Debug and release builds
-Debug/
-Release/
-x64/
-x86/
-build/
-dist/
-
 # Dependencies
+venv/
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
 node_modules/
-vendor/
 
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Logs
+# Logs and temp files
 *.log
+*.tmp
+*.swp
 
 # Environment
 .env
 .env.local
 *.env.*
 
-# OS files
+# Editors
+.vscode/
+.idea/
+
+# Build directories
+build/
+dist/
+target/
+.gradle/
+
+# System files
 .DS_Store
 Thumbs.db
-
-# Temporary files
-*.tmp
-*.temp
 ```
