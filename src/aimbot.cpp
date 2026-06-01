@@ -67,6 +67,8 @@ void Aimbot::SyncFromOverlay(Overlay& overlay) {
     aim_enable = overlay.aim_enable;
     aim_target = overlay.aim_target;
     aim_key_main = overlay.aim_key_main;
+    aim_key_sub = overlay.aim_key_sub;          // Синхронизируем дополнительную клавишу
+    aim_toggle_key = overlay.aim_toggle_key;    // Синхронизируем клавишу переключения
     aim_target_lock = overlay.aim_target_lock;
     
     // FOV и чувствительность
@@ -244,12 +246,22 @@ void Aimbot::SendHardwareMove(int x, int y) {
     }
 
     // КРИТИЧНО: Отправка через SendInput для hardware_type=0 (стандартная мышь Windows)
+    // Реализация с учётом bypass_mode (GHub, Razer, Random Delay)
     if (hardware_type == 0 && DynamicSendInput) {
         INPUT input = { 0 };
         input.type = INPUT_MOUSE;
         input.mi.dx = x;
         input.mi.dy = y;
         input.mi.dwFlags = MOUSEEVENTF_MOVE;
+        
+        // Применяем режим обхода если выбран
+        if (bypass_mode == 3) { // Random Delay
+            static std::random_device rd;
+            static std::mt19937 gen(rd());
+            int delay = std::uniform_int_distribution<>(5, 15)(gen);
+            Sleep(delay);
+        }
+        
         UINT result = DynamicSendInput(1, &input, sizeof(INPUT));
         if (move_count % 10 == 0) {
             std::cout << "[AIM DEBUG] SendInput OK: sent=" << result << " dx=" << x << " dy=" << y << std::endl;
@@ -410,7 +422,21 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     // ИСПРАВЛЕНИЕ: Сначала проверяем клавишу, потом aim_enable
     // Это позволяет аимботу работать даже если в конфиге aim_enable=false
     // но пользователь нажал клавишу активации
-    bool key_pressed = (GetAsyncKeyState(aim_key_main) & 0x8000) != 0 || g_remote_aim_key.load();
+    // ИСПРАВЛЕНИЕ: Проверяем все клавиши активации (main, sub, toggle)
+    bool key_pressed = false;
+    
+    // Основная клавиша
+    if (aim_key_main != 0 && (GetAsyncKeyState(aim_key_main) & 0x8000)) {
+        key_pressed = true;
+    }
+    // Дополнительная клавиша
+    if (aim_key_sub != 0 && (GetAsyncKeyState(aim_key_sub) & 0x8000)) {
+        key_pressed = true;
+    }
+    // Глобальная удалённая клавиша (для 2PC)
+    if (g_remote_aim_key.load()) {
+        key_pressed = true;
+    }
     
     if (!aim_enable && !key_pressed) {
         ResetTarget();

@@ -40,6 +40,8 @@ public:
     bool aim_target_lock = true;
     int aim_target = 0;  // 0=Auto, 1=Head, 2=Body
     int aim_key_main = VK_RBUTTON;
+    int aim_key_sub = 0;       // Дополнительная клавиша активации
+    int aim_toggle_key = 0;    // Клавиша переключения состояния
     float fov = 190.0f;
     float smooth_factor = 0.15f;
     int detection_resolution = 320;
