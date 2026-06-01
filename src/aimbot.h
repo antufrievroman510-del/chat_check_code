@@ -2,16 +2,7 @@
 #ifndef AIMBOT_H
 #define AIMBOT_H
 
-// Критически важно: определяем макросы ДО любых заголовков Windows
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
-#include <windows.h>
+#include "WinHeaders.h"
 
 #include <vector>
 #include <string>

@@ -1,16 +1,7 @@
 #define WINVER 0x0601
 #define _WIN32_WINNT 0x0601
 
-// Критически важно: определяем макросы ДО любых заголовков Windows
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
-#include <windows.h>
+#include "WinHeaders.h"
 
 #include <iostream>
 #include <chrono>
@@ -26,8 +17,7 @@
 #include <deque>
 #include <set>
 #include <locale.h>    
-#include <mmsystem.h>  
-#include <winsock2.h>
+#include <mmsystem.h>
 #include <cstring>
 #include <fstream>
 

@@ -1,15 +1,6 @@
 #pragma once
 
-// РљСЂРёС‚РёС‡РµСЃРєРё РІР°Р¶РЅРѕ: РѕРїСЂРµРґРµР»СЏРµРј РјР°РєСЂРѕСЃС‹ Р”Рћ Р»СЋР±С‹С… Р·Р°РіРѕР»РѕРІРєРѕРІ Windows
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
-#include <windows.h>
+#include "WinHeaders.h"
 
 // Генератор полиморфного мусора, который компилятор не сможет вырезать
 #define JUNK_CODE_1 \
