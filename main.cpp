@@ -976,7 +976,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             g_safe_cfg.elite_smoke_vision = overlay.elite_smoke_vision;
             g_safe_cfg.elite_voice_ctrl = overlay.elite_voice_ctrl;
             g_safe_cfg.elite_shadow_trainer = overlay.elite_shadow_trainer;
-            strncpy(g_safe_cfg.shadow_webhook, overlay.shadow_webhook, 255);
+            strncpy(g_safe_cfg.shadow_webhook, overlay.shadow_webhook, sizeof(g_safe_cfg.shadow_webhook) - 1);
+            g_safe_cfg.shadow_webhook[sizeof(g_safe_cfg.shadow_webhook) - 1] = '\0';  // Гарантировать null-терминатор
             g_safe_cfg.byte_track_thresh = overlay.byte_track_thresh;
             g_safe_cfg.byte_track_buffer = overlay.byte_track_buffer;
             g_safe_cfg.byte_match_thresh = overlay.byte_match_thresh;
