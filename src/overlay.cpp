@@ -5,6 +5,7 @@
 #undef max
 #undef min
 
+#include "WinHeaders.h"
 #include "overlay.h"
 #include "auth.h"
 #include "aimbot.h"
@@ -263,48 +264,48 @@ void Overlay::LoadConfig(Aimbot* aim) {
 
     std::unordered_map<std::string, std::function<void(const std::string&)>> handlers;
 
-    handlers["lifetime_seconds"] = [&](const std::string& v) { lifetime_seconds = safe_stod(v); };
-    handlers["aim_max_sens"] = [&](const std::string& v) { aim_max_sens = safe_stof(v); };
-    handlers["aim_min_sens"] = [&](const std::string& v) { aim_min_sens = safe_stof(v); };
-    handlers["fov_aimbot"] = [&](const std::string& v) { fov_aimbot = safe_stof(v); };
-    handlers["is_russian"] = [&](const std::string& v) { is_russian = std::stoi(v); };
-    handlers["aim_offset_x"] = [&](const std::string& v) { aim_offset_x = safe_stof(v); };
-    handlers["aim_offset_y"] = [&](const std::string& v) { aim_offset_y = safe_stof(v); };
-    handlers["aim_key_main"] = [&](const std::string& v) { aim_key_main = std::stoi(v); };
-    handlers["aim_key_sub"] = [&](const std::string& v) { aim_key_sub = std::stoi(v); };
-    handlers["ai_confidence_body"] = [&](const std::string& v) { ai_confidence_body = safe_stof(v); };
-    handlers["ai_confidence_head"] = [&](const std::string& v) { ai_confidence_head = safe_stof(v); };
-    handlers["min_box_area_body"] = [&](const std::string& v) { min_box_area_body = safe_stof(v); };
-    handlers["min_box_area_head"] = [&](const std::string& v) { min_box_area_head = safe_stof(v); };
-    handlers["disable_all_visuals_when_hidden"] = [&](const std::string& v) { disable_all_visuals_when_hidden = std::stoi(v); };
-    handlers["custom_res_w"] = [&](const std::string& v) { custom_res_w = std::stoi(v); };
-    handlers["custom_res_h"] = [&](const std::string& v) { custom_res_h = std::stoi(v); };
-    handlers["aim_smoother"] = [&](const std::string& v) { aim_smoother = safe_stof(v); };
-    handlers["fov_scan"] = [&](const std::string& v) { fov_scan = safe_stof(v); };
-    handlers["aim_kill_delay"] = [&](const std::string& v) { aim_kill_delay = safe_stof(v); };
-    handlers["obs_bypass"] = [&](const std::string& v) { obs_bypass = std::stoi(v); };
-    handlers["menu_scale"] = [&](const std::string& v) { menu_scale = safe_stof(v); };
-    handlers["hardware_mode_idx"] = [&](const std::string& v) { hardware_mode_idx = std::stoi(v); };
-    handlers["hw_enabled"] = [&](const std::string& v) { hw_enabled = std::stoi(v); };
-    handlers["bypass_mode_idx"] = [&](const std::string& v) { bypass_mode_idx = std::stoi(v); };
-    handlers["baud_rate_idx"] = [&](const std::string& v) { baud_rate_idx = std::stoi(v); };
-    handlers["com_port_buf"] = [&](const std::string& v) { strncpy(com_port_buf, v.c_str(), sizeof(com_port_buf) - 1); };
-    handlers["kmbox_ip_buf"] = [&](const std::string& v) { strncpy(kmbox_ip_buf, v.c_str(), sizeof(kmbox_ip_buf) - 1); };
-    handlers["kmbox_port"] = [&](const std::string& v) { kmbox_port = std::stoi(v); };
-    handlers["random_delay_min"] = [&](const std::string& v) { random_delay_min = std::stoi(v); };
-    handlers["random_delay_max"] = [&](const std::string& v) { random_delay_max = std::stoi(v); };
-    handlers["test_move_x"] = [&](const std::string& v) { test_move_x = std::stoi(v); };
-    handlers["test_move_y"] = [&](const std::string& v) { test_move_y = std::stoi(v); };
-    handlers["com_port"] = [&](const std::string& v) { com_port = std::stoi(v); };
-    handlers["aim_deadzone"] = [&](const std::string& v) { aim_deadzone = safe_stof(v); };
-    handlers["draw_crosshair"] = [&](const std::string& v) { draw_crosshair = std::stoi(v); };
-    handlers["hit_chance"] = [&](const std::string& v) { hit_chance = safe_stof(v); };
-    handlers["menu_width"] = [&](const std::string& v) { menu_width = safe_stof(v); };
-    handlers["menu_height"] = [&](const std::string& v) { menu_height = safe_stof(v); };
-    handlers["trigger_enable"] = [&](const std::string& v) { trigger_enable = std::stoi(v); };
-    handlers["trigger_delay"] = [&](const std::string& v) { trigger_delay = safe_stof(v); };
-    handlers["trigger_target"] = [&](const std::string& v) { trigger_target = std::stoi(v); };
-    handlers["trigger_key"] = [&](const std::string& v) { trigger_key = std::stoi(v); };
+    handlers["lifetime_seconds"] = [&](const std::string& v) { this->lifetime_seconds = safe_stod(v); };
+    handlers["aim_max_sens"] = [&](const std::string& v) { this->aim_max_sens = safe_stof(v); };
+    handlers["aim_min_sens"] = [&](const std::string& v) { this->aim_min_sens = safe_stof(v); };
+    handlers["fov_aimbot"] = [&](const std::string& v) { this->fov_aimbot = safe_stof(v); };
+    handlers["is_russian"] = [&](const std::string& v) { this->is_russian = std::stoi(v); };
+    handlers["aim_offset_x"] = [&](const std::string& v) { this->aim_offset_x = safe_stof(v); };
+    handlers["aim_offset_y"] = [&](const std::string& v) { this->aim_offset_y = safe_stof(v); };
+    handlers["aim_key_main"] = [&](const std::string& v) { this->aim_key_main = std::stoi(v); };
+    handlers["aim_key_sub"] = [&](const std::string& v) { this->aim_key_sub = std::stoi(v); };
+    handlers["ai_confidence_body"] = [&](const std::string& v) { this->ai_confidence_body = safe_stof(v); };
+    handlers["ai_confidence_head"] = [&](const std::string& v) { this->ai_confidence_head = safe_stof(v); };
+    handlers["min_box_area_body"] = [&](const std::string& v) { this->min_box_area_body = safe_stof(v); };
+    handlers["min_box_area_head"] = [&](const std::string& v) { this->min_box_area_head = safe_stof(v); };
+    handlers["disable_all_visuals_when_hidden"] = [&](const std::string& v) { this->disable_all_visuals_when_hidden = std::stoi(v); };
+    handlers["custom_res_w"] = [&](const std::string& v) { this->custom_res_w = std::stoi(v); };
+    handlers["custom_res_h"] = [&](const std::string& v) { this->custom_res_h = std::stoi(v); };
+    handlers["aim_smoother"] = [&](const std::string& v) { this->aim_smoother = safe_stof(v); };
+    handlers["fov_scan"] = [&](const std::string& v) { this->fov_scan = safe_stof(v); };
+    handlers["aim_kill_delay"] = [&](const std::string& v) { this->aim_kill_delay = safe_stof(v); };
+    handlers["obs_bypass"] = [&](const std::string& v) { this->obs_bypass = std::stoi(v); };
+    handlers["menu_scale"] = [&](const std::string& v) { this->menu_scale = safe_stof(v); };
+    handlers["this->hardware_mode_idx"] = [&](const std::string& v) { this->hardware_mode_idx = std::stoi(v); };
+    handlers["this->hw_enabled"] = [&](const std::string& v) { this->hw_enabled = std::stoi(v); };
+    handlers["this->bypass_mode_idx"] = [&](const std::string& v) { this->bypass_mode_idx = std::stoi(v); };
+    handlers["this->baud_rate_idx"] = [&](const std::string& v) { this->baud_rate_idx = std::stoi(v); };
+    handlers["this->com_port_buf"] = [&](const std::string& v) { strncpy(this->com_port_buf, v.c_str(), sizeof(this->com_port_buf) - 1); };
+    handlers["this->kmbox_ip_buf"] = [&](const std::string& v) { strncpy(this->kmbox_ip_buf, v.c_str(), sizeof(this->kmbox_ip_buf) - 1); };
+    handlers["this->kmbox_port"] = [&](const std::string& v) { this->kmbox_port = std::stoi(v); };
+    handlers["this->random_delay_min"] = [&](const std::string& v) { this->random_delay_min = std::stoi(v); };
+    handlers["this->random_delay_max"] = [&](const std::string& v) { this->random_delay_max = std::stoi(v); };
+    handlers["this->test_move_x"] = [&](const std::string& v) { this->test_move_x = std::stoi(v); };
+    handlers["this->test_move_y"] = [&](const std::string& v) { this->test_move_y = std::stoi(v); };
+    handlers["com_port"] = [&](const std::string& v) { this->com_port = std::stoi(v); };
+    handlers["aim_deadzone"] = [&](const std::string& v) { this->aim_deadzone = safe_stof(v); };
+    handlers["draw_crosshair"] = [&](const std::string& v) { this->draw_crosshair = std::stoi(v); };
+    handlers["hit_chance"] = [&](const std::string& v) { this->hit_chance = safe_stof(v); };
+    handlers["menu_width"] = [&](const std::string& v) { this->menu_width = safe_stof(v); };
+    handlers["menu_height"] = [&](const std::string& v) { this->menu_height = safe_stof(v); };
+    handlers["trigger_enable"] = [&](const std::string& v) { this->trigger_enable = std::stoi(v); };
+    handlers["trigger_delay"] = [&](const std::string& v) { this->trigger_delay = safe_stof(v); };
+    handlers["trigger_target"] = [&](const std::string& v) { this->trigger_target = std::stoi(v); };
+    handlers["trigger_key"] = [&](const std::string& v) { this->trigger_key = std::stoi(v); };
     handlers["rcs_enable"] = [&](const std::string& v) { rcs_enable = std::stoi(v); };
     handlers["rcs_pitch"] = [&](const std::string& v) { rcs_pitch = safe_stof(v); };
     handlers["rcs_yaw"] = [&](const std::string& v) { rcs_yaw = safe_stof(v); };
@@ -437,48 +438,48 @@ void Overlay::SaveConfig(Aimbot* aim) {
     std::ostringstream ss;
     ss.imbue(std::locale("C"));
     ss << "version=6\n";
-    ss << "lifetime_seconds=" << lifetime_seconds << "\n";
-    ss << "aim_max_sens=" << aim_max_sens << "\n";
-    ss << "aim_min_sens=" << aim_min_sens << "\n";
-    ss << "fov_aimbot=" << fov_aimbot << "\n";
-    ss << "is_russian=" << is_russian << "\n";
-    ss << "aim_offset_x=" << aim_offset_x << "\n";
-    ss << "aim_offset_y=" << aim_offset_y << "\n";
-    ss << "aim_key_main=" << aim_key_main << "\n";
-    ss << "aim_key_sub=" << aim_key_sub << "\n";
-    ss << "ai_confidence_body=" << ai_confidence_body << "\n";
-    ss << "ai_confidence_head=" << ai_confidence_head << "\n";
-    ss << "min_box_area_body=" << min_box_area_body << "\n";
-    ss << "min_box_area_head=" << min_box_area_head << "\n";
-    ss << "disable_all_visuals_when_hidden=" << disable_all_visuals_when_hidden << "\n";
-    ss << "custom_res_w=" << custom_res_w << "\n";
-    ss << "custom_res_h=" << custom_res_h << "\n";
-    ss << "aim_smoother=" << aim_smoother << "\n";
-    ss << "fov_scan=" << fov_scan << "\n";
-    ss << "aim_kill_delay=" << aim_kill_delay << "\n";
-    ss << "obs_bypass=" << obs_bypass << "\n";
-    ss << "menu_scale=" << menu_scale << "\n";
-    ss << "hardware_mode_idx=" << hardware_mode_idx << "\n";
-    ss << "hw_enabled=" << hw_enabled << "\n";
-    ss << "bypass_mode_idx=" << bypass_mode_idx << "\n";
-    ss << "baud_rate_idx=" << baud_rate_idx << "\n";
-    ss << "com_port_buf=" << com_port_buf << "\n";
-    ss << "kmbox_ip_buf=" << kmbox_ip_buf << "\n";
-    ss << "kmbox_port=" << kmbox_port << "\n";
-    ss << "random_delay_min=" << random_delay_min << "\n";
-    ss << "random_delay_max=" << random_delay_max << "\n";
-    ss << "test_move_x=" << test_move_x << "\n";
-    ss << "test_move_y=" << test_move_y << "\n";
-    ss << "com_port=" << com_port << "\n";
-    ss << "aim_deadzone=" << aim_deadzone << "\n";
-    ss << "draw_crosshair=" << draw_crosshair << "\n";
-    ss << "hit_chance=" << hit_chance << "\n";
-    ss << "menu_width=" << menu_width << "\n";
-    ss << "menu_height=" << menu_height << "\n";
+    ss << "lifetime_seconds=" << this->lifetime_seconds << "\n";
+    ss << "aim_max_sens=" << this->aim_max_sens << "\n";
+    ss << "aim_min_sens=" << this->aim_min_sens << "\n";
+    ss << "fov_aimbot=" << this->fov_aimbot << "\n";
+    ss << "is_russian=" << this->is_russian << "\n";
+    ss << "aim_offset_x=" << this->aim_offset_x << "\n";
+    ss << "aim_offset_y=" << this->aim_offset_y << "\n";
+    ss << "aim_key_main=" << this->aim_key_main << "\n";
+    ss << "aim_key_sub=" << this->aim_key_sub << "\n";
+    ss << "ai_confidence_body=" << this->ai_confidence_body << "\n";
+    ss << "ai_confidence_head=" << this->ai_confidence_head << "\n";
+    ss << "min_box_area_body=" << this->min_box_area_body << "\n";
+    ss << "min_box_area_head=" << this->min_box_area_head << "\n";
+    ss << "disable_all_visuals_when_hidden=" << this->disable_all_visuals_when_hidden << "\n";
+    ss << "custom_res_w=" << this->custom_res_w << "\n";
+    ss << "custom_res_h=" << this->custom_res_h << "\n";
+    ss << "aim_smoother=" << this->aim_smoother << "\n";
+    ss << "fov_scan=" << this->fov_scan << "\n";
+    ss << "aim_kill_delay=" << this->aim_kill_delay << "\n";
+    ss << "obs_bypass=" << this->obs_bypass << "\n";
+    ss << "menu_scale=" << this->menu_scale << "\n";
+    ss << "this->hardware_mode_idx=" << this->hardware_mode_idx << "\n";
+    ss << "this->hw_enabled=" << this->hw_enabled << "\n";
+    ss << "this->bypass_mode_idx=" << this->bypass_mode_idx << "\n";
+    ss << "this->baud_rate_idx=" << this->baud_rate_idx << "\n";
+    ss << "this->com_port_buf=" << this->com_port_buf << "\n";
+    ss << "this->kmbox_ip_buf=" << this->kmbox_ip_buf << "\n";
+    ss << "this->kmbox_port=" << this->kmbox_port << "\n";
+    ss << "this->random_delay_min=" << this->random_delay_min << "\n";
+    ss << "this->random_delay_max=" << this->random_delay_max << "\n";
+    ss << "this->test_move_x=" << this->test_move_x << "\n";
+    ss << "this->test_move_y=" << this->test_move_y << "\n";
+    ss << "com_port=" << this->com_port << "\n";
+    ss << "aim_deadzone=" << this->aim_deadzone << "\n";
+    ss << "draw_crosshair=" << this->draw_crosshair << "\n";
+    ss << "this->hit_chance=" << this->hit_chance << "\n";
+    ss << "this->menu_width=" << this->menu_width << "\n";
+    ss << "this->menu_height=" << this->menu_height << "\n";
     ss << "trigger_enable=" << trigger_enable << "\n";
-    ss << "trigger_delay=" << trigger_delay << "\n";
-    ss << "trigger_target=" << trigger_target << "\n";
-    ss << "trigger_key=" << trigger_key << "\n";
+    ss << "this->trigger_delay=" << this->trigger_delay << "\n";
+    ss << "this->trigger_target=" << this->trigger_target << "\n";
+    ss << "this->trigger_key=" << this->trigger_key << "\n";
     ss << "rcs_enable=" << rcs_enable << "\n";
     ss << "rcs_pitch=" << rcs_pitch << "\n";
     ss << "rcs_yaw=" << rcs_yaw << "\n";
@@ -612,10 +613,10 @@ void Overlay::ResetDefaults() {
     aim_offset_x = 0.0f; aim_offset_y = 0.0f; ai_model = 0;
     ai_confidence_body = 48.0f; ai_confidence_head = 35.0f;
     min_box_area_body = 150.0f; min_box_area_head = 40.0f;
-    hit_chance = 90.0f; auto_confidence = false;
+    this->hit_chance = 90.0f; auto_confidence = false;
     custom_res_w = 1920; custom_res_h = 1080;
-    obs_bypass = true; menu_scale = 100.0f; menu_width = 1150.0f; menu_height = 680.0f;
-    hardware_mode_idx = 0; com_port = 2; trigger_enable = false; trigger_delay = 0.05f; trigger_target = 0; trigger_key = 0;
+    obs_bypass = true; menu_scale = 100.0f; this->menu_width = 1150.0f; this->menu_height = 680.0f;
+    this->hardware_mode_idx = 0; com_port = 2; trigger_enable = false; this->trigger_delay = 0.05f; this->trigger_target = 0; this->trigger_key = 0;
     rcs_enable = false; rcs_pitch = 1.0f; rcs_yaw = 0.0f;
     refresh_rate_idx = 0; memory_enemy_frames = 3; enable_pose_adaptive = false;
     accent_color[0] = 0.0f; accent_color[1] = 0.8f; accent_color[2] = 1.0f;
@@ -1024,7 +1025,7 @@ void Overlay::RenderNeuralTab(float content_w, float content_h, const ImVec4& ac
     if (CustomSliderFloat("Confidence Head:", "##cnf_head", &ai_confidence_head, 0.0f, 100.0f, "%.0f%%", acc_vec, u8"Порог головы.")) cfg_changed = true;
     if (CustomSliderFloat("Min Box Area Body:", "##min_area_body", &min_box_area_body, 30.0f, 500.0f, "%.0f px²", acc_vec, u8"Мин. площадь тела.")) cfg_changed = true;
     if (CustomSliderFloat("Min Box Area Head:", "##min_area_head", &min_box_area_head, 10.0f, 200.0f, "%.0f px²", acc_vec, u8"Мин. площадь головы.")) cfg_changed = true;
-    if (CustomSliderFloat("Hit Chance:", "##htc", &hit_chance, 0.0f, 100.0f, "%.0f%%", acc_vec, u8"Вероятность срабатывания.")) cfg_changed = true;
+    if (CustomSliderFloat("Hit Chance:", "##htc", &this->hit_chance, 0.0f, 100.0f, "%.0f%%", acc_vec, u8"Вероятность срабатывания.")) cfg_changed = true;
     EndPanel();
 
     if (BeginPanel("Inference Optimization", ImVec2(0, content_h - 310 - 20), acc_vec)) cfg_changed = true;
@@ -1134,9 +1135,9 @@ void Overlay::RenderPwnzAITab(float content_w, float content_h, const ImVec4& ac
     ImGui::NextColumn();
 
     if (BeginPanel("AI Triggerbot", ImVec2(0, 220), acc_vec, true, &trigger_enable, acc_u32)) cfg_changed = true;
-    if (DrawKeybinder("Trigger Bind:", &trigger_key, 20, u8"Кнопка для триггера.")) cfg_changed = true;
+    if (DrawKeybinder("Trigger Bind:", &this->trigger_key, 20, u8"Кнопка для триггера.")) cfg_changed = true;
     ImGui::Spacing();
-    if (CustomSliderFloat("Click Delay:", "##trg_dly", &trigger_delay, 0.0f, 1.0f, "%.2f s", acc_vec, u8"Задержка выстрела.")) cfg_changed = true;
+    if (CustomSliderFloat("Click Delay:", "##trg_dly", &this->trigger_delay, 0.0f, 1.0f, "%.2f s", acc_vec, u8"Задержка выстрела.")) cfg_changed = true;
     ImGui::Spacing();
     ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "Target: Synced with Aim Target");
     EndPanel();
@@ -1260,7 +1261,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         "KMbox Net (UDP)"
     };
     
-    if (CustomCombo("Mode:", "##hw_mode", &hardware_mode_idx, hw_modes, 3, 
+    if (CustomCombo("Mode:", "##hw_mode", &this->hardware_mode_idx, hw_modes, 3, 
         is_russian ? u8"Выберите режим работы" : "Select hardware mode")) {
         cfg_changed = true;
     }
@@ -1268,7 +1269,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     ImGui::Spacing();
     
     // Enable Hardware Toggle
-    if (DrawToggle("Enable Hardware:", "##hw_en", &hw_enabled, acc_u32, 
+    if (DrawToggle("Enable Hardware:", "##hw_en", &this->hw_enabled, acc_u32, 
         is_russian ? u8"Включить аппаратный ввод" : "Enable hardware input")) {
         cfg_changed = true;
     }
@@ -1284,18 +1285,18 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         "Random Delay"
     };
     
-    if (CustomCombo("Bypass Mode:", "##bypass", &bypass_mode_idx, bypass_modes, 4,
+    if (CustomCombo("Bypass Mode:", "##bypass", &this->bypass_mode_idx, bypass_modes, 4,
         is_russian ? u8"Режим обхода античита" : "Anti-cheat bypass mode")) {
         cfg_changed = true;
     }
     
-    if (bypass_mode_idx == 3) { // Random Delay
+    if (this->bypass_mode_idx == 3) { // Random Delay
         ImGui::Spacing();
         ImGui::Text(is_russian ? u8"Random Delay (ms):" : "Random Delay (ms):");
         ImGui::PushItemWidth(100);
-        if (ImGui::SliderInt("##rd_min", &random_delay_min, 1, 50, "%d ms")) cfg_changed = true;
+        if (ImGui::SliderInt("##rd_min", &this->random_delay_min, 1, 50, "%d ms")) cfg_changed = true;
         ImGui::SameLine();
-        if (ImGui::SliderInt("##rd_max", &random_delay_max, 10, 100, "%d ms")) cfg_changed = true;
+        if (ImGui::SliderInt("##rd_max", &this->random_delay_max, 10, 100, "%d ms")) cfg_changed = true;
         ImGui::PopItemWidth();
         HelpMarker(is_russian ? u8"Мин/макс задержка для рандомизации" : "Min/Max delay for randomization");
     }
@@ -1305,13 +1306,13 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     ImGui::NextColumn();
 
     // Right Column - Device Specific Settings
-    if (hardware_mode_idx == 1) {
+    if (this->hardware_mode_idx == 1) {
         // Makcu UART Settings
         if (BeginPanel("Makcu (UART/COM) Settings", ImVec2(0, 280), acc_vec)) cfg_changed = true;
         
         ImGui::Text(is_russian ? u8"COM Порт:" : "COM Port:");
         ImGui::PushItemWidth(150);
-        if (ImGui::InputText("##com_port", com_port_buf, sizeof(com_port_buf))) cfg_changed = true;
+        if (ImGui::InputText("##com_port", this->com_port_buf, sizeof(this->com_port_buf))) cfg_changed = true;
         ImGui::PopItemWidth();
         HelpMarker(is_russian ? u8"Например: COM3" : "Example: COM3");
         
@@ -1322,7 +1323,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         
         ImGui::Text(is_russian ? u8"Baud Rate:" : "Baud Rate:");
         ImGui::PushItemWidth(150);
-        if (ImGui::Combo("##baud", &baud_rate_idx, baud_rates, IM_ARRAYSIZE(baud_rates))) cfg_changed = true;
+        if (ImGui::Combo("##baud", &this->baud_rate_idx, baud_rates, IM_ARRAYSIZE(baud_rates))) cfg_changed = true;
         ImGui::PopItemWidth();
         
         ImGui::Spacing();
@@ -1335,7 +1336,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         if (!connected) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
             if (ImGui::Button("Connect Makcu", ImVec2(150, 35))) {
-                hw.ConnectMacku(com_port_buf, baud_values[baud_rate_idx]);
+                hw.ConnectMacku(this->com_port_buf, baud_values[this->baud_rate_idx]);
             }
             ImGui::PopStyleColor();
         } else {
@@ -1355,13 +1356,13 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         
         EndPanel();
         
-    } else if (hardware_mode_idx == 2) {
+    } else if (this->hardware_mode_idx == 2) {
         // KMbox Net Settings
         if (BeginPanel("KMbox Net (UDP) Settings", ImVec2(0, 280), acc_vec)) cfg_changed = true;
         
         ImGui::Text(is_russian ? u8"IP Адрес:" : "IP Address:");
         ImGui::PushItemWidth(200);
-        if (ImGui::InputText("##kmbox_ip", kmbox_ip_buf, sizeof(kmbox_ip_buf))) cfg_changed = true;
+        if (ImGui::InputText("##kmbox_ip", this->kmbox_ip_buf, sizeof(this->kmbox_ip_buf))) cfg_changed = true;
         ImGui::PopItemWidth();
         HelpMarker(is_russian ? u8"Например: 192.168.1.100" : "Example: 192.168.1.100");
         
@@ -1369,7 +1370,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         
         ImGui::Text(is_russian ? u8"Порт:" : "Port:");
         ImGui::PushItemWidth(100);
-        if (ImGui::InputInt("##kmbox_port", &kmbox_port)) cfg_changed = true;
+        if (ImGui::InputInt("##this->kmbox_port", &this->kmbox_port)) cfg_changed = true;
         ImGui::PopItemWidth();
         
         ImGui::Spacing();
@@ -1382,7 +1383,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         if (!connected) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
             if (ImGui::Button("Connect KMbox", ImVec2(150, 35))) {
-                hw.ConnectKMbox(kmbox_ip_buf, kmbox_port);
+                hw.ConnectKMbox(this->kmbox_ip_buf, this->kmbox_port);
             }
             ImGui::PopStyleColor();
         } else {
@@ -1531,14 +1532,14 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     ImGui::Text(is_russian ? u8"X:" : "X:");
     ImGui::SameLine();
     ImGui::PushItemWidth(100);
-    if (ImGui::InputInt("##test_x", &test_move_x)) cfg_changed = true;
+    if (ImGui::InputInt("##test_x", &this->test_move_x)) cfg_changed = true;
     ImGui::PopItemWidth();
     
     ImGui::SameLine();
     ImGui::Text(is_russian ? u8"Y:" : "Y:");
     ImGui::SameLine();
     ImGui::PushItemWidth(100);
-    if (ImGui::InputInt("##test_y", &test_move_y)) cfg_changed = true;
+    if (ImGui::InputInt("##test_y", &this->test_move_y)) cfg_changed = true;
     ImGui::PopItemWidth();
     
     ImGui::Spacing();
@@ -1548,18 +1549,18 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     // Test Move Button
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 0.8f));
     if (ImGui::Button(is_russian ? u8"Test Move Mouse" : "Test Move Mouse", ImVec2(200, 40))) {
-        if (hw_enabled) {
-            if (hardware_mode_idx == 1 && hw.IsMackuConnected()) {
-                hw.SendMackuMove(test_move_x, test_move_y);
-            } else if (hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
-                hw.SendKMboxMove(test_move_x, test_move_y);
-            } else if (hardware_mode_idx == 0) {
+        if (this->hw_enabled) {
+            if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
+                hw.SendMackuMove(this->test_move_x, this->test_move_y);
+            } else if (this->hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
+                hw.SendKMboxMove(this->test_move_x, this->test_move_y);
+            } else if (this->hardware_mode_idx == 0) {
                 // Local mouse - use SendInput
                 #ifdef _WIN32
                 INPUT input = {};
                 input.type = INPUT_MOUSE;
-                input.mi.dx = test_move_x;
-                input.mi.dy = test_move_y;
+                input.mi.dx = this->test_move_x;
+                input.mi.dy = this->test_move_y;
                 input.mi.dwFlags = MOUSEEVENTF_MOVE;
                 SendInput(1, &input, sizeof(INPUT));
                 #endif
@@ -1569,8 +1570,8 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
             #ifdef _WIN32
             INPUT input = {};
             input.type = INPUT_MOUSE;
-            input.mi.dx = test_move_x;
-            input.mi.dy = test_move_y;
+            input.mi.dx = this->test_move_x;
+            input.mi.dy = this->test_move_y;
             input.mi.dwFlags = MOUSEEVENTF_MOVE;
             SendInput(1, &input, sizeof(INPUT));
             #endif
@@ -1589,10 +1590,10 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     // Test Left Click
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.7f, 0.2f, 0.8f));
     if (ImGui::Button(is_russian ? u8"Test Left Click" : "Test Left Click", ImVec2(200, 35))) {
-        if (hw_enabled) {
-            if (hardware_mode_idx == 1 && hw.IsMackuConnected()) {
+        if (this->hw_enabled) {
+            if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
                 hw.SendMackuClick(1); // Left click
-            } else if (hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
+            } else if (this->hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
                 hw.SendKMboxClick(1); // Left click
             } else {
                 #ifdef _WIN32
@@ -1622,12 +1623,12 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     // Test Double Click
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.5f, 0.2f, 0.8f));
     if (ImGui::Button(is_russian ? u8"Test Double Click" : "Test Double Click", ImVec2(200, 35))) {
-        if (hw_enabled) {
-            if (hardware_mode_idx == 1 && hw.IsMackuConnected()) {
+        if (this->hw_enabled) {
+            if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
                 hw.SendMackuClick(1);
                 Sleep(50);
                 hw.SendMackuClick(1);
-            } else if (hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
+            } else if (this->hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
                 hw.SendKMboxClick(1);
                 Sleep(50);
                 hw.SendKMboxClick(1);
@@ -1678,7 +1679,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
         "KMbox Net (UDP)"
     };
     
-    ImGui::Text("%s", mode_names[hardware_mode_idx]);
+    ImGui::Text("%s", mode_names[this->hardware_mode_idx]);
     
     ImGui::Spacing();
     ImGui::Separator();
@@ -1692,7 +1693,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     
     if (macku_connected) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ Makcu: CONNECTED");
-        ImGui::Text(is_russian ? u8"Порт: %s" : "Port: %s", com_port_buf);
+        ImGui::Text(is_russian ? u8"Порт: %s" : "Port: %s", this->com_port_buf);
     } else {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "✗ Makcu: DISCONNECTED");
     }
@@ -1701,7 +1702,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     
     if (kmbox_connected) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ KMbox: CONNECTED");
-        ImGui::Text(is_russian ? u8"IP: %s:%d" : "IP: %s:%d", kmbox_ip_buf, kmbox_port);
+        ImGui::Text(is_russian ? u8"IP: %s:%d" : "IP: %s:%d", this->kmbox_ip_buf, this->kmbox_port);
     } else {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "✗ KMbox: DISCONNECTED");
     }
@@ -1710,7 +1711,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     ImGui::Separator();
     ImGui::Spacing();
     
-    if (hw_enabled) {
+    if (this->hw_enabled) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
             is_russian ? u8"✅ Hardware ENABLED" : "✅ Hardware ENABLED");
     } else {
@@ -2366,7 +2367,7 @@ void Overlay::RenderMenu(const std::vector<Detection>& detections, Aimbot* aim, 
     ImVec4 acc_vec = ImVec4(accent_color[0], accent_color[1], accent_color[2], 1.0f);
     ImU32 acc_u32 = ImGui::ColorConvertFloat4ToU32(acc_vec);
 
-    ImGui::SetNextWindowSize(ImVec2(menu_width, menu_height), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(this->menu_width, this->menu_height), ImGuiCond_Always);
     ImGui::Begin("PWNZ_MAIN", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
 
     static float text_offset = 0.0f;
@@ -2465,7 +2466,7 @@ void Overlay::RenderMenu(const std::vector<Detection>& detections, Aimbot* aim, 
         "Makcu / Pico (COM)", "MoBox (COM)", "KMBox Net / DMA (UDP)",
         "Generic 2PC (UDP)", "Makcu (UDP)", "Makcu (COM stealth)"
     };
-    char status_text[128]; snprintf(status_text, sizeof(status_text), "( Bypass: %s )", hw_names_full[hardware_mode_idx]);
+    char status_text[128]; snprintf(status_text, sizeof(status_text), "( Bypass: %s )", hw_names_full[this->hardware_mode_idx]);
     float stat_w = ImGui::CalcTextSize(status_text).x; float center_x = ImGui::GetWindowWidth() / 2.0f;
     ImGui::SameLine(center_x - (stat_w / 2.0f)); ImGui::SetCursorPosY(14.0f);
     float r, g, b; ImGui::ColorConvertHSVtoRGB(fmod(time_sec * 0.3f, 1.0f), 0.7f, 1.0f, r, g, b);

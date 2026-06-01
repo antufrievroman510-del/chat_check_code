@@ -13,6 +13,15 @@
     #include <unistd.h>
 #else
     #pragma comment(lib, "ws2_32.lib")
+    // Определяем ssize_t для Windows если еще не определен
+    #ifndef _SSIZE_T_DEFINED
+        #ifdef _WIN64
+            typedef signed __int64 ssize_t;
+        #else
+            typedef signed int ssize_t;
+        #endif
+        #define _SSIZE_T_DEFINED
+    #endif
 #endif
 
 HardwareBackend& HardwareBackend::Instance() {
