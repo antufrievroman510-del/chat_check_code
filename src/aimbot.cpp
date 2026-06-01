@@ -395,10 +395,20 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     VMProtectBeginMutation("AimbotUpdate");
     MUTATE_SIGNATURE;
 
-    if (!aim_enable) {
+    // ИСПРАВЛЕНИЕ: Сначала проверяем клавишу, потом aim_enable
+    // Это позволяет аимботу работать даже если в конфиге aim_enable=false
+    // но пользователь нажал клавишу активации
+    bool key_pressed = (GetAsyncKeyState(aim_key_main) & 0x8000) != 0 || g_remote_aim_key.load();
+    
+    if (!aim_enable && !key_pressed) {
         ResetTarget();
         VMProtectEnd();
         return;
+    }
+    
+    // Если клавиша нажата, но aim_enable=false - включаем принудительно
+    if (!aim_enable && key_pressed) {
+        aim_enable = true;
     }
 
     if (g_last_update_time == 0) g_last_update_time = current_time_ms;

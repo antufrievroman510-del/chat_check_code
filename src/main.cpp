@@ -636,7 +636,9 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
         // Это обеспечивает мгновенную реакцию на изменение ползунков в меню
         aim->SyncFromOverlay(*overlay);
         
-        bool currently_aiming = (IsAimKeyPressed(overlay) || g_remote_aim_key.load()) && local_cfg.aim_enable;
+        // ИСПРАВЛЕНИЕ: Проверяем overlay->aim_enable вместо local_cfg.aim_enable
+        // Потому что SyncFromOverlay уже синхронизировал все настройки из overlay
+        bool currently_aiming = (IsAimKeyPressed(overlay) || g_remote_aim_key.load()) && overlay->aim_enable;
 
         if (local_cfg.com_port != last_com_port) {
             aim->com_port = local_cfg.com_port;
@@ -675,7 +677,16 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
                 // НЕ сбрасываем g_new_detections здесь, чтобы аим мог использовать тот же кадр несколько раз
             }
             // Если нет нового кадра, но мы всё ещё держим клавишу аима - используем последние известные детекции
-            if (!is_new_frame && current_det.empty()) { Sleep(1); continue; }
+            // ИСПРАВЛЕНИЕ: Не пропускаем кадр если детекты пустые - даём аимботу шанс использовать старые данные
+            if (!is_new_frame && current_det.empty()) {
+                // Используем последний известный кадр из глобальной переменной
+                std::lock_guard<std::mutex> lock_last(g_det_mutex);
+                current_det = g_shared_detections;
+                if (current_det.empty()) {
+                    Sleep(1);
+                    continue;
+                }
+            }
 
             if (local_cfg.aim_target_lock && current_det.size() > 1) {
                 float center_x = g_capture_w / 2.0f;
@@ -795,6 +806,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         overlay.is_first_frame_init = true;
         aim.hardware_type = overlay.hardware_type;
         aim.com_port = overlay.com_port;
+        
+        // ИСПРАВЛЕНИЕ: Гарантируем инициализацию SendInput для hardware_type=0
+        // Это критично для работы трекинга через стандартную мышь Windows
+        if (overlay.hardware_mode_idx == 0) {
+            aim.hardware_type = 0;
+        }
         aim.InitHardware();
 
         int start_w, start_h; GetModelSize(overlay.ai_model, start_w, start_h);

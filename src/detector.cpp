@@ -121,7 +121,10 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
 
         const OrtApi& ort_api = Ort::GetApi();
         const OrtDmlApi* dml_api = nullptr;
-        if (ort_api.GetExecutionProviderApi("DML", ORT_API_VERSION, reinterpret_cast<const void**>(&dml_api)) == nullptr && dml_api != nullptr) {
+        if (ort_api.GetExecutionProviderApi("DML", ORT_API_VERSION, reinterpret_cast<const void**>(&dml_api)) == nullptr) {
+            // DML API не доступна, пробуем инициализировать без DirectML
+            std::cout << "[Detector] DirectML not available, using CPU execution provider" << std::endl;
+        } else if (dml_api != nullptr) {
             IDXGIFactory1* factory = nullptr;
             if (SUCCEEDED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)&factory))) {
                 IDXGIAdapter1* adapter = nullptr;
