@@ -1308,10 +1308,14 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     ImGui::Separator();
     ImGui::Spacing();
     
-    // OBS Bypass Toggle
-    if (DrawToggle("OBS Bypass:", "##obs_bypass", &this->obs_bypass_enabled, acc_u32,
+    // OBS Bypass Toggle - используем obs_bypass для реального скрытия
+    if (DrawToggle("OBS Bypass:", "##obs_bypass", &this->obs_bypass, acc_u32,
         is_russian ? u8"Скрыть оверлей при записи/скриншотах" : "Hide overlay during recording/screenshots")) {
         cfg_changed = true;
+        // Немедленно применяем изменение
+        if (hwnd) {
+            SetWindowDisplayAffinity(hwnd, this->obs_bypass ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE);
+        }
     }
     
     EndPanel();
@@ -1420,7 +1424,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         
         EndPanel();
     } else {
-        // Local Mouse Info
+        // Local Mouse Info - режим SendInput
         if (BeginPanel("Local Mouse (SendInput) [UNSAFE]", ImVec2(0, 280), acc_vec)) {
             ImGui::TextColored(acc_vec, is_russian ? u8"Стандартный ввод Windows" : "Standard Windows Input");
             ImGui::Spacing();
@@ -1430,8 +1434,9 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             ImGui::Spacing();
             ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f),
                 is_russian ? u8"⚠ ОПАСНО: Может определяться античитами!" : "⚠ DANGEROUS: May be detected by anti-cheats!");
-            EndPanel();
         }
+        // Закрываем панель всегда, даже если BeginPanel вернул false
+        EndPanel();
     }
     
     ImGui::Columns(1);
@@ -2550,6 +2555,7 @@ void Overlay::Render(const std::vector<Detection>& detections, int screen_w, int
     }
 
     ImGui::GetIO().FontGlobalScale = menu_scale / 100.0f;
+    // OBS Bypass применяется в реальном времени при изменении флага
     static bool last_obs = !obs_bypass;
     if (obs_bypass != last_obs) {
         SetWindowDisplayAffinity(hwnd, obs_bypass ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE);
