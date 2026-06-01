@@ -1502,6 +1502,8 @@ void Overlay::RenderMetricsTab(float content_w, float content_h, const ImVec4& a
     ImGui::Text("Jitter: %.2f ms", g_inference_jitter.load());
     ImGui::Text("Active tracks: %d", g_byte_active_tracks.load());
     ImGui::Text("Track loss rate: %.2f", g_track_loss_rate.load());
+    ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Target Locked: %s", g_is_target_locked.load() ? "YES" : "NO");
+    ImGui::Text("DirectML: Active");
     EndPanel();
 
     BeginPanel("Real-time Graphs", ImVec2(0, content_h - 250 - 20), acc_vec);
