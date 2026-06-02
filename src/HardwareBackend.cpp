@@ -63,8 +63,14 @@ bool HardwareBackend::ConnectMacku(const std::string& port, int baud) {
     
     // Проверка на INVALID_HANDLE_VALUE, а не на nullptr
     if (hComPort == INVALID_HANDLE_VALUE) {
+        DWORD err = GetLastError();
         hComPort = nullptr;
-        std::cerr << "Failed to open COM port: " << port << " (Error: " << GetLastError() << ")" << std::endl;
+        std::cerr << "Failed to open COM port: " << port << " (Error: " << err << ")" << std::endl;
+        if (err == ERROR_ACCESS_DENIED) {
+            std::cerr << "ERROR: Port is busy or access denied. Close other apps using this port." << std::endl;
+        } else if (err == ERROR_FILE_NOT_FOUND) {
+            std::cerr << "ERROR: Port does not exist. Check Device Manager." << std::endl;
+        }
         return false;
     }
     
