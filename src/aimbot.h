@@ -80,6 +80,7 @@ public:
     int com_port = 3;
     std::string net_ip = "192.168.1.100";
     int net_port = 3333;
+    bool m_hw_enabled = false;  // Флаг включения аппаратного ввода (синхронизируется с overlay.hw_enabled)
 
     // Дополнительные настройки
     float min_sensitivity = 0.1f;
