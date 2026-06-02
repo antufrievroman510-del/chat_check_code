@@ -56,11 +56,15 @@ public:
     bool IsLeftButtonPressed() const { return m_lmb_pressed.load(); }
     bool IsRightButtonPressed() const { return m_rmb_pressed.load(); }
     bool IsMiddleButtonPressed() const { return m_mmb_pressed.load(); }
-    
     // Установка состояния кнопок (используется при получении данных от устройства)
     void SetLeftButtonPressed(bool pressed) { m_lmb_pressed.store(pressed); }
     void SetRightButtonPressed(bool pressed) { m_rmb_pressed.store(pressed); }
     void SetMiddleButtonPressed(bool pressed) { m_mmb_pressed.store(pressed); }
+    
+    // Запуск/остановка потока мониторинга
+    void StartMonitoring();
+    void StopMonitoring();
+    bool IsMonitoring() const { return m_monitoring.load(); }
 
 private:
     HANDLE hComPort;
@@ -69,12 +73,23 @@ private:
     std::mutex mtx;
     std::string m_portName;   // Имя порта для инициализации через Init()
     int m_baudRate;           // Скорость для инициализации через Init()
-    
+
     // === Состояние кнопок для аппаратного режима ===
     std::atomic<bool> m_lmb_pressed{false};
     std::atomic<bool> m_rmb_pressed{false};
     std::atomic<bool> m_mmb_pressed{false};
+    
+    // === Поток мониторинга ===
+    std::thread m_monitorThread;
+    std::atomic<bool> m_monitoring{false};
+    std::atomic<bool> m_stopMonitoring{false};
+    
+    // Функция чтения и парсинга ответов от устройства
+    void monitoringLoop();
 
     // Внутренняя отправка байтов
     bool WriteBytes(const unsigned char* data, size_t length);
+    
+    // Парсинг ответа от устройства для обновления состояния кнопок
+    void ParseResponse(const std::string& response);
 };
