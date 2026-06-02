@@ -8,10 +8,16 @@
 #include <cstdint>
 
 // Контроллер для работы с платой Makcu через UART (COM-порт)
-// Протокол: БИНАРНЫЙ (Binary Mouse Stream) согласно документации https://www.makcu.com/en/api
-// Формат фрейма: [0xDE][0xAD][Length][Command][Data...]
-// - Command 0x01: Относительное движение (4 байта: dx_low, dx_high, dy_low, dy_high)
-// - Command 0x03: Кнопки (1 байт: битовая маска)
+// Протокол: ТЕКСТОВЫЙ согласно https://github.com/K4HVH/makcu и https://www.makcu.com/en/api
+// Команды:
+//   km.move(dx,dy)\r\n      - движение мыши
+//   km.left(1)\r\n           - нажать ЛКМ
+//   km.left(0)\r\n           - отпустить ЛКМ
+//   km.right(1)\r\n          - нажать ПКМ
+//   km.right(0)\r\n          - отпустить ПКМ
+//   km.middle(1)\r\n         - нажать СКМ
+//   km.middle(0)\r\n         - отпустить СКМ
+//   km.buttons(1)\r\n        - включить стрим состояния кнопок
 class MakcuUART {
 public:
     MakcuUART();
@@ -32,7 +38,7 @@ public:
     // Проверка подключения
     bool IsConnected() const;
 
-    // Отправка движения мыши (бинарный протокол)
+    // Отправка движения мыши (текстовый протокол)
     bool MoveMouse(int dx, int dy);
     
     // Отправка нажатия кнопки (удержание)
@@ -77,9 +83,6 @@ private:
     std::atomic<bool> m_stopMonitoring{false};
     
     void monitoringLoop();
-    bool WriteBytes(const uint8_t* data, size_t length);
-    bool SendBinaryFrame(uint8_t command, const uint8_t* data, size_t dataLen);
-    
-    // Парсинг бинарных ответов от устройства
-    void ParseBinaryResponse(const uint8_t* buffer, size_t length);
+    bool WriteCommand(const char* command);
+    void ParseResponse(const char* buffer, size_t length);
 };
