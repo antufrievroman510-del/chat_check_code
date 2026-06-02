@@ -403,68 +403,20 @@ void MakcuUART::StopMonitoring() {
 }
 
 void MakcuUART::monitoringLoop() {
-    std::cout << "[MakcuUART] Monitoring loop started" << std::endl;
+    std::cout << "[MakcuUART] Monitoring loop started (Idle mode, no polling)." << std::endl;
     
-    // Настраиваем таймауты для неблокирующего чтения
-    COMMTIMEOUTS timeouts = {};
-    timeouts.ReadIntervalTimeout = MAXDWORD;        // Максимальный интервал между байтами
-    timeouts.ReadTotalTimeoutMultiplier = 0;        // Не добавлять время на байт
-    timeouts.ReadTotalTimeoutConstant = 0;          // Не ждать вообще, если буфер пуст
-    timeouts.WriteTotalTimeoutConstant = 1000;      // Таймаут на запись 1 сек
-    timeouts.WriteTotalTimeoutMultiplier = 0;
-
-    if (!SetCommTimeouts(hComPort, &timeouts)) {
-        std::cerr << "[MakcuUART] Failed to set timeouts, error: " << GetLastError() << std::endl;
-    } else {
-        std::cout << "[MakcuUART] Non-blocking timeouts set successfully." << std::endl;
-    }
-
-    int pollCounter = 0;
-    char buffer[256];
-    DWORD bytesRead;
-    std::string pollCmd = "km.get_state()\r\n";
+    // Прошивка Macku (MAKCM) НЕ поддерживает чтение состояния (get_state).
+    // Она работает только на прием команд (Write-only).
+    // Попытки чтения (ReadFile) без наличия входящих данных могут вызывать блокировки или возврат пустоты,
+    // что бесполезно тратит ресурсы и может мешать работе основного потока.
+    // 
+    // Состояние кнопок (g_makcu_*) обновляется локально в методах PressButton/ReleaseButton.
+    // Этот поток просто держит соединение активным и может быть расширен для обработки логов от ESP32 в будущем.
 
     while (!m_stopMonitoring.load() && isConnected) {
-        // Очищаем входной буфер от старого мусора перед опросом
-        PurgeComm(hComPort, PURGE_RXCLEAR);
-
-        // Отправляем запрос состояния каждые 50мс (чаще для лучшей отзывчивости)
-        DWORD bytesWritten;
-        if (!WriteFile(hComPort, pollCmd.c_str(), static_cast<DWORD>(pollCmd.length()), &bytesWritten, nullptr)) {
-            // Ошибка записи, возможно порт закрыт
-            std::cerr << "[MakcuUART] Write failed: " << GetLastError() << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            continue;
-        }
-        
-        // Даем устройству немного времени на ответ (ESP32 быстрый, 5-10мс достаточно)
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-        // Читаем ответ (вернется сразу из-за таймаутов, даже если данных нет)
-        if (ReadFile(hComPort, buffer, sizeof(buffer) - 1, &bytesRead, nullptr)) {
-            if (bytesRead > 0) {
-                buffer[bytesRead] = '\0';
-                std::string response(buffer);
-                
-                // Парсим только если ответ не пустой
-                if (!response.empty()) {
-                    // Для отладки можно раскомментировать:
-                    // std::cout << "[MakcuUART] RX: " << response << std::endl;
-                    ParseResponse(response);
-                }
-            }
-        } else {
-            // Ошибка чтения, отличная от "нет данных" (из-за таймаутов)
-            DWORD err = GetLastError();
-            if (err != ERROR_SUCCESS) { 
-                 // При неблокирующем чтении с таймаутами ошибки могут быть нормой, 
-                 // но если это ERROR_INVALID_HANDLE, значит порт закрыт
-                 if (err == ERROR_INVALID_HANDLE) break;
-            }
-        }
-
-        // Цикл опроса 50мс (20 раз в секунду)
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        // Просто спим, чтобы не грузить CPU. 
+        // Проверка isConnected нужна для выхода при отключении устройства в другом потоке.
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
     
     std::cout << "[MakcuUART] Monitoring loop ended" << std::endl;
