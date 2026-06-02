@@ -4,6 +4,7 @@
 #include <thread>
 #include <chrono>
 #include <sstream>
+#include <cstring>  // Для strlen
 #include "MakcuState.h"  // Подключаем заголовок с объявлением глобальных переменных
 
 // Глобальные переменные определены в MakcuState.cpp
@@ -403,21 +404,49 @@ void MakcuUART::StopMonitoring() {
 }
 
 void MakcuUART::monitoringLoop() {
-    std::cout << "[MakcuUART] Monitoring loop started (Idle mode, no polling)." << std::endl;
+    std::cout << "[MakcuUART] Monitoring loop started." << std::endl;
     
-    // Прошивка Macku (MAKCM) НЕ поддерживает чтение состояния (get_state).
-    // Она работает только на прием команд (Write-only).
-    // Попытки чтения (ReadFile) без наличия входящих данных могут вызывать блокировки или возврат пустоты,
-    // что бесполезно тратит ресурсы и может мешать работе основного потока.
-    // 
-    // Состояние кнопок (g_makcu_*) обновляется локально в методах PressButton/ReleaseButton.
-    // Этот поток просто держит соединение активным и может быть расширен для обработки логов от ESP32 в будущем.
-
-    while (!m_stopMonitoring.load() && isConnected) {
-        // Просто спим, чтобы не грузить CPU. 
-        // Проверка isConnected нужна для выхода при отключении устройства в другом потоке.
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    // Отправляем команду включения мониторинга кнопок
+    // Прошивка MAKCU начнёт отправлять данные о нажатиях кнопок
+    const char* enable_cmd = "km.buttons(1)\r\n";
+    WriteBytes(reinterpret_cast<const unsigned char*>(enable_cmd), strlen(enable_cmd));
+    std::cout << "[MakcuUART] Sent km.buttons(1) to enable button monitoring" << std::endl;
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    // Настраиваем таймауты для чтения (неблокирующее чтение)
+    COMMTIMEOUTS timeouts = {0};
+    timeouts.ReadIntervalTimeout = 50;
+    timeouts.ReadTotalTimeoutConstant = 50;
+    timeouts.ReadTotalTimeoutMultiplier = 0;
+    SetCommTimeouts(hComPort, &timeouts);
+    
+    // Буфер для чтения данных
+    unsigned char buffer[256];
+    
+    while (!m_stopMonitoring.load() && isConnected && hComPort != nullptr) {
+        DWORD bytes_read = 0;
+        BOOL read_result = ReadFile(hComPort, buffer, sizeof(buffer), &bytes_read, nullptr);
+        
+        if (read_result && bytes_read > 0) {
+            std::string response(reinterpret_cast<char*>(buffer), bytes_read);
+            std::cout << "[MakcuUART] RAW Received (" << bytes_read << " bytes): ";
+            for (size_t i = 0; i < bytes_read; ++i) {
+                printf("%02X ", buffer[i]);
+            }
+            std::cout << std::endl;
+            
+            // Парсим ответ - формат зависит от прошивки
+            // Обычно это ASCII строка вида "btn:1 0 0" или бинарные данные
+            ParseResponse(response);
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
     }
+    
+    // Отключаем мониторинг при выходе
+    const char* disable_cmd = "km.buttons(0)\r\n";
+    WriteBytes(reinterpret_cast<const unsigned char*>(disable_cmd), strlen(disable_cmd));
     
     std::cout << "[MakcuUART] Monitoring loop ended" << std::endl;
 }
