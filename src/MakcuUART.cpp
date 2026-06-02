@@ -138,15 +138,15 @@ bool MakcuUART::PressButton(int button) {
     switch (button) {
         case 0: 
             m_lmb_pressed.store(true); 
-            g_makcu_shooting.store(true); // LMB = shooting
+            pwnz_ai::g_makcu_shooting.store(true); // LMB = shooting
             break;
         case 1: 
             m_rmb_pressed.store(true); 
-            g_makcu_aiming.store(true);   // RMB = aiming
+            pwnz_ai::g_makcu_aiming.store(true);   // RMB = aiming
             break;
         case 2: 
             m_mmb_pressed.store(true); 
-            g_makcu_zooming.store(true);  // MMB = zooming
+            pwnz_ai::g_makcu_zooming.store(true);  // MMB = zooming
             break;
     }
 
@@ -195,15 +195,15 @@ bool MakcuUART::ReleaseButton(int button) {
     switch (button) {
         case 0: 
             m_lmb_pressed.store(false); 
-            g_makcu_shooting.store(false); // LMB = shooting
+            pwnz_ai::g_makcu_shooting.store(false); // LMB = shooting
             break;
         case 1: 
             m_rmb_pressed.store(false); 
-            g_makcu_aiming.store(false);   // RMB = aiming
+            pwnz_ai::g_makcu_aiming.store(false);   // RMB = aiming
             break;
         case 2: 
             m_mmb_pressed.store(false); 
-            g_makcu_zooming.store(false);  // MMB = zooming
+            pwnz_ai::g_makcu_zooming.store(false);  // MMB = zooming
             break;
     }
 
