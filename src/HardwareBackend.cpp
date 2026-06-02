@@ -49,7 +49,6 @@ bool HardwareBackend::ConnectMacku(const std::string& port, int baud) {
     DisconnectMacku();
     
     // Формируем имя порта для Windows (\\.\COM3)
-    // Правильное экранирование: два обратных слэша для одного слэша в пути
     std::string fullPort = "\\\\.\\" + port;
     
     hComPort = CreateFileA(
@@ -149,18 +148,43 @@ bool HardwareBackend::SendMackuClick(uint8_t button) {
     
 #ifdef _WIN32
     // Формат протокола Makcu ESP32S3 (совместим с прошивкой MAKCM):
-    // Текстовая команда: "km.click(button)\r\n"
-    // button: 0=left, 1=right, 2=middle (или 1=left, 2=right, 3=middle в зависимости от версии)
-    // См: https://github.com/terrafirma2021/MAKCM
-    std::string command = "km.click(" + std::to_string(button) + ")\r\n";
+    // Требуется отправка пары команд: нажатие (1) и отпускание (0)
+    // km.left(1), km.left(0) - ЛКМ
+    // km.right(1), km.right(0) - ПКМ
+    // km.middle(1), km.middle(0) - Колесо
+    // km.side1(1), km.side1(0) - Боковая 1
+    // km.side2(1), km.side2(0) - Боковая 2
     
+    std::string buttonName;
+    switch (button) {
+        case 0: buttonName = "left"; break;    // ЛКМ
+        case 1: buttonName = "right"; break;   // ПКМ
+        case 2: buttonName = "middle"; break;  // Колесо
+        case 3: buttonName = "side1"; break;   // Боковая 1
+        case 4: buttonName = "side2"; break;   // Боковая 2
+        default: buttonName = "left"; break;
+    }
+    
+    // Команда нажатия
+    std::string pressCmd = "km." + buttonName + "(1)\r\n";
     DWORD bytesWritten;
-    BOOL result = WriteFile(hComPort, command.c_str(), static_cast<DWORD>(command.length()), &bytesWritten, nullptr);
-    
-    if (!result || bytesWritten != command.length()) {
-        std::cerr << "[HardwareBackend] SendMackuClick failed: " << GetLastError() << std::endl;
+    BOOL result = WriteFile(hComPort, pressCmd.c_str(), static_cast<DWORD>(pressCmd.length()), &bytesWritten, nullptr);
+    if (!result || bytesWritten != pressCmd.length()) {
+        std::cerr << "[HardwareBackend] SendMackuClick press failed: " << GetLastError() << std::endl;
         return false;
     }
+    
+    // Задержка между нажатием и отпусканием
+    Sleep(50);
+    
+    // Команда отпускания
+    std::string releaseCmd = "km." + buttonName + "(0)\r\n";
+    result = WriteFile(hComPort, releaseCmd.c_str(), static_cast<DWORD>(releaseCmd.length()), &bytesWritten, nullptr);
+    if (!result || bytesWritten != releaseCmd.length()) {
+        std::cerr << "[HardwareBackend] SendMackuClick release failed: " << GetLastError() << std::endl;
+        return false;
+    }
+    
     return true;
 #else
     return false;
