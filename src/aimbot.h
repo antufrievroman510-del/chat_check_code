@@ -39,6 +39,8 @@ public:
     void CloseHardware();
     void SendHardwareMove(int x, int y);
     void SendHardwareClick();
+    void SendHardwarePress(int button);  // Нажатие кнопки (удержание)
+    void SendHardwareRelease(int button);  // Отпускание кнопки
 
     // Настройки
     bool aim_enable = true;
