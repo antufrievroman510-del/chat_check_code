@@ -19,15 +19,19 @@ namespace pwnz_ai {
                   << " at " << m_baud_rate << " baud..." << std::endl;
         
         if (m_com_port.empty()) {
+            std::cerr << "[MakcuMouse] ERROR: Empty COM port name!" << std::endl;
             return false;
         }
 
         // Вызов реального метода подключения из MakcuUART
+        std::cout << "[MakcuMouse] Calling MakcuUART::Connect..." << std::endl;
         if (!m_uart.Connect(m_com_port, m_baud_rate)) {
-            std::cerr << "[MakcuMouse] Failed to connect to " << m_com_port << std::endl;
+            std::cerr << "[MakcuMouse] Failed to connect to " << m_com_port 
+                      << " (Error: " << GetLastError() << ")" << std::endl;
             return false;
         }
 
+        std::cout << "[MakcuMouse] Successfully connected!" << std::endl;
         m_initialized = true;
         return true;
     }
@@ -40,19 +44,15 @@ namespace pwnz_ai {
     }
 
     void MakcuMouse::Click(int button) {
-        if (!m_initialized) return;
+        if (!m_initialized) {
+            std::cerr << "[MakcuMouse] Click called but not initialized!" << std::endl;
+            return;
+        }
 
-        // Эмуляция нажатия кнопки
-        // Примечание: MakcuUART может не поддерживать клики напрямую.
-        // Если поддержка нужна, потребуется доработка MakcuUART или эмуляция через SendInput.
-        // В данной реализации считаем, что клик обрабатывается драйвером устройства или игнорируется.
-        // Для полной поддержки можно добавить метод в MakcuUART.
-        
-        // Заглушка: пока просто логируем (или можно вызвать MoveMouse(0,0) как heart-beat)
-        // std::cout << "[MakcuMouse] Click: button=" << button << " (Not fully supported by UART yet)" << std::endl;
-        
-        // Если в будущем добавим поддержку в MakcuUART:
-        // m_uart.Click(button); 
+        // Отправка команды клика через UART
+        // button: 0=ЛКМ, 1=ПКМ, 2=Колесо (нажатие), 3=Боковая 1, 4=Боковая 2
+        std::cout << "[MakcuMouse] Click button=" << button << std::endl;
+        m_uart.Click(button);
     }
 
     void MakcuMouse::Shutdown() {
