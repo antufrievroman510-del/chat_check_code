@@ -3,15 +3,16 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <sstream>
 
-// Преамбула и постамбула протокола
-constexpr unsigned char PACKET_START = 0xAA;
-constexpr unsigned char PACKET_END = 0xBB;
-constexpr unsigned char PACKET_TYPE_MOVE = 0x01;
-constexpr unsigned char PACKET_TYPE_MOVE_ABS = 0x02;
+// Протокол Makcu ESP32S3 использует текстовые команды формата:
+// km.move(x,y) - движение мыши
+// km.click(button) - клик (button: 0=left, 1=right, 2=middle)
+// km.press(button) - нажать кнопку
+// km.release(button) - отпустить кнопку
 
 MakcuUART::MakcuUART() 
-    : hComPort(nullptr), isConnected(false), packetDelayMs(1), m_portName("COM3"), m_baudRate(9600) {}
+    : hComPort(nullptr), isConnected(false), packetDelayMs(5), m_portName("COM3"), m_baudRate(115200) {}
 
 MakcuUART::~MakcuUART() {
     Shutdown();
@@ -116,18 +117,13 @@ bool MakcuUART::MoveMouse(int dx, int dy) {
 
     std::lock_guard<std::mutex> lock(mtx);
 
-    // Формируем пакет: [START, TYPE, DX_L, DX_H, DY_L, DY_H, END]
-    // Используем little-endian порядок байт для совместимости с Arduino/Makcu
-    unsigned char packet[7];
-    packet[0] = PACKET_START;
-    packet[1] = PACKET_TYPE_MOVE;
-    packet[2] = static_cast<unsigned char>(dx & 0xFF);        // DX Low
-    packet[3] = static_cast<unsigned char>((dx >> 8) & 0xFF); // DX High
-    packet[4] = static_cast<unsigned char>(dy & 0xFF);        // DY Low
-    packet[5] = static_cast<unsigned char>((dy >> 8) & 0xFF); // DY High
-    packet[6] = PACKET_END;
+    // Формируем текстовую команду: km.move(x,y)\n
+    // ESP32S3 прошивка ожидает именно такой формат
+    std::ostringstream cmd;
+    cmd << "km.move(" << dx << "," << dy << ")\r\n";
+    std::string command = cmd.str();
 
-    bool result = WriteBytes(packet, sizeof(packet));
+    bool result = WriteBytes(reinterpret_cast<const unsigned char*>(command.c_str()), command.length());
     
     if (result && packetDelayMs > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(packetDelayMs));
@@ -136,28 +132,20 @@ bool MakcuUART::MoveMouse(int dx, int dy) {
     return result;
 }
 
-bool MakcuUART::MoveMouseAbsolute(int x, int y, int width, int height) {
+bool MakcuUART::MoveMouseAbsolute(int x, int y, int /*width*/, int /*height*/) {
     if (!isConnected || hComPort == nullptr) {
         return false;
     }
 
     std::lock_guard<std::mutex> lock(mtx);
 
-    // Для абсолютного позиционирования можем масштабировать в диапазон 0-65535 (uint16_t)
-    // или передавать как есть, если прошивка поддерживает
-    unsigned short scaledX = static_cast<unsigned short>((x * 65535) / width);
-    unsigned short scaledY = static_cast<unsigned short>((y * 65535) / height);
+    // Для абсолютного позиционирования используем ту же команду
+    // Прошивка сама масштабирует координаты если нужно
+    std::ostringstream cmd;
+    cmd << "km.move(" << x << "," << y << ")\r\n";
+    std::string command = cmd.str();
 
-    unsigned char packet[7];
-    packet[0] = PACKET_START;
-    packet[1] = PACKET_TYPE_MOVE_ABS;
-    packet[2] = static_cast<unsigned char>(scaledX & 0xFF);
-    packet[3] = static_cast<unsigned char>((scaledX >> 8) & 0xFF);
-    packet[4] = static_cast<unsigned char>(scaledY & 0xFF);
-    packet[5] = static_cast<unsigned char>((scaledY >> 8) & 0xFF);
-    packet[6] = PACKET_END;
-
-    bool result = WriteBytes(packet, sizeof(packet));
+    bool result = WriteBytes(reinterpret_cast<const unsigned char*>(command.c_str()), command.length());
     
     if (result && packetDelayMs > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(packetDelayMs));
