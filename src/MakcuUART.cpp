@@ -1,31 +1,41 @@
 #include "MakcuUART.h"
-// Winsock заголовки уже подключены в MakcuUART.h
 #include <iostream>
 #include <thread>
 #include <chrono>
-#include <sstream>
-#include <cstring>  // Для strlen
-#include "MakcuState.h"  // Подключаем заголовок с объявлением глобальных переменных
+#include <cstdint>
+#include <cstring>
 
-// Глобальные переменные определены в MakcuState.cpp
+// Протокол Makcu Binary Mouse Stream:
+// Фрейм: [0xDE][0xAD][Length][Command][Data...]
+// Length = количество байт данных + 1 (байт команды)
+// Command 0x01: Движение (4 байта: dx_low, dx_high, dy_low, dy_high) - int16 little-endian
+// Command 0x03: Кнопки (1 байт: битовая маска)
+//   Бит 0 (0x01): ЛКМ
+//   Бит 1 (0x02): ПКМ
+//   Бит 2 (0x04): СКМ (колесо)
+//   Бит 3 (0x08): Боковая кнопка 1
+//   Бит 4 (0x10): Боковая кнопка 2
 
-// Протокол Makcu ESP32S3 (прошивка MAKCM) использует текстовые команды формата:
-// km.move(x,y)      - движение мыши
-// km.left(1/0)      - нажать/отпустить ЛКМ
-// km.right(1/0)     - нажать/отпустить ПКМ
-// km.middle(1/0)    - нажать/отпустить колесо
-// km.side1(1/0)     - нажать/отпустить боковую кнопку 1
-// km.side2(1/0)     - нажать/отпустить боковую кнопку 2
-// Важно: Для корректного клика нужно отправить пару команд button(1) -> button(0)
+// Маркеры фрейма
+static const uint8_t FRAME_MARKER_1 = 0xDE;
+static const uint8_t FRAME_MARKER_2 = 0xAD;
+
+// Команды
+static const uint8_t CMD_MOVE_RELATIVE = 0x01;
+static const uint8_t CMD_BUTTONS = 0x03;
+
+// Кнопки (битовая маска)
+static const uint8_t BTN_LEFT = 0x01;
+static const uint8_t BTN_RIGHT = 0x02;
+static const uint8_t BTN_MIDDLE = 0x04;
 
 MakcuUART::MakcuUART() 
-    : hComPort(nullptr), isConnected(false), packetDelayMs(5), m_portName("COM3"), m_baudRate(115200) {}
+    : hComPort(nullptr), isConnected(false), packetDelayMs(1), m_portName("COM3"), m_baudRate(115200) {}
 
 MakcuUART::~MakcuUART() {
     Shutdown();
 }
 
-// Реализация интерфейса IMouseInput
 bool MakcuUART::Init() {
     return Connect(m_portName, m_baudRate);
 }
@@ -35,180 +45,10 @@ void MakcuUART::Move(int dx, int dy) {
 }
 
 void MakcuUART::Click(int button) {
-    ClickMouse(button);
-}
-
-bool MakcuUART::ClickMouse(int button) {
-    if (!isConnected || hComPort == nullptr) {
-        std::cerr << "[MakcuUART] ClickMouse: Not connected!" << std::endl;
-        return false;
-    }
-
-    std::lock_guard<std::mutex> lock(mtx);
-
-    // Формируем обозначение кнопки для нового протокола
-    // button: 0=ЛКМ (left), 1=ПКМ (right), 2=Колесо (middle), 3=Боковая1 (side1), 4=Боковая2 (side2)
-    std::string buttonCmd;
-    switch (button) {
-        case 0: buttonCmd = "left"; break;   // ЛКМ
-        case 1: buttonCmd = "right"; break;  // ПКМ
-        case 2: buttonCmd = "middle"; break; // Колесо (нажатие)
-        case 3: buttonCmd = "side1"; break;  // Боковая кнопка 1
-        case 4: buttonCmd = "side2"; break;  // Боковая кнопка 2
-        default: buttonCmd = "left"; break;  // По умолчанию ЛКМ
-    }
-    
-    // Прошивка MAKCM требует раздельные команды нажатия (1) и отпускания (0)
-    // Формируем команду нажатия: km.button(1)\r\n
-    std::ostringstream pressCmd;
-    pressCmd << "km." << buttonCmd << "(1)\r\n";
-    std::string pressCommand = pressCmd.str();
-    
-    // Формируем команду отпускания: km.button(0)\r\n
-    std::ostringstream releaseCmd;
-    releaseCmd << "km." << buttonCmd << "(0)\r\n";
-    std::string releaseCommand = releaseCmd.str();
-
-    std::cout << "[MakcuUART] Sending click: " << buttonCmd << "(1) -> " << buttonCmd << "(0)" << std::endl;
-    
-    // Отправляем нажатие
-    bool pressResult = WriteBytes(reinterpret_cast<const unsigned char*>(pressCommand.c_str()), pressCommand.length());
-    if (!pressResult) {
-        std::cerr << "[MakcuUART] Failed to send press command" << std::endl;
-        return false;
-    }
-    
-    // Небольшая задержка между нажатием и отпусканием (имитация реального клика)
-    // 50ms достаточно для регистрации клика в игре
+    // Для бинарного протокола клик = press + release с небольшой задержкой
+    PressButton(button);
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    
-    // Отправляем отпускание
-    bool releaseResult = WriteBytes(reinterpret_cast<const unsigned char*>(releaseCommand.c_str()), releaseCommand.length());
-    if (!releaseResult) {
-        std::cerr << "[MakcuUART] Failed to send release command" << std::endl;
-        return false;
-    }
-    
-    // Дополнительная задержка после клика
-    if (packetDelayMs > 0) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(packetDelayMs));
-    }
-
-    return true;
-}
-
-/**
- * @brief Нажатие кнопки мыши (удержание)
- * Отправляет только команду нажатия km.button(1) без отпускания
- */
-bool MakcuUART::PressButton(int button) {
-    if (!isConnected || hComPort == nullptr) {
-        std::cerr << "[MakcuUART] PressButton: Not connected!" << std::endl;
-        return false;
-    }
-
-    std::lock_guard<std::mutex> lock(mtx);
-
-    // Формируем обозначение кнопки
-    std::string buttonCmd;
-    switch (button) {
-        case 0: buttonCmd = "left"; break;   // ЛКМ
-        case 1: buttonCmd = "right"; break;  // ПКМ
-        case 2: buttonCmd = "middle"; break; // Колесо
-        case 3: buttonCmd = "side1"; break;  // Боковая кнопка 1
-        case 4: buttonCmd = "side2"; break;  // Боковая кнопка 2
-        default: buttonCmd = "left"; break;
-    }
-    
-    // Формируем команду нажатия: km.button(1)\r\n
-    std::ostringstream pressCmd;
-    pressCmd << "km." << buttonCmd << "(1)\r\n";
-    std::string pressCommand = pressCmd.str();
-
-    std::cout << "[MakcuUART] Press button: " << buttonCmd << "(1)" << std::endl;
-    
-    // Отправляем нажатие
-    bool result = WriteBytes(reinterpret_cast<const unsigned char*>(pressCommand.c_str()), pressCommand.length());
-    if (!result) {
-        std::cerr << "[MakcuUART] Failed to send press command" << std::endl;
-        return false;
-    }
-    
-    // === КРИТИЧНО: Обновляем локальное состояние кнопки ===
-    // Это позволяет отслеживать состояние кнопок в аппаратном режиме
-    switch (button) {
-        case 0: 
-            m_lmb_pressed.store(true); 
-            pwnz_ai::g_makcu_shooting.store(true); // LMB = shooting
-            break;
-        case 1: 
-            m_rmb_pressed.store(true); 
-            pwnz_ai::g_makcu_aiming.store(true);   // RMB = aiming
-            break;
-        case 2: 
-            m_mmb_pressed.store(true); 
-            pwnz_ai::g_makcu_zooming.store(true);  // MMB = zooming
-            break;
-    }
-
-    return true;
-}
-
-/**
- * @brief Отпускание кнопки мыши
- * Отправляет только команду отпускания km.button(0)
- */
-bool MakcuUART::ReleaseButton(int button) {
-    if (!isConnected || hComPort == nullptr) {
-        std::cerr << "[MakcuUART] ReleaseButton: Not connected!" << std::endl;
-        return false;
-    }
-
-    std::lock_guard<std::mutex> lock(mtx);
-
-    // Формируем обозначение кнопки
-    std::string buttonCmd;
-    switch (button) {
-        case 0: buttonCmd = "left"; break;   // ЛКМ
-        case 1: buttonCmd = "right"; break;  // ПКМ
-        case 2: buttonCmd = "middle"; break; // Колесо
-        case 3: buttonCmd = "side1"; break;  // Боковая кнопка 1
-        case 4: buttonCmd = "side2"; break;  // Боковая кнопка 2
-        default: buttonCmd = "left"; break;
-    }
-    
-    // Формируем команду отпускания: km.button(0)\r\n
-    std::ostringstream releaseCmd;
-    releaseCmd << "km." << buttonCmd << "(0)\r\n";
-    std::string releaseCommand = releaseCmd.str();
-
-    std::cout << "[MakcuUART] Release button: " << buttonCmd << "(0)" << std::endl;
-    
-    // Отправляем отпускание
-    bool result = WriteBytes(reinterpret_cast<const unsigned char*>(releaseCommand.c_str()), releaseCommand.length());
-    if (!result) {
-        std::cerr << "[MakcuUART] Failed to send release command" << std::endl;
-        return false;
-    }
-    
-    // === КРИТИЧНО: Обновляем локальное состояние кнопки ===
-    // Это позволяет отслеживать состояние кнопок в аппаратном режиме
-    switch (button) {
-        case 0: 
-            m_lmb_pressed.store(false); 
-            pwnz_ai::g_makcu_shooting.store(false); // LMB = shooting
-            break;
-        case 1: 
-            m_rmb_pressed.store(false); 
-            pwnz_ai::g_makcu_aiming.store(false);   // RMB = aiming
-            break;
-        case 2: 
-            m_mmb_pressed.store(false); 
-            pwnz_ai::g_makcu_zooming.store(false);  // MMB = zooming
-            break;
-    }
-
-    return true;
+    ReleaseButton(button);
 }
 
 void MakcuUART::Shutdown() {
@@ -222,33 +62,31 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
         Disconnect();
     }
 
-    // Формируем имя порта для Windows (\\.\COM3)
-    // Для портов выше COM9 обязательно использование префикса \\\.
+    // Формируем имя порта для Windows
     std::string fullPortName = "\\\\.\\" + portName;
     
-    std::cout << "[MakcuUART] Attempting to connect to: " << fullPortName
+    std::cout << "[MakcuUART] Connecting to: " << fullPortName 
               << " at " << baudRate << " baud..." << std::endl;
     
     hComPort = CreateFileA(
         fullPortName.c_str(),
         GENERIC_READ | GENERIC_WRITE,
         0,          // No sharing
-        nullptr,    // Default security attributes
+        nullptr,
         OPEN_EXISTING,
-        0,          // No flags or attributes
-        nullptr     // No template file
+        0,
+        nullptr
     );
 
-    // Проверка на INVALID_HANDLE_VALUE, а не на nullptr
     if (hComPort == INVALID_HANDLE_VALUE) {
         DWORD err = GetLastError();
         hComPort = nullptr;
         std::cerr << "[MakcuUART] Failed to open COM port: " << portName 
                   << " (Error: " << err << ")" << std::endl;
         if (err == ERROR_ACCESS_DENIED) {
-            std::cerr << "ERROR: Port is busy or access denied. Close Arduino IDE, terminal apps, etc." << std::endl;
+            std::cerr << "[MakcuUART] Port is busy or access denied. Run as Administrator." << std::endl;
         } else if (err == ERROR_FILE_NOT_FOUND) {
-            std::cerr << "ERROR: Port does not exist. Check Device Manager for correct COM number." << std::endl;
+            std::cerr << "[MakcuUART] Port does not exist. Check Device Manager." << std::endl;
         }
         return false;
     }
@@ -272,35 +110,51 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
         return false;
     }
 
-    // Установка таймаутов (опционально, для надежности)
+    // Таймауты для записи
     COMMTIMEOUTS timeouts = { 0 };
     timeouts.WriteTotalTimeoutConstant = 500;
     timeouts.WriteTotalTimeoutMultiplier = 0;
     SetCommTimeouts(hComPort, &timeouts);
 
-    // Очистка буферов перед началом работы
+    // Очистка буферов
     PurgeComm(hComPort, PURGE_TXCLEAR | PURGE_RXCLEAR);
     
-    // Включаем DTR и RTS для питания ESP32
+    // Включаем DTR и RTS
     dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE;
     dcbSerialParams.fRtsControl = RTS_CONTROL_ENABLE;
     SetCommState(hComPort, &dcbSerialParams);
     
-    // Небольшая задержка для стабилизации соединения
-    Sleep(100);
+    Sleep(100); // Задержка для стабилизации
 
     isConnected = true;
+    std::cout << "[MakcuUART] Connected successfully!" << std::endl;
+    
+    // Отправляем команду включения бинарного стрима кнопок
+    // Прошивка Makcu начинает отправлять бинарные данные о кнопках после этой команды
+    uint8_t enable_btn[] = {FRAME_MARKER_1, FRAME_MARKER_2, 0x02, CMD_BUTTONS, 0x01};
+    WriteBytes(enable_btn, sizeof(enable_btn));
+    std::cout << "[MakcuUART] Sent button stream enable command" << std::endl;
+    
+    Sleep(50);
+    
     return true;
 }
 
 void MakcuUART::Disconnect() {
     std::lock_guard<std::mutex> lock(mtx);
     
+    StopMonitoring();
+    
     if (hComPort != nullptr) {
+        // Отключаем стрим кнопок
+        uint8_t disable_btn[] = {FRAME_MARKER_1, FRAME_MARKER_2, 0x02, CMD_BUTTONS, 0x00};
+        WriteBytes(disable_btn, sizeof(disable_btn));
+        
         CloseHandle(hComPort);
         hComPort = nullptr;
     }
     isConnected = false;
+    std::cout << "[MakcuUART] Disconnected" << std::endl;
 }
 
 bool MakcuUART::IsConnected() const {
@@ -314,13 +168,15 @@ bool MakcuUART::MoveMouse(int dx, int dy) {
 
     std::lock_guard<std::mutex> lock(mtx);
 
-    // Формируем текстовую команду: km.move(x,y)\n
-    // ESP32S3 прошивка ожидает именно такой формат
-    std::ostringstream cmd;
-    cmd << "km.move(" << dx << "," << dy << ")\r\n";
-    std::string command = cmd.str();
-
-    bool result = WriteBytes(reinterpret_cast<const unsigned char*>(command.c_str()), command.length());
+    // Формируем бинарный фрейм для движения
+    // Данные: dx (int16 LE), dy (int16 LE) = 4 байта
+    uint8_t data[4];
+    data[0] = static_cast<uint8_t>(dx & 0xFF);
+    data[1] = static_cast<uint8_t>((dx >> 8) & 0xFF);
+    data[2] = static_cast<uint8_t>(dy & 0xFF);
+    data[3] = static_cast<uint8_t>((dy >> 8) & 0xFF);
+    
+    bool result = SendBinaryFrame(CMD_MOVE_RELATIVE, data, 4);
     
     if (result && packetDelayMs > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(packetDelayMs));
@@ -329,25 +185,77 @@ bool MakcuUART::MoveMouse(int dx, int dy) {
     return result;
 }
 
-bool MakcuUART::MoveMouseAbsolute(int x, int y, int /*width*/, int /*height*/) {
+bool MakcuUART::PressButton(int button) {
     if (!isConnected || hComPort == nullptr) {
+        std::cerr << "[MakcuUART] PressButton: Not connected!" << std::endl;
         return false;
     }
 
     std::lock_guard<std::mutex> lock(mtx);
 
-    // Для абсолютного позиционирования используем ту же команду
-    // Прошивка сама масштабирует координаты если нужно
-    std::ostringstream cmd;
-    cmd << "km.move(" << x << "," << y << ")\r\n";
-    std::string command = cmd.str();
-
-    bool result = WriteBytes(reinterpret_cast<const unsigned char*>(command.c_str()), command.length());
+    // Определяем бит кнопки
+    uint8_t btnMask = 0;
+    switch (button) {
+        case 0: btnMask = BTN_LEFT; break;   // ЛКМ
+        case 1: btnMask = BTN_RIGHT; break;  // ПКМ
+        case 2: btnMask = BTN_MIDDLE; break; // СКМ
+        default: btnMask = BTN_LEFT; break;
+    }
     
-    if (result && packetDelayMs > 0) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(packetDelayMs));
+    // Отправляем бинарную команду кнопки
+    // Данные: 1 байт - битовая маска
+    bool result = SendBinaryFrame(CMD_BUTTONS, &btnMask, 1);
+    
+    if (result) {
+        // Обновляем локальное состояние
+        switch (button) {
+            case 0: m_lmb_pressed.store(true); break;
+            case 1: m_rmb_pressed.store(true); break;
+            case 2: m_mmb_pressed.store(true); break;
+        }
+        std::cout << "[MakcuUART] Press button " << button << " (mask=0x" << std::hex << (int)btnMask << std::dec << ")" << std::endl;
+    }
+    
+    return result;
+}
+
+bool MakcuUART::ReleaseButton(int button) {
+    if (!isConnected || hComPort == nullptr) {
+        std::cerr << "[MakcuUART] ReleaseButton: Not connected!" << std::endl;
+        return false;
     }
 
+    std::lock_guard<std::mutex> lock(mtx);
+
+    // Для отпускания отправляем маску со сброшенным битом
+    // Но в протоколе Makcu команда 0x03 с маской устанавливает состояние кнопок
+    // Поэтому отправляем 0x00 для отпускания всех кнопок, или конкретную маску без нужного бита
+    
+    // Получаем текущее состояние и сбрасываем нужный бит
+    uint8_t currentMask = 0;
+    if (m_lmb_pressed.load()) currentMask |= BTN_LEFT;
+    if (m_rmb_pressed.load()) currentMask |= BTN_RIGHT;
+    if (m_mmb_pressed.load()) currentMask |= BTN_MIDDLE;
+    
+    // Сбрасываем бит отпускаемой кнопки
+    switch (button) {
+        case 0: currentMask &= ~BTN_LEFT; break;
+        case 1: currentMask &= ~BTN_RIGHT; break;
+        case 2: currentMask &= ~BTN_MIDDLE; break;
+    }
+    
+    bool result = SendBinaryFrame(CMD_BUTTONS, &currentMask, 1);
+    
+    if (result) {
+        // Обновляем локальное состояние
+        switch (button) {
+            case 0: m_lmb_pressed.store(false); break;
+            case 1: m_rmb_pressed.store(false); break;
+            case 2: m_mmb_pressed.store(false); break;
+        }
+        std::cout << "[MakcuUART] Release button " << button << " (mask=0x" << std::hex << (int)currentMask << std::dec << ")" << std::endl;
+    }
+    
     return result;
 }
 
@@ -355,29 +263,47 @@ void MakcuUART::SetPacketDelayMs(int ms) {
     packetDelayMs = (ms < 0) ? 0 : ms;
 }
 
-bool MakcuUART::WriteBytes(const unsigned char* data, size_t length) {
+bool MakcuUART::SendBinaryFrame(uint8_t command, const uint8_t* data, size_t dataLen) {
+    // Формируем фрейм: [0xDE][0xAD][Length][Command][Data...]
+    // Length = dataLen + 1 (байт команды)
+    uint8_t frame[256];
+    frame[0] = FRAME_MARKER_1;
+    frame[1] = FRAME_MARKER_2;
+    frame[2] = static_cast<uint8_t>(dataLen + 1); // Length includes command byte
+    frame[3] = command;
+    
+    if (dataLen > 0 && data != nullptr) {
+        memcpy(frame + 4, data, dataLen);
+    }
+    
+    size_t totalLen = 4 + dataLen;
+    
+    bool result = WriteBytes(frame, totalLen);
+    
+    if (result) {
+        FlushFileBuffers(hComPort);
+    }
+    
+    return result;
+}
+
+bool MakcuUART::WriteBytes(const uint8_t* data, size_t length) {
     DWORD bytesWritten;
     BOOL result = WriteFile(hComPort, data, static_cast<DWORD>(length), &bytesWritten, nullptr);
     
     if (!result || bytesWritten != length) {
-        // Ошибка записи или таймаут
+        DWORD err = GetLastError();
+        std::cerr << "[MakcuUART] Write failed: " << err << " (written=" << bytesWritten << ", expected=" << length << ")" << std::endl;
         Disconnect();
         return false;
     }
     
-    // Принудительно сбрасываем буфер вывода, чтобы данные сразу ушли в ESP32
-    FlushFileBuffers(hComPort);
-    
     return true;
 }
 
-// ============================================================
-// Реализация потока мониторинга состояния кнопок
-// ============================================================
-
 void MakcuUART::StartMonitoring() {
     if (m_monitoring.load()) {
-        return; // Уже запущен
+        return;
     }
     
     m_stopMonitoring.store(false);
@@ -389,7 +315,7 @@ void MakcuUART::StartMonitoring() {
 
 void MakcuUART::StopMonitoring() {
     if (!m_monitoring.load()) {
-        return; // Не запущен
+        return;
     }
     
     m_stopMonitoring.store(true);
@@ -404,119 +330,68 @@ void MakcuUART::StopMonitoring() {
 }
 
 void MakcuUART::monitoringLoop() {
-    std::cout << "[MakcuUART] Monitoring loop started." << std::endl;
+    std::cout << "[MakcuUART] Monitoring loop started" << std::endl;
     
-    // Отправляем команду включения мониторинга кнопок
-    // Прошивка MAKCU начнёт отправлять данные о нажатиях кнопок
-    const char* enable_cmd = "km.buttons(1)\r\n";
-    WriteBytes(reinterpret_cast<const unsigned char*>(enable_cmd), strlen(enable_cmd));
-    std::cout << "[MakcuUART] Sent km.buttons(1) to enable button monitoring" << std::endl;
-    
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    
-    // Настраиваем таймауты для чтения (неблокирующее чтение)
+    // Настраиваем таймауты для неблокирующего чтения
     COMMTIMEOUTS timeouts = {0};
     timeouts.ReadIntervalTimeout = 50;
     timeouts.ReadTotalTimeoutConstant = 50;
     timeouts.ReadTotalTimeoutMultiplier = 0;
     SetCommTimeouts(hComPort, &timeouts);
     
-    // Буфер для чтения данных
-    unsigned char buffer[256];
+    uint8_t buffer[256];
+    size_t bufferPos = 0;
     
     while (!m_stopMonitoring.load() && isConnected && hComPort != nullptr) {
-        DWORD bytes_read = 0;
-        BOOL read_result = ReadFile(hComPort, buffer, sizeof(buffer), &bytes_read, nullptr);
+        DWORD bytesRead = 0;
+        BOOL readResult = ReadFile(hComPort, buffer, sizeof(buffer), &bytesRead, nullptr);
         
-        if (read_result && bytes_read > 0) {
-            std::string response(reinterpret_cast<char*>(buffer), bytes_read);
-            std::cout << "[MakcuUART] RAW Received (" << bytes_read << " bytes): ";
-            for (size_t i = 0; i < bytes_read; ++i) {
-                printf("%02X ", buffer[i]);
-            }
-            std::cout << std::endl;
-            
-            // Парсим ответ - формат зависит от прошивки
-            // Обычно это ASCII строка вида "btn:1 0 0" или бинарные данные
-            ParseResponse(response);
-        } else {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        if (readResult && bytesRead > 0) {
+            // Парсим бинарные данные
+            ParseBinaryResponse(buffer, bytesRead);
         }
+        
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    
-    // Отключаем мониторинг при выходе
-    const char* disable_cmd = "km.buttons(0)\r\n";
-    WriteBytes(reinterpret_cast<const unsigned char*>(disable_cmd), strlen(disable_cmd));
     
     std::cout << "[MakcuUART] Monitoring loop ended" << std::endl;
 }
 
-void MakcuUART::ParseResponse(const std::string& response) {
-    // Парсим ответы от прошивки MAKCM
-    // Формат может быть: "btn:1 0 0" или "state:L,R,M"
-    
-    std::cout << "[MakcuUART] ParseResponse called with: \"" << response << "\"" << std::endl;
-    
-    // Пример парсинга для формата "btn:L R M" где L/R/M = 0 или 1
-    if (response.find("btn:") != std::string::npos) {
-        size_t pos = response.find("btn:") + 4;
-        std::string btnState = response.substr(pos);
-        
-        // Удаляем пробелы и переводы строк
-        btnState.erase(std::remove_if(btnState.begin(), btnState.end(), ::isspace), btnState.end());
-        
-        std::cout << "[MakcuUART] Button state string: \"" << btnState << "\" (len=" << btnState.length() << ")" << std::endl;
-        
-        if (btnState.length() >= 3) {
-            bool lmb = (btnState[0] == '1');
-            bool rmb = (btnState[1] == '1');
-            bool mmb = (btnState[2] == '1');
+void MakcuUART::ParseBinaryResponse(const uint8_t* buffer, size_t length) {
+    // Ищем маркеры фрейма 0xDE 0xAD
+    for (size_t i = 0; i + 3 < length; ++i) {
+        if (buffer[i] == FRAME_MARKER_1 && buffer[i+1] == FRAME_MARKER_2) {
+            uint8_t frameLen = buffer[i+2];
+            uint8_t command = buffer[i+3];
             
-            // Обновляем локальное состояние
-            m_lmb_pressed.store(lmb);
-            m_rmb_pressed.store(rmb);
-            m_mmb_pressed.store(mmb);
-            
-            // Обновляем глобальные переменные для использования в aimbot.cpp
-            pwnz_ai::g_makcu_shooting.store(lmb);   // LMB = стрельба
-            pwnz_ai::g_makcu_aiming.store(rmb);     // RMB = прицеливание
-            pwnz_ai::g_makcu_zooming.store(mmb);    // MMB = зум
-            
-            std::cout << "[MakcuUART] Parsed buttons: L=" << lmb << " R=" << rmb << " M=" << mmb << std::endl;
-        } else {
-            std::cerr << "[MakcuUART] Button state too short: \"" << btnState << "\"" << std::endl;
-        }
-    }
-    // Альтернативный формат: "left:1 right:0 middle:0"
-    else {
-        if (response.find("left:1") != std::string::npos) {
-            m_lmb_pressed.store(true);
-            pwnz_ai::g_makcu_shooting.store(true);
-            std::cout << "[MakcuUART] LMB pressed (alt format)" << std::endl;
-        } else if (response.find("left:0") != std::string::npos) {
-            m_lmb_pressed.store(false);
-            pwnz_ai::g_makcu_shooting.store(false);
-            std::cout << "[MakcuUART] LMB released (alt format)" << std::endl;
-        }
-        
-        if (response.find("right:1") != std::string::npos) {
-            m_rmb_pressed.store(true);
-            pwnz_ai::g_makcu_aiming.store(true);
-            std::cout << "[MakcuUART] RMB pressed (alt format)" << std::endl;
-        } else if (response.find("right:0") != std::string::npos) {
-            m_rmb_pressed.store(false);
-            pwnz_ai::g_makcu_aiming.store(false);
-            std::cout << "[MakcuUART] RMB released (alt format)" << std::endl;
-        }
-        
-        if (response.find("middle:1") != std::string::npos) {
-            m_mmb_pressed.store(true);
-            pwnz_ai::g_makcu_zooming.store(true);
-            std::cout << "[MakcuUART] MMB pressed (alt format)" << std::endl;
-        } else if (response.find("middle:0") != std::string::npos) {
-            m_mmb_pressed.store(false);
-            pwnz_ai::g_makcu_zooming.store(false);
-            std::cout << "[MakcuUART] MMB released (alt format)" << std::endl;
+            // Проверяем, что у нас достаточно данных
+            if (i + 4 + (frameLen - 1) <= length) {
+                if (command == CMD_BUTTONS && frameLen >= 2) {
+                    // Данные о кнопках: 1 байт маски
+                    uint8_t btnMask = buffer[i+4];
+                    
+                    bool lmb = (btnMask & BTN_LEFT) != 0;
+                    bool rmb = (btnMask & BTN_RIGHT) != 0;
+                    bool mmb = (btnMask & BTN_MIDDLE) != 0;
+                    
+                    // Обновляем состояние только если изменилось
+                    if (m_lmb_pressed.load() != lmb) {
+                        m_lmb_pressed.store(lmb);
+                        std::cout << "[MakcuUART] LMB state changed: " << (lmb ? "pressed" : "released") << std::endl;
+                    }
+                    if (m_rmb_pressed.load() != rmb) {
+                        m_rmb_pressed.store(rmb);
+                        std::cout << "[MakcuUART] RMB state changed: " << (rmb ? "pressed" : "released") << std::endl;
+                    }
+                    if (m_mmb_pressed.load() != mmb) {
+                        m_mmb_pressed.store(mmb);
+                        std::cout << "[MakcuUART] MMB state changed: " << (mmb ? "pressed" : "released") << std::endl;
+                    }
+                }
+                
+                // Пропускаем этот фрейм
+                i += (3 + frameLen);
+            }
         }
     }
 }

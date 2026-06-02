@@ -5,20 +5,22 @@
 #include <string>
 #include <mutex>
 #include <atomic>
-#include "MakcuState.h"  // Подключаем заголовок с объявлением глобальных переменных
+#include <cstdint>
 
 // Контроллер для работы с платой Makcu через UART (COM-порт)
-// Протокол: Текстовые команды "km.move(x,y)\r\n" и "km.click(b)\r\n"
-// Совместим с прошивкой https://github.com/terrafirma2021/MAKCM
+// Протокол: БИНАРНЫЙ (Binary Mouse Stream) согласно документации https://www.makcu.com/en/api
+// Формат фрейма: [0xDE][0xAD][Length][Command][Data...]
+// - Command 0x01: Относительное движение (4 байта: dx_low, dx_high, dy_low, dy_high)
+// - Command 0x03: Кнопки (1 байт: битовая маска)
 class MakcuUART {
 public:
     MakcuUART();
     ~MakcuUART();
-
-    // Методы интерфейса IMouseInput (для использования как самостоятельный бэкенд)
+    
+    // Методы интерфейса IMouseInput
     bool Init();
     void Move(int dx, int dy);
-    void Click(int button);  // 0=ЛКМ, 1=ПКМ, 2=Колесо, 3=Боковая1, 4=Боковая2
+    void Click(int button);  // 0=ЛКМ, 1=ПКМ, 2=Колесо
     void Shutdown();
 
     // Инициализация COM-порта
@@ -30,33 +32,23 @@ public:
     // Проверка подключения
     bool IsConnected() const;
 
-    // Отправка движения мыши
-    // dx, dy - относительное смещение (как в MouseMove)
+    // Отправка движения мыши (бинарный протокол)
     bool MoveMouse(int dx, int dy);
-
-    // Отправка абсолютного положения (если поддерживается прошивкой)
-    bool MoveMouseAbsolute(int x, int y, int width, int height);
     
-    // Отправка клика мышью
-    // button: 0=ЛКМ, 1=ПКМ, 2=Колесо (нажатие), 3=Боковая кнопка 1, 4=Боковая кнопка 2
-    bool ClickMouse(int button);
-
     // Отправка нажатия кнопки (удержание)
     bool PressButton(int button);
 
     // Отпускание кнопки
     bool ReleaseButton(int button);
 
-    // Настройка таймингов (задержка между пакетами для стабильности)
+    // Настройка таймингов
     void SetPacketDelayMs(int ms);
     
-    // === НОВОЕ: Мониторинг состояния кнопок для аппаратного режима ===
-    // Эти методы возвращают состояние кнопок, полученное от устройства macku
-    // (если прошивка поддерживает обратную связь)
+    // === Состояние кнопок для аппаратного режима ===
     bool IsLeftButtonPressed() const { return m_lmb_pressed.load(); }
     bool IsRightButtonPressed() const { return m_rmb_pressed.load(); }
     bool IsMiddleButtonPressed() const { return m_mmb_pressed.load(); }
-    // Установка состояния кнопок (используется при получении данных от устройства)
+    
     void SetLeftButtonPressed(bool pressed) { m_lmb_pressed.store(pressed); }
     void SetRightButtonPressed(bool pressed) { m_rmb_pressed.store(pressed); }
     void SetMiddleButtonPressed(bool pressed) { m_mmb_pressed.store(pressed); }
@@ -71,25 +63,23 @@ private:
     bool isConnected;
     int packetDelayMs;
     std::mutex mtx;
-    std::string m_portName;   // Имя порта для инициализации через Init()
-    int m_baudRate;           // Скорость для инициализации через Init()
+    std::string m_portName;
+    int m_baudRate;
 
-    // === Состояние кнопок для аппаратного режима ===
+    // Состояние кнопок
     std::atomic<bool> m_lmb_pressed{false};
     std::atomic<bool> m_rmb_pressed{false};
     std::atomic<bool> m_mmb_pressed{false};
     
-    // === Поток мониторинга ===
+    // Поток мониторинга
     std::thread m_monitorThread;
     std::atomic<bool> m_monitoring{false};
     std::atomic<bool> m_stopMonitoring{false};
     
-    // Функция чтения и парсинга ответов от устройства
     void monitoringLoop();
-
-    // Внутренняя отправка байтов
-    bool WriteBytes(const unsigned char* data, size_t length);
+    bool WriteBytes(const uint8_t* data, size_t length);
+    bool SendBinaryFrame(uint8_t command, const uint8_t* data, size_t dataLen);
     
-    // Парсинг ответа от устройства для обновления состояния кнопок
-    void ParseResponse(const std::string& response);
+    // Парсинг бинарных ответов от устройства
+    void ParseBinaryResponse(const uint8_t* buffer, size_t length);
 };
