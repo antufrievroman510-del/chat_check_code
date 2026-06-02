@@ -28,10 +28,43 @@ void MakcuUART::Move(int dx, int dy) {
 }
 
 void MakcuUART::Click(int button) {
-    // В текущей прошивке Makcu нет команды клика через UART.
-    // Можно расширить протокол или оставить заглушку.
-    // Для совместимости с интерфейсом просто возвращаем.
-    (void)button; 
+    ClickMouse(button);
+}
+
+bool MakcuUART::ClickMouse(int button) {
+    if (!isConnected || hComPort == nullptr) {
+        std::cerr << "[MakcuUART] ClickMouse: Not connected!" << std::endl;
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(mtx);
+
+    // Формируем текстовую команду: km.click(button)\r\n
+    // button: 0=ЛКМ (L), 1=ПКМ (R), 2=Колесо (M), 3=Боковая1 (4), 4=Боковая2 (5)
+    // Прошивка MAKCM принимает: km.click(L), km.click(R), km.click(M), km.click(4), km.click(5)
+    std::string buttonStr;
+    switch (button) {
+        case 0: buttonStr = "L"; break;   // ЛКМ
+        case 1: buttonStr = "R"; break;   // ПКМ
+        case 2: buttonStr = "M"; break;   // Колесо (нажатие)
+        case 3: buttonStr = "4"; break;   // Боковая кнопка 1
+        case 4: buttonStr = "5"; break;   // Боковая кнопка 2
+        default: buttonStr = "L"; break;  // По умолчанию ЛКМ
+    }
+    
+    std::ostringstream cmd;
+    cmd << "km.click(" << buttonStr << ")\r\n";
+    std::string command = cmd.str();
+
+    std::cout << "[MakcuUART] Sending click command: " << command;
+    
+    bool result = WriteBytes(reinterpret_cast<const unsigned char*>(command.c_str()), command.length());
+    
+    if (result && packetDelayMs > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(packetDelayMs));
+    }
+
+    return result;
 }
 
 void MakcuUART::Shutdown() {
