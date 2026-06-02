@@ -42,6 +42,7 @@
 #include <iphlpapi.h>
 #include <shlobj.h>
 #include <wincrypt.h>
+#include <cstring>
 #pragma comment(lib, "iphlpapi.lib")
 #pragma comment(lib, "crypt32.lib")
 
@@ -1442,13 +1443,32 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     // Right Column - Device Specific Settings
     if (this->hardware_mode_idx == 1) {
         // Makcu UART Settings
-        if (BeginPanel("Makcu (UART/COM) Settings", ImVec2(0, 280), acc_vec)) cfg_changed = true;
+        if (BeginPanel("Makcu (UART/COM) Settings", ImVec2(0, 320), acc_vec)) cfg_changed = true;
         
         ImGui::Text(is_russian ? u8"COM Порт:" : "COM Port:");
         ImGui::PushItemWidth(150);
-        if (ImGui::InputText("##com_port", this->com_port_buf, sizeof(this->com_port_buf))) cfg_changed = true;
+        
+        // COM-порт выпадающий список от COM1 до COM10
+        const char* com_ports[] = { 
+            "COM1", "COM2", "COM3", "COM4", "COM5", 
+            "COM6", "COM7", "COM8", "COM9", "COM10" 
+        };
+        static int com_port_idx = 2; // По умолчанию COM3
+        
+        // Синхронизация индекса с буфером com_port_buf
+        for (int i = 0; i < 10; i++) {
+            if (strcmp(com_ports[i], this->com_port_buf) == 0) {
+                com_port_idx = i;
+                break;
+            }
+        }
+        
+        if (ImGui::Combo("##com_port", &com_port_idx, com_ports, IM_ARRAYSIZE(com_ports))) {
+            strncpy_s(this->com_port_buf, sizeof(this->com_port_buf), com_ports[com_port_idx], _TRUNCATE);
+            cfg_changed = true;
+        }
         ImGui::PopItemWidth();
-        HelpMarker(is_russian ? u8"Например: COM3" : "Example: COM3");
+        HelpMarker(is_russian ? u8"Выберите COM порт из списка (COM1-COM10)" : "Select COM port from list (COM1-COM10)");
         
         ImGui::Spacing();
         
@@ -1467,25 +1487,49 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         auto& hw = HardwareBackend::Instance();
         bool connected = hw.IsMackuConnected();
         
+        // Кнопка \"Принять\" для подключения
         if (!connected) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
-            if (ImGui::Button("Connect Makcu", ImVec2(150, 35))) {
-                hw.ConnectMacku(com_port_buf, baud_values[baud_rate_idx]);
+            if (ImGui::Button("Apply/Connect", ImVec2(150, 35))) {
+                // Попытка подключения к выбранному порту
+                std::cout << "[OVERLAY] Attempting to connect to " << this->com_port_buf 
+                          << " at " << baud_values[baud_rate_idx] << " baud..." << std::endl;
+                bool result = hw.ConnectMacku(this->com_port_buf, baud_values[baud_rate_idx]);
+                if (result) {
+                    std::cout << "[OVERLAY] Successfully connected to " << this->com_port_buf << std::endl;
+                } else {
+                    std::cerr << "[OVERLAY] Failed to connect to " << this->com_port_buf << std::endl;
+                }
             }
             ImGui::PopStyleColor();
         } else {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
-            if (ImGui::Button("Disconnect Makcu", ImVec2(150, 35))) {
+            if (ImGui::Button("Disconnect", ImVec2(150, 35))) {
                 hw.DisconnectMacku();
+                std::cout << "[OVERLAY] Disconnected from Makcu" << std::endl;
             }
             ImGui::PopStyleColor();
         }
         
         ImGui::SameLine();
+        
+        // Отображение статуса подключения
         if (connected) {
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "CONNECTED");
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), is_russian ? u8"✓ Подключено" : "✓ Connected");
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "(%s @ %d)", this->com_port_buf, baud_values[baud_rate_idx]);
         } else {
-            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "DISCONNECTED");
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), is_russian ? u8"✗ Отключено" : "✗ Disconnected");
+        }
+        
+        // Дополнительная информация о статусе
+        ImGui::Spacing();
+        if (connected) {
+            ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), 
+                is_russian ? u8"Устройство Macku готово к работе" : "Macku device ready");
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), 
+                is_russian ? u8"Нажмите 'Apply/Connect' для подключения" : "Press 'Apply/Connect' to connect");
         }
         
         EndPanel();
