@@ -200,8 +200,10 @@ bool Aimbot::InitHardware() {
                 break;
             case 1: // Makcu (аппаратный ввод через COM-порт)
                 {
+                    // Используем com_port_buf из overlay для имени порта
                     std::string com_port_name = "COM" + std::to_string(com_port);
-                    int baud_rate = (bypass_mode == 0) ? 9600 : 115200;
+                    int baud_rate = 115200; // Фиксированная скорость для прошивки MAKCM
+                    std::cout << "[Aimbot] Creating MakcuMouse on " << com_port_name << " at " << baud_rate << " baud" << std::endl;
                     m_mouseInput = std::make_unique<pwnz_ai::MakcuMouse>(com_port_name, baud_rate);
                 }
                 break;

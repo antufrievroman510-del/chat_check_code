@@ -1,14 +1,15 @@
 ```
-# Compiled files
+# Compiled and binary files
 *.o
 *.obj
-*.exe
-*.dll
-*.so
 *.a
+*.lib
+*.so
+*.dll
+*.exe
 *.out
 
-# Build artifacts
+# Build directories
 build/
 dist/
 target/
@@ -18,28 +19,24 @@ node_modules/
 venv/
 .venv/
 __pycache__/
-.mypy_cache/
-.pytest_cache/
-.gradle/
+*.egg-info/
 
-# Editor/IDE files
+# Editors
 .vscode/
 .idea/
 *.swp
 *.swo
-*.tmp
 
-# Logs
+# Logs and temp files
 *.log
-
-# Coverage
-coverage/
-htmlcov/
-.coverage
+*.tmp
+*.temp
 
 # System files
 .DS_Store
 Thumbs.db
+
+# Environment
 .env
 .env.local
 *.env.*

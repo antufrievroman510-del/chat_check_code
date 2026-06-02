@@ -29,6 +29,10 @@ HardwareBackend& HardwareBackend::Instance() {
     return instance;
 }
 
+HardwareBackend::HardwareBackend() 
+    : hComPort(nullptr), udpSocket(0), kmboxAddrPtr(nullptr), mackuConnected(false), kmboxConnected(false) {
+}
+
 HardwareBackend::~HardwareBackend() {
     DisconnectMacku();
     DisconnectKMbox();
@@ -122,25 +126,15 @@ bool HardwareBackend::SendMackuMove(int x, int y) {
     if (!mackuConnected.load() || hComPort == nullptr) return false;
     
 #ifdef _WIN32
-    // Формат протокола Makcu (совместим с Arduino/MakcuUART): 
-    // [0xAA, 0x01, DX_L, DX_H, DY_L, DY_H, 0xBB]
-    constexpr unsigned char PACKET_START = 0xAA;
-    constexpr unsigned char PACKET_TYPE_MOVE = 0x01;
-    constexpr unsigned char PACKET_END = 0xBB;
-    
-    uint8_t buffer[7];
-    buffer[0] = PACKET_START;
-    buffer[1] = PACKET_TYPE_MOVE;
-    buffer[2] = static_cast<unsigned char>(x & 0xFF);        // DX Low
-    buffer[3] = static_cast<unsigned char>((x >> 8) & 0xFF); // DX High
-    buffer[4] = static_cast<unsigned char>(y & 0xFF);        // DY Low
-    buffer[5] = static_cast<unsigned char>((y >> 8) & 0xFF); // DY High
-    buffer[6] = PACKET_END;
+    // Формат протокола Makcu ESP32S3 (совместим с прошивкой MAKCM):
+    // Текстовая команда: "km.move(x,y)\r\n"
+    // См: https://github.com/terrafirma2021/MAKCM
+    std::string command = "km.move(" + std::to_string(x) + "," + std::to_string(y) + ")\r\n";
     
     DWORD bytesWritten;
-    BOOL result = WriteFile(hComPort, buffer, sizeof(buffer), &bytesWritten, nullptr);
+    BOOL result = WriteFile(hComPort, command.c_str(), static_cast<DWORD>(command.length()), &bytesWritten, nullptr);
     
-    if (!result || bytesWritten != sizeof(buffer)) {
+    if (!result || bytesWritten != command.length()) {
         std::cerr << "[HardwareBackend] SendMackuMove failed: " << GetLastError() << std::endl;
         return false;
     }
@@ -154,26 +148,16 @@ bool HardwareBackend::SendMackuClick(uint8_t button) {
     if (!mackuConnected.load() || hComPort == nullptr) return false;
     
 #ifdef _WIN32
-    // Для кликов используем тот же протокол что и для движения
-    // Но с нулевыми координатами и специальным флагом
-    // Или можно использовать отдельный тип пакета если прошивка поддерживает
-    constexpr unsigned char PACKET_START = 0xAA;
-    constexpr unsigned char PACKET_TYPE_CLICK = 0x03;
-    constexpr unsigned char PACKET_END = 0xBB;
-    
-    uint8_t buffer[7];
-    buffer[0] = PACKET_START;
-    buffer[1] = PACKET_TYPE_CLICK;
-    buffer[2] = button;     // Код кнопки: 1=Left, 2=Right, 3=Middle
-    buffer[3] = 0x00;       // Reserved
-    buffer[4] = 0x00;       // Reserved
-    buffer[5] = 0x00;       // Reserved
-    buffer[6] = PACKET_END;
+    // Формат протокола Makcu ESP32S3 (совместим с прошивкой MAKCM):
+    // Текстовая команда: "km.click(button)\r\n"
+    // button: 0=left, 1=right, 2=middle (или 1=left, 2=right, 3=middle в зависимости от версии)
+    // См: https://github.com/terrafirma2021/MAKCM
+    std::string command = "km.click(" + std::to_string(button) + ")\r\n";
     
     DWORD bytesWritten;
-    BOOL result = WriteFile(hComPort, buffer, sizeof(buffer), &bytesWritten, nullptr);
+    BOOL result = WriteFile(hComPort, command.c_str(), static_cast<DWORD>(command.length()), &bytesWritten, nullptr);
     
-    if (!result || bytesWritten != sizeof(buffer)) {
+    if (!result || bytesWritten != command.length()) {
         std::cerr << "[HardwareBackend] SendMackuClick failed: " << GetLastError() << std::endl;
         return false;
     }

@@ -63,7 +63,7 @@ public:
     bool SendKMboxClick(uint8_t button);
 
 private:
-    HardwareBackend() = default;
+    HardwareBackend();  // Добавлен конструктор по умолчанию
     ~HardwareBackend();
 
 #ifdef _WIN32

@@ -1749,8 +1749,10 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
         if (this->hw_enabled) {
             if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
                 hw.SendMackuMove(this->test_move_x, this->test_move_y);
+                std::cout << "[OVERLAY] Sent Macku move: (" << this->test_move_x << ", " << this->test_move_y << ")" << std::endl;
             } else if (this->hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
                 hw.SendKMboxMove(this->test_move_x, this->test_move_y);
+                std::cout << "[OVERLAY] Sent KMbox move: (" << this->test_move_x << ", " << this->test_move_y << ")" << std::endl;
             } else if (this->hardware_mode_idx == 0) {
                 // Local mouse - use SendInput
                 #ifdef _WIN32
@@ -1760,6 +1762,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
                 input.mi.dy = this->test_move_y;
                 input.mi.dwFlags = MOUSEEVENTF_MOVE;
                 SendInput(1, &input, sizeof(INPUT));
+                std::cout << "[OVERLAY] Sent local move: (" << this->test_move_x << ", " << this->test_move_y << ")" << std::endl;
                 #endif
             }
         } else {
@@ -1771,6 +1774,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
             input.mi.dy = this->test_move_y;
             input.mi.dwFlags = MOUSEEVENTF_MOVE;
             SendInput(1, &input, sizeof(INPUT));
+            std::cout << "[OVERLAY] Sent local move (hw disabled): (" << this->test_move_x << ", " << this->test_move_y << ")" << std::endl;
             #endif
         }
     }
@@ -1789,9 +1793,11 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     if (ImGui::Button(is_russian ? u8"Test Left Click" : "Test Left Click", ImVec2(200, 35))) {
         if (this->hw_enabled) {
             if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
-                hw.SendMackuClick(1); // Left click
+                hw.SendMackuClick(0); // Left click (0=left для прошивки MAKCM)
+                std::cout << "[OVERLAY] Sent Macku left click" << std::endl;
             } else if (this->hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
                 hw.SendKMboxClick(1); // Left click
+                std::cout << "[OVERLAY] Sent KMbox left click" << std::endl;
             } else {
                 #ifdef _WIN32
                 INPUT inputs[2] = {};
@@ -1800,6 +1806,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
                 inputs[1].type = INPUT_MOUSE;
                 inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
                 SendInput(2, inputs, sizeof(INPUT));
+                std::cout << "[OVERLAY] Sent local left click" << std::endl;
                 #endif
             }
         } else {
@@ -1810,6 +1817,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
             inputs[1].type = INPUT_MOUSE;
             inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
             SendInput(2, inputs, sizeof(INPUT));
+            std::cout << "[OVERLAY] Sent local left click (hw disabled)" << std::endl;
             #endif
         }
     }
@@ -1822,13 +1830,15 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     if (ImGui::Button(is_russian ? u8"Test Double Click" : "Test Double Click", ImVec2(200, 35))) {
         if (this->hw_enabled) {
             if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
-                hw.SendMackuClick(1);
+                hw.SendMackuClick(0); // Left click
                 Sleep(50);
-                hw.SendMackuClick(1);
+                hw.SendMackuClick(0); // Left click again
+                std::cout << "[OVERLAY] Sent Macku double click" << std::endl;
             } else if (this->hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
                 hw.SendKMboxClick(1);
                 Sleep(50);
                 hw.SendKMboxClick(1);
+                std::cout << "[OVERLAY] Sent KMbox double click" << std::endl;
             } else {
                 #ifdef _WIN32
                 INPUT inputs[4] = {};
