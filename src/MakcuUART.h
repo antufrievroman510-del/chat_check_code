@@ -4,6 +4,7 @@
 
 #include <string>
 #include <mutex>
+#include <atomic>
 
 // Контроллер для работы с платой Makcu через UART (COM-порт)
 // Протокол: Текстовые команды "km.move(x,y)\r\n" и "km.click(b)\r\n"
@@ -47,6 +48,18 @@ public:
 
     // Настройка таймингов (задержка между пакетами для стабильности)
     void SetPacketDelayMs(int ms);
+    
+    // === НОВОЕ: Мониторинг состояния кнопок для аппаратного режима ===
+    // Эти методы возвращают состояние кнопок, полученное от устройства macku
+    // (если прошивка поддерживает обратную связь)
+    bool IsLeftButtonPressed() const { return m_lmb_pressed.load(); }
+    bool IsRightButtonPressed() const { return m_rmb_pressed.load(); }
+    bool IsMiddleButtonPressed() const { return m_mmb_pressed.load(); }
+    
+    // Установка состояния кнопок (используется при получении данных от устройства)
+    void SetLeftButtonPressed(bool pressed) { m_lmb_pressed.store(pressed); }
+    void SetRightButtonPressed(bool pressed) { m_rmb_pressed.store(pressed); }
+    void SetMiddleButtonPressed(bool pressed) { m_mmb_pressed.store(pressed); }
 
 private:
     HANDLE hComPort;
@@ -55,6 +68,11 @@ private:
     std::mutex mtx;
     std::string m_portName;   // Имя порта для инициализации через Init()
     int m_baudRate;           // Скорость для инициализации через Init()
+    
+    // === Состояние кнопок для аппаратного режима ===
+    std::atomic<bool> m_lmb_pressed{false};
+    std::atomic<bool> m_rmb_pressed{false};
+    std::atomic<bool> m_mmb_pressed{false};
 
     // Внутренняя отправка байтов
     bool WriteBytes(const unsigned char* data, size_t length);

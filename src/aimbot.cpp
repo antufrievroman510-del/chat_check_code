@@ -741,50 +741,68 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     
     // КРИТИЧНО: Проверяем hardware_type >= 1 (Makcu/KMbox), а не != 0
     // Это гарантирует что мы используем аппаратный ввод только когда он включен
-    if (hardware_type >= 1 && current_key_state) {
+    if (hardware_type >= 1) {
         // Аппаратный режим: обрабатываем нажатия кнопок мыши через macku/kmbox
         // 0 = ЛКМ (основной огонь), 1 = ПКМ (прицеливание)
         
         // Определяем какая кнопка является основной для активации аимбота
         int fire_button = 0; // По умолчанию ЛКМ для стрельбы
         
+        // Статические переменные для отслеживания состояния кнопок
+        static bool hw_lmb_pressed = false;
+        static bool hw_rmb_pressed = false;
+        
         // Если активация от ПКМ (VK_RBUTTON = 0x02), то используем ПКМ для прицеливания
         // и ЛКМ для автоматической стрельбы
         if (aim_key_main == VK_RBUTTON) {
-            // ПКМ удерживается для прицеливания - отправляем Press(1) при переходе
-            if (!prev_key_state && current_key_state) {
+            // ПКМ удерживается для прицеливания
+            if (current_key_state && !hw_rmb_pressed) {
+                // Переход: кнопка была отпущена -> нажата
                 std::cout << "[AIMBOT] Right button PRESSED (aiming)" << std::endl;
                 SendHardwarePress(1); // ПКМ - прицеливание
+                hw_rmb_pressed = true;
+            } else if (!current_key_state && hw_rmb_pressed) {
+                // Переход: кнопка была нажата -> отпущена
+                std::cout << "[AIMBOT] Right button RELEASED (aiming)" << std::endl;
+                SendHardwareRelease(1); // ПКМ - отпускание
+                hw_rmb_pressed = false;
+                hw_lmb_pressed = false; // Сбрасываем и ЛКМ тоже
             }
+            
             // Автоматическая стрельба ЛКМ пока удерживается ПКМ
             // Стреляем с интервалом ~100ms (10 выстрелов в секунду)
-            static long long last_shot_time = 0;
-            long long current_time = current_time_ms;
-            if (current_time - last_shot_time > 100) {
-                std::cout << "[AIMBOT] Auto-fire LEFT button" << std::endl;
-                SendHardwareClick(0); // ЛКМ - выстрел
-                last_shot_time = current_time;
+            if (hw_rmb_pressed) {
+                static long long last_shot_time = 0;
+                long long current_time = current_time_ms;
+                if (current_time - last_shot_time > 100) {
+                    std::cout << "[AIMBOT] Auto-fire LEFT button" << std::endl;
+                    SendHardwareClick(0); // ЛКМ - выстрел (click = press + release)
+                    last_shot_time = current_time;
+                }
             }
         } else if (aim_key_main == VK_LBUTTON) {
             // Активация от ЛКМ - просто стреляем
-            if (!prev_key_state && current_key_state) {
+            if (current_key_state && !hw_lmb_pressed) {
+                // Переход: кнопка была отпущена -> нажата
                 std::cout << "[AIMBOT] Left button PRESSED (fire)" << std::endl;
                 SendHardwarePress(0); // ЛКМ - нажатие
+                hw_lmb_pressed = true;
+            } else if (!current_key_state && hw_lmb_pressed) {
+                // Переход: кнопка была нажата -> отпущена
+                std::cout << "[AIMBOT] Left button RELEASED (fire)" << std::endl;
+                SendHardwareRelease(0); // ЛКМ - отпускание
+                hw_lmb_pressed = false;
             }
-            // Для автоматической стрельбы продолжаем кликать
-            static long long last_shot_time = 0;
-            long long current_time = current_time_ms;
-            if (current_time - last_shot_time > 100) {
-                SendHardwareClick(0);
-                last_shot_time = current_time;
+            
+            // Для автоматической стрельбы продолжаем кликать пока удерживается кнопка
+            if (hw_lmb_pressed) {
+                static long long last_shot_time = 0;
+                long long current_time = current_time_ms;
+                if (current_time - last_shot_time > 100) {
+                    SendHardwareClick(0);
+                    last_shot_time = current_time;
+                }
             }
-        }
-        
-        // Отпускаем кнопки при отпускании клавиши активации
-        if (prev_key_state && !current_key_state) {
-            std::cout << "[AIMBOT] Buttons RELEASED" << std::endl;
-            SendHardwareRelease(0); // ЛКМ
-            SendHardwareRelease(1); // ПКМ
         }
     }
     
