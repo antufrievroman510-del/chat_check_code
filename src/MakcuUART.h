@@ -39,6 +39,12 @@ public:
     // button: 0=ЛКМ, 1=ПКМ, 2=Колесо (нажатие), 3=Боковая кнопка 1, 4=Боковая кнопка 2
     bool ClickMouse(int button);
 
+    // Отправка нажатия кнопки (удержание)
+    bool PressButton(int button);
+
+    // Отпускание кнопки
+    bool ReleaseButton(int button);
+
     // Настройка таймингов (задержка между пакетами для стабильности)
     void SetPacketDelayMs(int ms);
 

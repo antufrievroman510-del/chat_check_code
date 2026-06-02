@@ -93,6 +93,86 @@ bool MakcuUART::ClickMouse(int button) {
     return true;
 }
 
+/**
+ * @brief Нажатие кнопки мыши (удержание)
+ * Отправляет только команду нажатия km.button(1) без отпускания
+ */
+bool MakcuUART::PressButton(int button) {
+    if (!isConnected || hComPort == nullptr) {
+        std::cerr << "[MakcuUART] PressButton: Not connected!" << std::endl;
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(mtx);
+
+    // Формируем обозначение кнопки
+    std::string buttonCmd;
+    switch (button) {
+        case 0: buttonCmd = "left"; break;   // ЛКМ
+        case 1: buttonCmd = "right"; break;  // ПКМ
+        case 2: buttonCmd = "middle"; break; // Колесо
+        case 3: buttonCmd = "side1"; break;  // Боковая кнопка 1
+        case 4: buttonCmd = "side2"; break;  // Боковая кнопка 2
+        default: buttonCmd = "left"; break;
+    }
+    
+    // Формируем команду нажатия: km.button(1)\r\n
+    std::ostringstream pressCmd;
+    pressCmd << "km." << buttonCmd << "(1)\r\n";
+    std::string pressCommand = pressCmd.str();
+
+    std::cout << "[MakcuUART] Press button: " << buttonCmd << "(1)" << std::endl;
+    
+    // Отправляем нажатие
+    bool result = WriteBytes(reinterpret_cast<const unsigned char*>(pressCommand.c_str()), pressCommand.length());
+    if (!result) {
+        std::cerr << "[MakcuUART] Failed to send press command" << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * @brief Отпускание кнопки мыши
+ * Отправляет только команду отпускания km.button(0)
+ */
+bool MakcuUART::ReleaseButton(int button) {
+    if (!isConnected || hComPort == nullptr) {
+        std::cerr << "[MakcuUART] ReleaseButton: Not connected!" << std::endl;
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(mtx);
+
+    // Формируем обозначение кнопки
+    std::string buttonCmd;
+    switch (button) {
+        case 0: buttonCmd = "left"; break;   // ЛКМ
+        case 1: buttonCmd = "right"; break;  // ПКМ
+        case 2: buttonCmd = "middle"; break; // Колесо
+        case 3: buttonCmd = "side1"; break;  // Боковая кнопка 1
+        case 4: buttonCmd = "side2"; break;  // Боковая кнопка 2
+        default: buttonCmd = "left"; break;
+    }
+    
+    // Формируем команду отпускания: km.button(0)\r\n
+    std::ostringstream releaseCmd;
+    releaseCmd << "km." << buttonCmd << "(0)\r\n";
+    std::string releaseCommand = releaseCmd.str();
+
+    std::cout << "[MakcuUART] Release button: " << buttonCmd << "(0)" << std::endl;
+    
+    // Отправляем отпускание
+    bool result = WriteBytes(reinterpret_cast<const unsigned char*>(releaseCommand.c_str()), releaseCommand.length());
+    if (!result) {
+        std::cerr << "[MakcuUART] Failed to send release command" << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
 void MakcuUART::Shutdown() {
     Disconnect();
 }

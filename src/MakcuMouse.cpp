@@ -55,6 +55,30 @@ namespace pwnz_ai {
         m_uart.Click(button);
     }
 
+    void MakcuMouse::Press(int button) {
+        if (!m_initialized) {
+            std::cerr << "[MakcuMouse] Press called but not initialized!" << std::endl;
+            return;
+        }
+
+        // Отправка команды нажатия кнопки через UART (без отпускания)
+        // button: 0=ЛКМ, 1=ПКМ, 2=Колесо, 3=Боковая 1, 4=Боковая 2
+        std::cout << "[MakcuMouse] Press button=" << button << std::endl;
+        m_uart.PressButton(button);
+    }
+
+    void MakcuMouse::Release(int button) {
+        if (!m_initialized) {
+            std::cerr << "[MakcuMouse] Release called but not initialized!" << std::endl;
+            return;
+        }
+
+        // Отправка команды отпускания кнопки через UART
+        // button: 0=ЛКМ, 1=ПКМ, 2=Колесо, 3=Боковая 1, 4=Боковая 2
+        std::cout << "[MakcuMouse] Release button=" << button << std::endl;
+        m_uart.ReleaseButton(button);
+    }
+
     void MakcuMouse::Shutdown() {
         if (!m_initialized) return;
 
