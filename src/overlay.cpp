@@ -2687,10 +2687,10 @@ void Overlay::Render(const std::vector<Detection>& detections, int screen_w, int
 
     ImGui::GetIO().FontGlobalScale = menu_scale / 100.0f;
     // OBS Bypass применяется в реальном времени при изменении флага
-    static bool last_obs = !obs_bypass_enabled_enabled;
+    static bool last_obs = !obs_bypass_enabled;
     if (obs_bypass_enabled != last_obs) {
         SetWindowDisplayAffinity(hwnd, obs_bypass_enabled ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE);
-        last_obs = obs_bypass_enabled_enabled;
+        last_obs = obs_bypass_enabled;
     }
     ImGui_ImplDX11_NewFrame(); ImGui_ImplWin32_NewFrame();
     POINT m_pt;
