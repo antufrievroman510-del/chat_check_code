@@ -37,6 +37,17 @@ thread_local std::normal_distribution<float> Aimbot::gauss_dist(0.0f, 1.0f);
 Aimbot::Aimbot() {
     MUTATE_SIGNATURE;
     ResetTarget();
+    
+    // Создаем SendInputMouse по умолчанию, чтобы избежать краша до применения настроек
+    try {
+        m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
+        if (m_mouseInput) {
+            m_mouseInput->Init();
+        }
+    } catch (...) {
+        // В случае ошибки оставляем nullptr, будет создан при первом вызове InitHardware
+        m_mouseInput.reset();
+    }
 }
 
 Aimbot::~Aimbot() {
@@ -388,6 +399,18 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     bool is_new_frame, long long current_time_ms, float zoom_scale) {
     VMProtectBeginMutation("AimbotUpdate");
     MUTATE_SIGNATURE;
+
+    // КРИТИЧНО: Проверка на валидность m_mouseInput перед любой логикой
+    if (!m_mouseInput) {
+        // Пытаемся инициализировать заново если указатель пуст
+        InitHardware();
+        if (!m_mouseInput) {
+            // Если всё ещё nullptr - выходим чтобы избежать краша
+            ResetTarget();
+            VMProtectEnd();
+            return;
+        }
+    }
 
     // ИСПРАВЛЕНИЕ: Сначала проверяем клавишу, потом aim_enable
     // Это позволяет аимботу работать даже если в конфиге aim_enable=false
