@@ -5,11 +5,11 @@
 #include <chrono>
 #include <sstream>
 
-// Протокол Makcu ESP32S3 использует текстовые команды формата:
-// km.move(x,y) - движение мыши
-// km.click(button) - клик (button: 0=left, 1=right, 2=middle)
-// km.press(button) - нажать кнопку
-// km.release(button) - отпустить кнопку
+// Протокол Makcu ESP32S3 (прошивка MAKCM) использует текстовые команды формата:
+// km.move(x,y)      - движение мыши
+// km.press(button)  - нажать кнопку (button: L=ЛКМ, R=ПКМ, M=колесо, 4=боковая1, 5=боковая2)
+// km.release(button)- отпустить кнопку
+// Важно: Для корректного клика нужно отправить пару команд press -> release
 
 MakcuUART::MakcuUART() 
     : hComPort(nullptr), isConnected(false), packetDelayMs(5), m_portName("COM3"), m_baudRate(115200) {}
@@ -39,9 +39,8 @@ bool MakcuUART::ClickMouse(int button) {
 
     std::lock_guard<std::mutex> lock(mtx);
 
-    // Формируем текстовую команду: km.click(button)\r\n
+    // Формируем обозначение кнопки
     // button: 0=ЛКМ (L), 1=ПКМ (R), 2=Колесо (M), 3=Боковая1 (4), 4=Боковая2 (5)
-    // Прошивка MAKCM принимает: km.click(L), km.click(R), km.click(M), km.click(4), km.click(5)
     std::string buttonStr;
     switch (button) {
         case 0: buttonStr = "L"; break;   // ЛКМ
@@ -52,19 +51,43 @@ bool MakcuUART::ClickMouse(int button) {
         default: buttonStr = "L"; break;  // По умолчанию ЛКМ
     }
     
-    std::ostringstream cmd;
-    cmd << "km.click(" << buttonStr << ")\r\n";
-    std::string command = cmd.str();
+    // Прошивка MAKCM требует раздельные команды press и release для корректного клика
+    // Формируем команду нажатия: km.press(button)\r\n
+    std::ostringstream pressCmd;
+    pressCmd << "km.press(" << buttonStr << ")\r\n";
+    std::string pressCommand = pressCmd.str();
+    
+    // Формируем команду отпускания: km.release(button)\r\n
+    std::ostringstream releaseCmd;
+    releaseCmd << "km.release(" << buttonStr << ")\r\n";
+    std::string releaseCommand = releaseCmd.str();
 
-    std::cout << "[MakcuUART] Sending click command: " << command;
+    std::cout << "[MakcuUART] Sending click: press(" << buttonStr << ") -> release(" << buttonStr << ")" << std::endl;
     
-    bool result = WriteBytes(reinterpret_cast<const unsigned char*>(command.c_str()), command.length());
+    // Отправляем нажатие
+    bool pressResult = WriteBytes(reinterpret_cast<const unsigned char*>(pressCommand.c_str()), pressCommand.length());
+    if (!pressResult) {
+        std::cerr << "[MakcuUART] Failed to send press command" << std::endl;
+        return false;
+    }
     
-    if (result && packetDelayMs > 0) {
+    // Небольшая задержка между нажатием и отпусканием (имитация реального клика)
+    // 50ms достаточно для регистрации клика в игре
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    
+    // Отправляем отпускание
+    bool releaseResult = WriteBytes(reinterpret_cast<const unsigned char*>(releaseCommand.c_str()), releaseCommand.length());
+    if (!releaseResult) {
+        std::cerr << "[MakcuUART] Failed to send release command" << std::endl;
+        return false;
+    }
+    
+    // Дополнительная задержка после клика
+    if (packetDelayMs > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(packetDelayMs));
     }
 
-    return result;
+    return true;
 }
 
 void MakcuUART::Shutdown() {
