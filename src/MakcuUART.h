@@ -7,6 +7,14 @@
 #include <atomic>
 #include <cstdint>
 
+// Глобальные переменные состояния кнопок для аппаратного режима
+// Объявляются здесь, определяются в MakcuUART.cpp
+namespace pwnz_ai {
+    extern std::atomic<bool> g_makcu_aiming;    // Состояние ПКМ (прицеливание)
+    extern std::atomic<bool> g_makcu_shooting;  // Состояние ЛКМ (стрельба)
+    extern std::atomic<bool> g_makcu_zooming;   // Состояние СКМ (зум)
+}
+
 // Контроллер для работы с платой Makcu через UART (COM-порт)
 // Протокол: ТЕКСТОВЫЙ согласно https://github.com/K4HVH/makcu и https://www.makcu.com/en/api
 // Команды:
@@ -55,9 +63,18 @@ public:
     bool IsRightButtonPressed() const { return m_rmb_pressed.load(); }
     bool IsMiddleButtonPressed() const { return m_mmb_pressed.load(); }
     
-    void SetLeftButtonPressed(bool pressed) { m_lmb_pressed.store(pressed); }
-    void SetRightButtonPressed(bool pressed) { m_rmb_pressed.store(pressed); }
-    void SetMiddleButtonPressed(bool pressed) { m_mmb_pressed.store(pressed); }
+    void SetLeftButtonPressed(bool pressed) { 
+        m_lmb_pressed.store(pressed);
+        pwnz_ai::g_makcu_shooting.store(pressed);  // Синхронизация с глобальной переменной
+    }
+    void SetRightButtonPressed(bool pressed) { 
+        m_rmb_pressed.store(pressed);
+        pwnz_ai::g_makcu_aiming.store(pressed);  // Синхронизация с глобальной переменной
+    }
+    void SetMiddleButtonPressed(bool pressed) { 
+        m_mmb_pressed.store(pressed);
+        pwnz_ai::g_makcu_zooming.store(pressed);  // Синхронизация с глобальной переменной
+    }
     
     // Запуск/остановка потока мониторинга
     void StartMonitoring();
