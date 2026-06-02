@@ -316,6 +316,38 @@ void Aimbot::SendHardwareClick() {
     }
 }
 
+void Aimbot::SendHardwarePress(int button) {
+    // Отправка команды нажатия кнопки через полиморфный интерфейс
+    if (m_mouseInput) {
+        std::cout << "[Aimbot] SendHardwarePress: button=" << button << " hw=" << hardware_type << std::endl;
+        m_mouseInput->Press(button);
+        return;
+    }
+
+    // Fallback: если m_mouseInput не создан, создаём его заново
+    std::cerr << "[AIM WARNING] m_mouseInput is null for press! Re-initializing..." << std::endl;
+    InitHardware();
+    if (m_mouseInput) {
+        m_mouseInput->Press(button);
+    }
+}
+
+void Aimbot::SendHardwareRelease(int button) {
+    // Отправка команды отпускания кнопки через полиморфный интерфейс
+    if (m_mouseInput) {
+        std::cout << "[Aimbot] SendHardwareRelease: button=" << button << " hw=" << hardware_type << std::endl;
+        m_mouseInput->Release(button);
+        return;
+    }
+
+    // Fallback: если m_mouseInput не создан, создаём его заново
+    std::cerr << "[AIM WARNING] m_mouseInput is null for release! Re-initializing..." << std::endl;
+    InitHardware();
+    if (m_mouseInput) {
+        m_mouseInput->Release(button);
+    }
+}
+
 // ============================================================
 // Вспомогательные методы
 // ============================================================
@@ -684,6 +716,65 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
 
     // === Шаг 15: Отправка движения через Hardware (напрямую из AimResult) ===
     // УДАЛЕНЫ: Pixelsmooth, Lerp, Path Randomization, Overshoot - теперь это делает AimMath
+    
+    // === ЛОГИКА АВТОСТРЕЛЬБЫ (Press/Release для аппаратного ввода) ===
+    // Сохраняем состояние клавиши активации для определения переходов
+    static bool prev_key_state = false;
+    bool current_key_state = key_pressed;
+    
+    // Определяем тип стрельбы (автоматическая или одиночная)
+    // Если aim_key_main = VK_RBUTTON (0x02) - это удержание для прицеливания+стрельбы
+    // Если нужна отдельная логика для авто/полуавто - можно добавить настройку
+    
+    if (hardware_type != 0 && current_key_state) {
+        // Аппаратный режим: обрабатываем нажатия кнопок мыши через macku/kmbox
+        // 0 = ЛКМ (основной огонь), 1 = ПКМ (прицеливание)
+        
+        // Определяем какая кнопка является основной для активации аимбота
+        int fire_button = 0; // По умолчанию ЛКМ для стрельбы
+        
+        // Если активация от ПКМ (VK_RBUTTON = 0x02), то используем ПКМ для прицеливания
+        // и ЛКМ для автоматической стрельбы
+        if (aim_key_main == VK_RBUTTON) {
+            // ПКМ удерживается для прицеливания - отправляем Press(1) при переходе
+            if (!prev_key_state && current_key_state) {
+                std::cout << "[AIMBOT] Right button PRESSED (aiming)" << std::endl;
+                SendHardwarePress(1); // ПКМ - прицеливание
+            }
+            // Автоматическая стрельба ЛКМ пока удерживается ПКМ
+            // Стреляем с интервалом ~100ms (10 выстрелов в секунду)
+            static long long last_shot_time = 0;
+            long long current_time = current_time_ms;
+            if (current_time - last_shot_time > 100) {
+                std::cout << "[AIMBOT] Auto-fire LEFT button" << std::endl;
+                SendHardwareClick(0); // ЛКМ - выстрел
+                last_shot_time = current_time;
+            }
+        } else if (aim_key_main == VK_LBUTTON) {
+            // Активация от ЛКМ - просто стреляем
+            if (!prev_key_state && current_key_state) {
+                std::cout << "[AIMBOT] Left button PRESSED (fire)" << std::endl;
+                SendHardwarePress(0); // ЛКМ - нажатие
+            }
+            // Для автоматической стрельбы продолжаем кликать
+            static long long last_shot_time = 0;
+            long long current_time = current_time_ms;
+            if (current_time - last_shot_time > 100) {
+                SendHardwareClick(0);
+                last_shot_time = current_time;
+            }
+        }
+        
+        // Отпускаем кнопки при отпускании клавиши активации
+        if (prev_key_state && !current_key_state) {
+            std::cout << "[AIMBOT] Buttons RELEASED" << std::endl;
+            SendHardwareRelease(0); // ЛКМ
+            SendHardwareRelease(1); // ПКМ
+        }
+    }
+    
+    prev_key_state = current_key_state;
+    
     if (mx == 0 && my == 0) {
         // Цель в FOV, но движение 0 - возможно FOV мал или Smooth огромный
         if (key_pressed) {
