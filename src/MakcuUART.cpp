@@ -129,6 +129,14 @@ bool MakcuUART::PressButton(int button) {
         std::cerr << "[MakcuUART] Failed to send press command" << std::endl;
         return false;
     }
+    
+    // === КРИТИЧНО: Обновляем локальное состояние кнопки ===
+    // Это позволяет отслеживать состояние кнопок в аппаратном режиме
+    switch (button) {
+        case 0: m_lmb_pressed.store(true); break;
+        case 1: m_rmb_pressed.store(true); break;
+        case 2: m_mmb_pressed.store(true); break;
+    }
 
     return true;
 }
@@ -168,6 +176,14 @@ bool MakcuUART::ReleaseButton(int button) {
     if (!result) {
         std::cerr << "[MakcuUART] Failed to send release command" << std::endl;
         return false;
+    }
+    
+    // === КРИТИЧНО: Обновляем локальное состояние кнопки ===
+    // Это позволяет отслеживать состояние кнопок в аппаратном режиме
+    switch (button) {
+        case 0: m_lmb_pressed.store(false); break;
+        case 1: m_rmb_pressed.store(false); break;
+        case 2: m_mmb_pressed.store(false); break;
     }
 
     return true;
