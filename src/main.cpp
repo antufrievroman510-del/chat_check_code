@@ -845,17 +845,28 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         
         // ИСПРАВЛЕНИЕ: Гарантируем инициализацию SendInput для hardware_type=0
         // Это критично для работы трекинга через стандартную мышь Windows
-        std::cout << "[INIT] Hardware type: " << aim.hardware_type << std::endl;
-        if (aim.InitHardware()) {
-            std::cout << "[INIT] Hardware initialized successfully" << std::endl;
-            if (aim.hardware_type == 0) {
-                std::cout << "[INIT] SendInput is ready for hardware_type=0" << std::endl;
+        // Устанавливаем hardware_type из mouse_input_method_idx для корректного выбора метода
+        aim.hardware_type = overlay.mouse_input_method_idx;
+        
+        std::cout << "[INIT] Hardware type: " << aim.hardware_type << " (0=SendInput, 1=Makcu, 2=KMbox)" << std::endl;
+        
+        try {
+            if (aim.InitHardware()) {
+                std::cout << "[INIT] Hardware initialized successfully" << std::endl;
+                if (aim.hardware_type == 0) {
+                    std::cout << "[INIT] SendInput is ready for hardware_type=0" << std::endl;
+                }
+            } else {
+                std::cout << "[INIT] WARNING: Hardware initialization returned false, but fallback should have worked" << std::endl;
             }
-        } else {
-            std::cout << "[INIT] WARNING: Hardware initialization failed!" << std::endl;
-            if (aim.hardware_type == 0) {
-                std::cerr << "[INIT] CRITICAL: SendInput will NOT work!" << std::endl;
-            }
+        }
+        catch (const std::exception& e) {
+            std::cerr << "[INIT] Exception during InitHardware: " << e.what() << std::endl;
+            std::cout << "[INIT] Attempting emergency fallback to SendInput..." << std::endl;
+        }
+        catch (...) {
+            std::cerr << "[INIT] Unknown exception during InitHardware" << std::endl;
+            std::cout << "[INIT] Attempting emergency fallback to SendInput..." << std::endl;
         }
 
         int start_w, start_h; GetModelSize(overlay.ai_model, start_w, start_h);

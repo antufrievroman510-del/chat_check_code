@@ -188,44 +188,79 @@ void Aimbot::ResetTarget() {
 
 bool Aimbot::InitHardware() {
     MUTATE_SIGNATURE;
-    CloseHardware();
+    
+    try {
+        CloseHardware();
 
-    // Создаём объект метода ввода в зависимости от hardware_type
-    // 0 = SendInput (программный), 1 = Makcu (UART/COM), 2 = KMbox (Network)
-    switch (hardware_type) {
-        case 0: // SendInput (программный ввод)
+        // Создаём объект метода ввода в зависимости от hardware_type
+        // 0 = SendInput (программный), 1 = Makcu (UART/COM), 2 = KMbox (Network)
+        switch (hardware_type) {
+            case 0: // SendInput (программный ввод)
+                m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
+                break;
+            case 1: // Makcu (аппаратный ввод через COM-порт)
+                {
+                    std::string com_port_name = "COM" + std::to_string(com_port);
+                    int baud_rate = (bypass_mode == 0) ? 9600 : 115200;
+                    m_mouseInput = std::make_unique<pwnz_ai::MakcuMouse>(com_port_name, baud_rate);
+                }
+                break;
+            case 2: // KMbox (аппаратный ввод через сеть)
+                m_mouseInput = std::make_unique<pwnz_ai::KMboxMouse>(net_ip, net_port);
+                break;
+            default:
+                // Неизвестный тип, используем SendInput по умолчанию
+                m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
+                break;
+        }
+
+        // Инициализируем выбранный метод ввода
+        if (!m_mouseInput) {
+            std::cerr << "[Aimbot] Failed to create mouse input object for hardware_type=" << hardware_type << std::endl;
+            return false;
+        }
+
+        bool initResult = m_mouseInput->Init();
+        if (!initResult) {
+            std::cerr << "[Aimbot] Failed to initialize mouse input for hardware_type=" << hardware_type << std::endl;
+            // НЕ возвращаем false, а продолжаем с SendInput как fallback
+            std::cerr << "[Aimbot] Fallback to SendInput..." << std::endl;
             m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
-            break;
-        case 1: // Makcu (аппаратный ввод через COM-порт)
-            {
-                std::string com_port_name = "COM" + std::to_string(com_port);
-                int baud_rate = (bypass_mode == 0) ? 9600 : 115200; // Пример использования bypass_mode для скорости
-                m_mouseInput = std::make_unique<pwnz_ai::MakcuMouse>(com_port_name, baud_rate);
-            }
-            break;
-        case 2: // KMbox (аппаратный ввод через сеть)
-            m_mouseInput = std::make_unique<pwnz_ai::KMboxMouse>(net_ip, net_port);
-            break;
-        default:
-            // Неизвестный тип, используем SendInput по умолчанию
+            m_mouseInput->Init();
+        }
+
+        std::cout << "[Aimbot] Hardware initialized successfully. Type=" << hardware_type << std::endl;
+        return true;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[Aimbot] Exception in InitHardware: " << e.what() << std::endl;
+        // Fallback на SendInput
+        try {
+            CloseHardware();
             m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
-            break;
+            m_mouseInput->Init();
+            std::cout << "[Aimbot] Fallback to SendInput after exception" << std::endl;
+            return true;
+        }
+        catch (...) {
+            std::cerr << "[Aimbot] Critical: Even SendInput failed!" << std::endl;
+            return false;
+        }
     }
-
-    // Инициализируем выбранный метод ввода
-    if (!m_mouseInput) {
-        std::cerr << "[Aimbot] Failed to create mouse input object for hardware_type=" << hardware_type << std::endl;
-        return false;
+    catch (...) {
+        std::cerr << "[Aimbot] Unknown exception in InitHardware" << std::endl;
+        // Fallback на SendInput
+        try {
+            CloseHardware();
+            m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
+            m_mouseInput->Init();
+            std::cout << "[Aimbot] Fallback to SendInput after unknown exception" << std::endl;
+            return true;
+        }
+        catch (...) {
+            return false;
+        }
     }
-
-    bool initResult = m_mouseInput->Init();
-    if (!initResult) {
-        std::cerr << "[Aimbot] Failed to initialize mouse input for hardware_type=" << hardware_type << std::endl;
-        return false;
-    }
-
-    std::cout << "[Aimbot] Hardware initialized successfully. Type=" << hardware_type << std::endl;
-    return true;
 }
 
 void Aimbot::CloseHardware() {
