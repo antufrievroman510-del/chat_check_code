@@ -70,6 +70,8 @@ bool HardwareController::Initialize(const ::HardwareConfig& config) {
                 if (g_makcu.Connect(config.com_port, config.baud_rate)) {
                     connected_ = true;
                     std::cout << "[HW] Mode: Macku UART on " << config.com_port << std::endl;
+                    // Запускаем мониторинг кнопок для аппаратного режима
+                    g_makcu.StartMonitoring();
                 } else {
                     connected_ = false;
                     std::cerr << "[HW] Macku connection failed" << std::endl;
@@ -97,6 +99,9 @@ bool HardwareController::Initialize(const ::HardwareConfig& config) {
 
 void HardwareController::Shutdown() {
     EnterCriticalSection(&cs_);
+    
+    // Останавливаем мониторинг перед отключением
+    g_makcu.StopMonitoring();
     
     // Отключение всех устройств
     g_makcu.Disconnect();
