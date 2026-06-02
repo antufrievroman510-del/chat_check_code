@@ -36,13 +36,32 @@ HardwareBackend::~HardwareBackend() {
 
 bool HardwareBackend::ConnectMacku(const std::string& port, int baud) {
 #ifdef _WIN32
+    // Проверка на пустое имя порта
+    if (port.empty()) {
+        std::cerr << "Empty COM port name" << std::endl;
+        return false;
+    }
+    
     DisconnectMacku();
     
+    // Формируем имя порта для Windows (\\.\COM3)
+    // Правильное экранирование: два обратных слэша для одного слэша в пути
     std::string fullPort = "\\\\.\\" + port;
-    hComPort = CreateFileA(fullPort.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
     
-    if (hComPort == (HANDLE)-1) {
-        std::cerr << "Failed to open COM port: " << port << std::endl;
+    hComPort = CreateFileA(
+        fullPort.c_str(),
+        GENERIC_READ | GENERIC_WRITE,
+        0,          // No sharing
+        nullptr,    // Default security attributes
+        OPEN_EXISTING,
+        0,          // No flags or attributes
+        nullptr     // No template file
+    );
+    
+    // Проверка на INVALID_HANDLE_VALUE, а не на nullptr
+    if (hComPort == INVALID_HANDLE_VALUE) {
+        hComPort = nullptr;
+        std::cerr << "Failed to open COM port: " << port << " (Error: " << GetLastError() << ")" << std::endl;
         return false;
     }
     
@@ -51,6 +70,7 @@ bool HardwareBackend::ConnectMacku(const std::string& port, int baud) {
     if (!GetCommState(hComPort, &dcb)) {
         CloseHandle(hComPort);
         hComPort = nullptr;
+        std::cerr << "Failed to get COM state: " << GetLastError() << std::endl;
         return false;
     }
     
@@ -62,6 +82,7 @@ bool HardwareBackend::ConnectMacku(const std::string& port, int baud) {
     if (!SetCommState(hComPort, &dcb)) {
         CloseHandle(hComPort);
         hComPort = nullptr;
+        std::cerr << "Failed to set COM state: " << GetLastError() << std::endl;
         return false;
     }
     
@@ -98,46 +119,65 @@ bool HardwareBackend::IsMackuConnected() const {
 }
 
 bool HardwareBackend::SendMackuMove(int x, int y) {
-    if (!mackuConnected.load()) return false;
+    if (!mackuConnected.load() || hComPort == nullptr) return false;
     
 #ifdef _WIN32
-    // Формат протокола Macku: [0xAA, 0x55, X_low, X_high, Y_low, Y_high, checksum]
-    uint8_t buffer[8];
-    buffer[0] = 0xAA;
-    buffer[1] = 0x55;
-    buffer[2] = x & 0xFF;
-    buffer[3] = (x >> 8) & 0xFF;
-    buffer[4] = y & 0xFF;
-    buffer[5] = (y >> 8) & 0xFF;
-    buffer[6] = (buffer[0] + buffer[1] + buffer[2] + buffer[3] + buffer[4] + buffer[5]) & 0xFF;
-    buffer[7] = 0x0D; // End marker
+    // Формат протокола Makcu (совместим с Arduino/MakcuUART): 
+    // [0xAA, 0x01, DX_L, DX_H, DY_L, DY_H, 0xBB]
+    constexpr unsigned char PACKET_START = 0xAA;
+    constexpr unsigned char PACKET_TYPE_MOVE = 0x01;
+    constexpr unsigned char PACKET_END = 0xBB;
+    
+    uint8_t buffer[7];
+    buffer[0] = PACKET_START;
+    buffer[1] = PACKET_TYPE_MOVE;
+    buffer[2] = static_cast<unsigned char>(x & 0xFF);        // DX Low
+    buffer[3] = static_cast<unsigned char>((x >> 8) & 0xFF); // DX High
+    buffer[4] = static_cast<unsigned char>(y & 0xFF);        // DY Low
+    buffer[5] = static_cast<unsigned char>((y >> 8) & 0xFF); // DY High
+    buffer[6] = PACKET_END;
     
     DWORD bytesWritten;
-    WriteFile(hComPort, buffer, 8, &bytesWritten, nullptr);
-    return bytesWritten == 8;
+    BOOL result = WriteFile(hComPort, buffer, sizeof(buffer), &bytesWritten, nullptr);
+    
+    if (!result || bytesWritten != sizeof(buffer)) {
+        std::cerr << "[HardwareBackend] SendMackuMove failed: " << GetLastError() << std::endl;
+        return false;
+    }
+    return true;
 #else
     return false;
 #endif
 }
 
 bool HardwareBackend::SendMackuClick(uint8_t button) {
-    if (!mackuConnected.load()) return false;
+    if (!mackuConnected.load() || hComPort == nullptr) return false;
     
 #ifdef _WIN32
-    // Формат: [0xAA, 0x55, 0x00, 0x00, BUTTON, 0x00, checksum, 0x0D]
-    uint8_t buffer[8];
-    buffer[0] = 0xAA;
-    buffer[1] = 0x55;
-    buffer[2] = 0x00;
-    buffer[3] = 0x00;
-    buffer[4] = button;
-    buffer[5] = 0x00;
-    buffer[6] = (buffer[0] + buffer[1] + buffer[2] + buffer[3] + buffer[4] + buffer[5]) & 0xFF;
-    buffer[7] = 0x0D;
+    // Для кликов используем тот же протокол что и для движения
+    // Но с нулевыми координатами и специальным флагом
+    // Или можно использовать отдельный тип пакета если прошивка поддерживает
+    constexpr unsigned char PACKET_START = 0xAA;
+    constexpr unsigned char PACKET_TYPE_CLICK = 0x03;
+    constexpr unsigned char PACKET_END = 0xBB;
+    
+    uint8_t buffer[7];
+    buffer[0] = PACKET_START;
+    buffer[1] = PACKET_TYPE_CLICK;
+    buffer[2] = button;     // Код кнопки: 1=Left, 2=Right, 3=Middle
+    buffer[3] = 0x00;       // Reserved
+    buffer[4] = 0x00;       // Reserved
+    buffer[5] = 0x00;       // Reserved
+    buffer[6] = PACKET_END;
     
     DWORD bytesWritten;
-    WriteFile(hComPort, buffer, 8, &bytesWritten, nullptr);
-    return bytesWritten == 8;
+    BOOL result = WriteFile(hComPort, buffer, sizeof(buffer), &bytesWritten, nullptr);
+    
+    if (!result || bytesWritten != sizeof(buffer)) {
+        std::cerr << "[HardwareBackend] SendMackuClick failed: " << GetLastError() << std::endl;
+        return false;
+    }
+    return true;
 #else
     return false;
 #endif
