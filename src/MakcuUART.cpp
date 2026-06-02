@@ -375,3 +375,123 @@ bool MakcuUART::WriteBytes(const unsigned char* data, size_t length) {
     
     return true;
 }
+
+// ============================================================
+// Реализация потока мониторинга состояния кнопок
+// ============================================================
+
+void MakcuUART::StartMonitoring() {
+    if (m_monitoring.load()) {
+        return; // Уже запущен
+    }
+    
+    m_stopMonitoring.store(false);
+    m_monitorThread = std::thread(&MakcuUART::monitoringLoop, this);
+    m_monitoring.store(true);
+    
+    std::cout << "[MakcuUART] Button monitoring started" << std::endl;
+}
+
+void MakcuUART::StopMonitoring() {
+    if (!m_monitoring.load()) {
+        return; // Не запущен
+    }
+    
+    m_stopMonitoring.store(true);
+    
+    if (m_monitorThread.joinable()) {
+        m_monitorThread.join();
+    }
+    
+    m_monitoring.store(false);
+    
+    std::cout << "[MakcuUART] Button monitoring stopped" << std::endl;
+}
+
+void MakcuUART::monitoringLoop() {
+    std::cout << "[MakcuUART] Monitoring loop started" << std::endl;
+    
+    while (!m_stopMonitoring.load() && isConnected) {
+        // Читаем ответ от устройства (если прошивка отправляет состояние кнопок)
+        // Прошивка MAKCM может отправлять ответы вида: "btn:1 0 0" (LMB RMB MMB)
+        char buffer[256];
+        DWORD bytesRead;
+        
+        // Неблокирующее чтение с таймаутом
+        if (ReadFile(hComPort, buffer, sizeof(buffer) - 1, &bytesRead, nullptr)) {
+            if (bytesRead > 0) {
+                buffer[bytesRead] = '\0';
+                std::string response(buffer);
+                
+                // Логируем для отладки
+                std::cout << "[MakcuUART] Received: " << response << std::endl;
+                
+                // Парсим ответ
+                ParseResponse(response);
+            }
+        }
+        
+        // Небольшая задержка чтобы не грузить CPU
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    
+    std::cout << "[MakcuUART] Monitoring loop ended" << std::endl;
+}
+
+void MakcuUART::ParseResponse(const std::string& response) {
+    // Парсим ответы от прошивки MAKCM
+    // Формат может быть: "btn:1 0 0" или "state:L,R,M"
+    
+    // Пример парсинга для формата "btn:L R M" где L/R/M = 0 или 1
+    if (response.find("btn:") != std::string::npos) {
+        size_t pos = response.find("btn:") + 4;
+        std::string btnState = response.substr(pos);
+        
+        // Удаляем пробелы и переводы строк
+        btnState.erase(std::remove_if(btnState.begin(), btnState.end(), ::isspace), btnState.end());
+        
+        if (btnState.length() >= 3) {
+            bool lmb = (btnState[0] == '1');
+            bool rmb = (btnState[1] == '1');
+            bool mmb = (btnState[2] == '1');
+            
+            // Обновляем локальное состояние
+            m_lmb_pressed.store(lmb);
+            m_rmb_pressed.store(rmb);
+            m_mmb_pressed.store(mmb);
+            
+            // Обновляем глобальные переменные для использования в aimbot.cpp
+            pwnz_ai::g_makcu_shooting.store(lmb);   // LMB = стрельба
+            pwnz_ai::g_makcu_aiming.store(rmb);     // RMB = прицеливание
+            pwnz_ai::g_makcu_zooming.store(mmb);    // MMB = зум
+            
+            std::cout << "[MakcuUART] Parsed buttons: L=" << lmb << " R=" << rmb << " M=" << mmb << std::endl;
+        }
+    }
+    // Альтернативный формат: "left:1 right:0 middle:0"
+    else {
+        if (response.find("left:1") != std::string::npos) {
+            m_lmb_pressed.store(true);
+            pwnz_ai::g_makcu_shooting.store(true);
+        } else if (response.find("left:0") != std::string::npos) {
+            m_lmb_pressed.store(false);
+            pwnz_ai::g_makcu_shooting.store(false);
+        }
+        
+        if (response.find("right:1") != std::string::npos) {
+            m_rmb_pressed.store(true);
+            pwnz_ai::g_makcu_aiming.store(true);
+        } else if (response.find("right:0") != std::string::npos) {
+            m_rmb_pressed.store(false);
+            pwnz_ai::g_makcu_aiming.store(false);
+        }
+        
+        if (response.find("middle:1") != std::string::npos) {
+            m_mmb_pressed.store(true);
+            pwnz_ai::g_makcu_zooming.store(true);
+        } else if (response.find("middle:0") != std::string::npos) {
+            m_mmb_pressed.store(false);
+            pwnz_ai::g_makcu_zooming.store(false);
+        }
+    }
+}
