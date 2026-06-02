@@ -120,9 +120,15 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
 
     // Проверка на INVALID_HANDLE_VALUE, а не на nullptr
     if (hComPort == INVALID_HANDLE_VALUE) {
+        DWORD err = GetLastError();
         hComPort = nullptr;
         std::cerr << "[MakcuUART] Failed to open COM port: " << portName 
-                  << " (Error: " << GetLastError() << ")" << std::endl;
+                  << " (Error: " << err << ")" << std::endl;
+        if (err == ERROR_ACCESS_DENIED) {
+            std::cerr << "ERROR: Port is busy or access denied. Close Arduino IDE, terminal apps, etc." << std::endl;
+        } else if (err == ERROR_FILE_NOT_FOUND) {
+            std::cerr << "ERROR: Port does not exist. Check Device Manager for correct COM number." << std::endl;
+        }
         return false;
     }
 

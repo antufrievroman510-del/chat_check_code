@@ -1,14 +1,14 @@
-```
+```cpp
 # Compiled files
 *.o
 *.obj
-*.exe
-*.dll
-*.so
 *.a
+*.so
+*.dll
+*.exe
 *.out
 
-# Build artifacts
+# Build directories
 build/
 dist/
 target/
@@ -22,11 +22,15 @@ __pycache__/
 .pytest_cache/
 .gradle/
 
-# Editors/IDE
+# Editors
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# Logs and temp files
+*.log
+*.tmp
 
 # System files
 .DS_Store
@@ -35,8 +39,7 @@ Thumbs.db
 .env.local
 *.env.*
 
-# Logs and coverage
-*.log
+# Coverage
 coverage/
 htmlcov/
 .coverage
