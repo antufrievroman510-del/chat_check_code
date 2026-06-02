@@ -53,6 +53,36 @@ void KMboxMouse::Click(int button) {
     m_kmbox->Click(button);
 }
 
+void KMboxMouse::Press(int button) {
+    if (!m_initialized || !m_kmbox) {
+        return;
+    }
+
+    // Отправка команды нажатия кнопки (без отпускания)
+    uint8_t btn = 0;
+    if (button == 0) btn = KMBoxButton::LEFT;
+    else if (button == 1) btn = KMBoxButton::RIGHT;
+    else if (button == 2) btn = KMBoxButton::MIDDLE;
+    
+    m_kmbox->MouseButton(btn, true);
+    std::cout << "[KMboxMouse] Press button=" << button << std::endl;
+}
+
+void KMboxMouse::Release(int button) {
+    if (!m_initialized || !m_kmbox) {
+        return;
+    }
+
+    // Отправка команды отпускания кнопки
+    uint8_t btn = 0;
+    if (button == 0) btn = KMBoxButton::LEFT;
+    else if (button == 1) btn = KMBoxButton::RIGHT;
+    else if (button == 2) btn = KMBoxButton::MIDDLE;
+    
+    m_kmbox->MouseButton(btn, false);
+    std::cout << "[KMboxMouse] Release button=" << button << std::endl;
+}
+
 void KMboxMouse::Shutdown() {
     if (m_initialized && m_kmbox) {
         m_kmbox->Disconnect();

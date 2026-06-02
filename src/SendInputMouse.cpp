@@ -49,6 +49,58 @@ void SendInputMouse::Click(int button) {
     SendMouseInput(upFlag);
 }
 
+void SendInputMouse::Press(int button) {
+    if (!m_initialized) {
+        return;
+    }
+
+    DWORD downFlag = 0;
+
+    // Определяем флаг нажатия кнопки
+    switch (button) {
+        case 0: // Левая кнопка
+            downFlag = MOUSEEVENTF_LEFTDOWN;
+            break;
+        case 1: // Правая кнопка
+            downFlag = MOUSEEVENTF_RIGHTDOWN;
+            break;
+        case 2: // Средняя кнопка
+            downFlag = MOUSEEVENTF_MIDDLEDOWN;
+            break;
+        default:
+            return; // Неизвестная кнопка
+    }
+
+    // Эмулируем только нажатие (удержание)
+    SendMouseInput(downFlag);
+}
+
+void SendInputMouse::Release(int button) {
+    if (!m_initialized) {
+        return;
+    }
+
+    DWORD upFlag = 0;
+
+    // Определяем флаг отпускания кнопки
+    switch (button) {
+        case 0: // Левая кнопка
+            upFlag = MOUSEEVENTF_LEFTUP;
+            break;
+        case 1: // Правая кнопка
+            upFlag = MOUSEEVENTF_RIGHTUP;
+            break;
+        case 2: // Средняя кнопка
+            upFlag = MOUSEEVENTF_MIDDLEUP;
+            break;
+        default:
+            return; // Неизвестная кнопка
+    }
+
+    // Эмулируем только отпускание
+    SendMouseInput(upFlag);
+}
+
 void SendInputMouse::Shutdown() {
     m_initialized = false;
     // Для SendInput не требуется освобождения ресурсов

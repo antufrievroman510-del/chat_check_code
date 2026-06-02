@@ -22,6 +22,8 @@ public:
     bool Init() override;
     void Move(int dx, int dy) override;
     void Click(int button) override;
+    void Press(int button) override;  // Нажатие кнопки (удержание)
+    void Release(int button) override;  // Отпускание кнопки
     void Shutdown() override;
 
 private:
