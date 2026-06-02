@@ -33,10 +33,22 @@ public:
     virtual void Move(int dx, int dy) = 0;
 
     /**
-     * @brief Эмуляция нажатия кнопки мыши
+     * @brief Эмуляция нажатия кнопки мыши (полный клик: press + release)
      * @param button Код кнопки (0=левая, 1=правая, 2=средняя и т.д.)
      */
     virtual void Click(int button) = 0;
+
+    /**
+     * @brief Нажатие кнопки мыши (удержание)
+     * @param button Код кнопки (0=левая, 1=правая, 2=средняя и т.д.)
+     */
+    virtual void Press(int button) = 0;
+
+    /**
+     * @brief Отпускание кнопки мыши
+     * @param button Код кнопки (0=левая, 1=правая, 2=средняя и т.д.)
+     */
+    virtual void Release(int button) = 0;
 
     /**
      * @brief Завершение работы и освобождение ресурсов
