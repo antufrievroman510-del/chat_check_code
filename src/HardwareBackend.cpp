@@ -143,6 +143,11 @@ bool HardwareBackend::SendMackuMove(int x, int y) {
         std::cerr << "[HardwareBackend] SendMackuMove failed: " << GetLastError() << std::endl;
         return false;
     }
+    
+    // КРИТИЧНО: Принудительно сбрасываем буфер вывода, чтобы данные сразу ушли в ESP32
+    // Без этого команды могут оставаться в буфере и не выполняться
+    FlushFileBuffers(hComPort);
+    
     return true;
 #else
     return false;
@@ -180,6 +185,9 @@ bool HardwareBackend::SendMackuClick(uint8_t button) {
         return false;
     }
     
+    // КРИТИЧНО: Сбрасываем буфер после нажатия
+    FlushFileBuffers(hComPort);
+    
     // Задержка между нажатием и отпусканием
     Sleep(50);
     
@@ -190,6 +198,9 @@ bool HardwareBackend::SendMackuClick(uint8_t button) {
         std::cerr << "[HardwareBackend] SendMackuClick release failed: " << GetLastError() << std::endl;
         return false;
     }
+    
+    // КРИТИЧНО: Сбрасываем буфер после отпускания
+    FlushFileBuffers(hComPort);
     
     return true;
 #else

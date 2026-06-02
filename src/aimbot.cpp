@@ -283,9 +283,7 @@ void Aimbot::SendHardwareMove(int x, int y) {
     // [DEBUG] Логирование отправки движения
     static int move_count = 0;
     move_count++;
-    if (move_count % 10 == 0) {  // Логируем каждый 10-й вызов чтобы не спамить
-        std::cout << "[AIM DEBUG] SendHardwareMove: dx=" << x << " dy=" << y << " hw=" << hardware_type << std::endl;
-    }
+    std::cout << "[AIM DEBUG] SendHardwareMove: dx=" << x << " dy=" << y << " hw=" << hardware_type << std::endl;
     
     // ИСПОЛЬЗУЕМ ТОЛЬКО полиморфный интерфейс для отправки движения
     if (m_mouseInput) {
@@ -741,7 +739,9 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     // Если aim_key_main = VK_RBUTTON (0x02) - это удержание для прицеливания+стрельбы
     // Если нужна отдельная логика для авто/полуавто - можно добавить настройку
     
-    if (hardware_type != 0 && current_key_state) {
+    // КРИТИЧНО: Проверяем hardware_type >= 1 (Makcu/KMbox), а не != 0
+    // Это гарантирует что мы используем аппаратный ввод только когда он включен
+    if (hardware_type >= 1 && current_key_state) {
         // Аппаратный режим: обрабатываем нажатия кнопок мыши через macku/kmbox
         // 0 = ЛКМ (основной огонь), 1 = ПКМ (прицеливание)
         
