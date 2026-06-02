@@ -14,6 +14,7 @@
 #include "AimMath.h"
 #include "MouseController.h"
 #include "overlay.h"  // [ДОБАВЛЕНО] Для типа Overlay в SyncFromOverlay()
+#include "MakcuUART.h"  // [ДОБАВЛЕНО] Для доступа к g_makcu_aiming/g_makcu_shooting
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -500,17 +501,28 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     // ИСПРАВЛЕНИЕ: Проверяем все клавиши активации (main, sub, toggle)
     bool key_pressed = false;
     
-    // Основная клавиша
-    if (aim_key_main != 0 && (GetAsyncKeyState(aim_key_main) & 0x8000)) {
-        key_pressed = true;
-    }
-    // Дополнительная клавиша
-    if (aim_key_sub != 0 && (GetAsyncKeyState(aim_key_sub) & 0x8000)) {
-        key_pressed = true;
-    }
-    // Глобальная удалённая клавиша (для 2PC)
-    if (g_remote_aim_key.load()) {
-        key_pressed = true;
+    // === КРИТИЧНО: Для аппаратного режима (Makcu) используем g_makcu_aiming/g_makcu_shooting ===
+    // Эти переменные обновляются из MakcuUART::PressButton/ReleaseButton
+    if (hardware_type >= 1) {
+        // В аппаратном режиме состояние кнопок определяется через обратную связь от устройства
+        key_pressed = pwnz_ai::g_makcu_aiming.load() || pwnz_ai::g_makcu_shooting.load();
+        std::cout << "[AIMBOT] HW Mode: aiming=" << pwnz_ai::g_makcu_aiming.load() 
+                  << " shooting=" << pwnz_ai::g_makcu_shooting.load() 
+                  << " key_pressed=" << key_pressed << std::endl;
+    } else {
+        // В программном режиме используем GetAsyncKeyState как раньше
+        // Основная клавиша
+        if (aim_key_main != 0 && (GetAsyncKeyState(aim_key_main) & 0x8000)) {
+            key_pressed = true;
+        }
+        // Дополнительная клавиша
+        if (aim_key_sub != 0 && (GetAsyncKeyState(aim_key_sub) & 0x8000)) {
+            key_pressed = true;
+        }
+        // Глобальная удалённая клавиша (для 2PC)
+        if (g_remote_aim_key.load()) {
+            key_pressed = true;
+        }
     }
     
     if (!aim_enable && !key_pressed) {
@@ -730,83 +742,64 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     // === Шаг 15: Отправка движения через Hardware (напрямую из AimResult) ===
     // УДАЛЕНЫ: Pixelsmooth, Lerp, Path Randomization, Overshoot - теперь это делает AimMath
     
-    // === ЛОГИКА АВТОСТРЕЛЬБЫ (Press/Release для аппаратного ввода) ===
-    // Сохраняем состояние клавиши активации для определения переходов
-    static bool prev_key_state = false;
-    bool current_key_state = key_pressed;
-    
-    // Определяем тип стрельбы (автоматическая или одиночная)
-    // Если aim_key_main = VK_RBUTTON (0x02) - это удержание для прицеливания+стрельбы
-    // Если нужна отдельная логика для авто/полуавто - можно добавить настройку
+// === ЛОГИКА АВТОСТРЕЛЬБЫ (Press/Release для аппаратного ввода) ===
+    // В аппаратном режиме key_pressed определяется из g_makcu_aiming/g_makcu_shooting
+    // которые обновляются при нажатии/отпускании кнопок на игровом ПК
     
     // КРИТИЧНО: Проверяем hardware_type >= 1 (Makcu/KMbox), а не != 0
-    // Это гарантирует что мы используем аппаратный ввод только когда он включен
     if (hardware_type >= 1) {
-        // Аппаратный режим: обрабатываем нажатия кнопок мыши через macku/kmbox
-        // 0 = ЛКМ (основной огонь), 1 = ПКМ (прицеливание)
+        // Аппаратный режим: используем g_makcu_aiming/g_makcu_shooting напрямую
         
-        // Определяем какая кнопка является основной для активации аимбота
-        int fire_button = 0; // По умолчанию ЛКМ для стрельбы
-        
-        // Статические переменные для отслеживания состояния кнопок
+        // Статические переменные для отслеживания переходов
         static bool hw_lmb_pressed = false;
         static bool hw_rmb_pressed = false;
         
-        // Если активация от ПКМ (VK_RBUTTON = 0x02), то используем ПКМ для прицеливания
-        // и ЛКМ для автоматической стрельбы
-        if (aim_key_main == VK_RBUTTON) {
-            // ПКМ удерживается для прицеливания
-            if (current_key_state && !hw_rmb_pressed) {
-                // Переход: кнопка была отпущена -> нажата
-                std::cout << "[AIMBOT] Right button PRESSED (aiming)" << std::endl;
-                SendHardwarePress(1); // ПКМ - прицеливание
-                hw_rmb_pressed = true;
-            } else if (!current_key_state && hw_rmb_pressed) {
-                // Переход: кнопка была нажата -> отпущена
-                std::cout << "[AIMBOT] Right button RELEASED (aiming)" << std::endl;
-                SendHardwareRelease(1); // ПКМ - отпускание
-                hw_rmb_pressed = false;
-                hw_lmb_pressed = false; // Сбрасываем и ЛКМ тоже
-            }
-            
-            // Автоматическая стрельба ЛКМ пока удерживается ПКМ
-            // Стреляем с интервалом ~100ms (10 выстрелов в секунду)
-            if (hw_rmb_pressed) {
-                static long long last_shot_time = 0;
-                long long current_time = current_time_ms;
-                if (current_time - last_shot_time > 100) {
-                    std::cout << "[AIMBOT] Auto-fire LEFT button" << std::endl;
-                    SendHardwareClick(0); // ЛКМ - выстрел (click = press + release)
-                    last_shot_time = current_time;
-                }
-            }
-        } else if (aim_key_main == VK_LBUTTON) {
-            // Активация от ЛКМ - просто стреляем
-            if (current_key_state && !hw_lmb_pressed) {
-                // Переход: кнопка была отпущена -> нажата
-                std::cout << "[AIMBOT] Left button PRESSED (fire)" << std::endl;
-                SendHardwarePress(0); // ЛКМ - нажатие
-                hw_lmb_pressed = true;
-            } else if (!current_key_state && hw_lmb_pressed) {
-                // Переход: кнопка была нажата -> отпущена
-                std::cout << "[AIMBOT] Left button RELEASED (fire)" << std::endl;
-                SendHardwareRelease(0); // ЛКМ - отпускание
-                hw_lmb_pressed = false;
-            }
-            
-            // Для автоматической стрельбы продолжаем кликать пока удерживается кнопка
-            if (hw_lmb_pressed) {
-                static long long last_shot_time = 0;
-                long long current_time = current_time_ms;
-                if (current_time - last_shot_time > 100) {
-                    SendHardwareClick(0);
-                    last_shot_time = current_time;
-                }
+        // Получаем актуальное состояние кнопок из глобальных переменных
+        bool aiming_now = pwnz_ai::g_makcu_aiming.load();   // RMB - прицеливание
+        bool shooting_now = pwnz_ai::g_makcu_shooting.load(); // LMB - стрельба
+        
+        std::cout << "[AIMBOT] HW Loop: aiming=" << aiming_now << " shooting=" << shooting_now << std::endl;
+        
+        // Обработка ПКМ (прицеливание) - переходы
+        if (aiming_now && !hw_rmb_pressed) {
+            std::cout << "[AIMBOT] Right button PRESSED (aiming)" << std::endl;
+            SendHardwarePress(1);
+            hw_rmb_pressed = true;
+        } else if (!aiming_now && hw_rmb_pressed) {
+            std::cout << "[AIMBOT] Right button RELEASED (aiming)" << std::endl;
+            SendHardwareRelease(1);
+            hw_rmb_pressed = false;
+            hw_lmb_pressed = false;
+        }
+        
+        // Обработка ЛКМ (стрельба) - переходы
+        if (shooting_now && !hw_lmb_pressed) {
+            std::cout << "[AIMBOT] Left button PRESSED (fire)" << std::endl;
+            SendHardwarePress(0);
+            hw_lmb_pressed = true;
+        } else if (!shooting_now && hw_lmb_pressed) {
+            std::cout << "[AIMBOT] Left button RELEASED (fire)" << std::endl;
+            SendHardwareRelease(0);
+            hw_lmb_pressed = false;
+        }
+        
+        // Авто-огонь при прицеливании (ПКМ)
+        if (hw_rmb_pressed) {
+            static long long last_shot_time = 0;
+            long long current_time = current_time_ms;
+            if (current_time - last_shot_time > 100) {
+                std::cout << "[AIMBOT] Auto-fire LEFT button" << std::endl;
+                SendHardwareClick(0);
+                last_shot_time = current_time;
             }
         }
+    } else {
+        // Программный режим: оставляем старую логику
+        static bool prev_key_state = false;
+        bool current_key_state = key_pressed;
+        prev_key_state = current_key_state;
     }
-    
-    prev_key_state = current_key_state;
+
     
     if (mx == 0 && my == 0) {
         // Цель в FOV, но движение 0 - возможно FOV мал или Smooth огромный

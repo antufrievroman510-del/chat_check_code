@@ -5,6 +5,14 @@
 #include <chrono>
 #include <sstream>
 
+// Глобальные атомарные переменные для состояния кнопок (как в reference проекте)
+// Эти переменные должны обновляться из отдельного потока мониторинга
+namespace pwnz_ai {
+    std::atomic<bool> g_makcu_aiming{false};      // RMB - прицеливание
+    std::atomic<bool> g_makcu_shooting{false};    // LMB - стрельба
+    std::atomic<bool> g_makcu_zooming{false};     // MMB - зум (если нужно)
+}
+
 // Протокол Makcu ESP32S3 (прошивка MAKCM) использует текстовые команды формата:
 // km.move(x,y)      - движение мыши
 // km.left(1/0)      - нажать/отпустить ЛКМ
@@ -133,9 +141,18 @@ bool MakcuUART::PressButton(int button) {
     // === КРИТИЧНО: Обновляем локальное состояние кнопки ===
     // Это позволяет отслеживать состояние кнопок в аппаратном режиме
     switch (button) {
-        case 0: m_lmb_pressed.store(true); break;
-        case 1: m_rmb_pressed.store(true); break;
-        case 2: m_mmb_pressed.store(true); break;
+        case 0: 
+            m_lmb_pressed.store(true); 
+            g_makcu_shooting.store(true); // LMB = shooting
+            break;
+        case 1: 
+            m_rmb_pressed.store(true); 
+            g_makcu_aiming.store(true);   // RMB = aiming
+            break;
+        case 2: 
+            m_mmb_pressed.store(true); 
+            g_makcu_zooming.store(true);  // MMB = zooming
+            break;
     }
 
     return true;
@@ -181,9 +198,18 @@ bool MakcuUART::ReleaseButton(int button) {
     // === КРИТИЧНО: Обновляем локальное состояние кнопки ===
     // Это позволяет отслеживать состояние кнопок в аппаратном режиме
     switch (button) {
-        case 0: m_lmb_pressed.store(false); break;
-        case 1: m_rmb_pressed.store(false); break;
-        case 2: m_mmb_pressed.store(false); break;
+        case 0: 
+            m_lmb_pressed.store(false); 
+            g_makcu_shooting.store(false); // LMB = shooting
+            break;
+        case 1: 
+            m_rmb_pressed.store(false); 
+            g_makcu_aiming.store(false);   // RMB = aiming
+            break;
+        case 2: 
+            m_mmb_pressed.store(false); 
+            g_makcu_zooming.store(false);  // MMB = zooming
+            break;
     }
 
     return true;
