@@ -227,5 +227,8 @@ bool MakcuUART::WriteBytes(const unsigned char* data, size_t length) {
         return false;
     }
     
+    // Принудительно сбрасываем буфер вывода, чтобы данные сразу ушли в ESP32
+    FlushFileBuffers(hComPort);
+    
     return true;
 }
