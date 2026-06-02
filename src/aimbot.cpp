@@ -114,7 +114,7 @@ void Aimbot::SyncFromOverlay(Overlay& overlay) {
     enable_dynamic_fov = overlay.enable_dynamic_fov;  // Синхронизация динамического FOV
     
     // Hardware
-    hardware_type = overlay.hardware_mode_idx;  // Связываем hardware_mode_idx из UI с hardware_type в aimbot
+    hardware_type = overlay.mouse_input_method_idx;  // ИСПОЛЬЗУЕМ mouse_input_method_idx для выбора метода ввода
     // Парсим COM-порт из строки "COM3" -> 3
     if (std::string(overlay.com_port_buf).substr(0, 3) == "COM") {
         com_port = std::stoi(std::string(overlay.com_port_buf).substr(3));
