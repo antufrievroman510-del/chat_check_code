@@ -1,5 +1,6 @@
 #include "MakcuUART.h"
 // Winsock заголовки уже подключены в MakcuUART.h
+#include <iostream>
 #include <thread>
 #include <chrono>
 
@@ -44,6 +45,7 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
     }
 
     // Формируем имя порта для Windows (\\.\COM3)
+    // Правильное экранирование: четыре обратных слэша дают два в строке, плюс точка и ещё два слэша
     std::string fullPortName = "\\\\.\\" + portName;
     
     hComPort = CreateFileA(
@@ -56,7 +58,11 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
         nullptr     // No template file
     );
 
-    if (hComPort == nullptr) {
+    // Проверка на INVALID_HANDLE_VALUE, а не на nullptr
+    if (hComPort == INVALID_HANDLE_VALUE) {
+        hComPort = nullptr;
+        std::cerr << "[MakcuUART] Failed to open COM port: " << portName 
+                  << " (Error: " << GetLastError() << ")" << std::endl;
         return false;
     }
 
