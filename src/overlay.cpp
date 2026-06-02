@@ -1345,12 +1345,12 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     ImGui::SetColumnWidth(0, content_w * 0.5f);
 
     // === ЛЕВАЯ КОЛОНКА: Основные настройки Hardware ===
-    if (BeginPanel("Hardware Output Mode", ImVec2(0, 280), acc_vec)) cfg_changed = true;
+    if (BeginPanel("Hardware Output Mode", ImVec2(0, 320), acc_vec)) cfg_changed = true;
     
     const char* hw_modes[] = {
         "Local Mouse (SendInput) [UNSAFE]",
-        "Makcu (UART/COM)",
-        "KMbox Net (UDP)"
+        "Makcu (UART/COM) [2PC]",
+        "KMbox Net (UDP) [2PC]"
     };
     
     if (CustomCombo("Mode:", "##hw_mode", &this->hardware_mode_idx, hw_modes, 3, 
@@ -1360,14 +1360,42 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     
     ImGui::Spacing();
     
+    // Выбор метода ввода мыши (для всех режимов)
+    const char* mouse_methods[] = {
+        "SendInput (Windows API)",
+        "Makcu (ESP32S3 HID)",
+        "KMbox (Network HID)"
+    };
+    
+    if (CustomCombo("Mouse Input Method:", "##mouse_method", &this->mouse_input_method_idx, mouse_methods, 3,
+        is_russian ? u8"Метод эмуляции мыши" : "Mouse emulation method")) {
+        cfg_changed = true;
+    }
+    
+    HelpMarker(is_russian ? u8"SendInput - программный ввод (небезопасно)\nMakcu/KMbox - аппаратный ввод через 2PC (безопасно)" 
+                         : u8"SendInput - software input (unsafe)\nMakcu/KMbox - hardware input via 2PC (safe)");
+    
+    ImGui::Spacing();
+    
     // Enable Hardware Toggle
     if (DrawToggle("Enable Hardware:", "##hw_en", &this->hw_enabled, acc_u32, 
         is_russian ? u8"Включить аппаратный ввод" : "Enable hardware input")) {
         cfg_changed = true;
     }
     
+    ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
+    
+    // Кнопка Apply Hardware Settings
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 1.0f, 0.3f, 1.0f));
+    if (ImGui::Button("APPLY HARDWARE SETTINGS", ImVec2(-1, 35))) {
+        this->apply_hw_flag = true;
+    }
+    ImGui::PopStyleColor(2);
+    HelpMarker(is_russian ? u8"Применить настройки оборудования и переподключить метод ввода" 
+                         : u8"Apply hardware settings and reconnect input method");
     
     // Bypass Options
     const char* bypass_modes[] = {

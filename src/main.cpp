@@ -1036,14 +1036,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             overlay.apply_hw_flag = false;
             
             // Синхронизация всех hardware настроек из overlay в aimbot
-            // Aimbot сам распарсит com_port_buf в SyncFromOverlay, но для безопасности продублируем
             aim.com_port = std::atoi(overlay.com_port_buf + 3); // "COM3" -> 3
             aim.hardware_type = overlay.hardware_mode_idx;
             aim.bypass_mode = overlay.bypass_mode_idx;
             aim.net_ip = overlay.kmbox_ip_buf;
             aim.net_port = overlay.kmbox_port;
             
+            // КРИТИЧНО: Синхронизация mouse_input_method_idx для выбора метода ввода
+            // 0=SendInput, 1=Makcu, 2=KMbox
+            int selected_method = overlay.mouse_input_method_idx;
+            
             std::cout << "[MAIN] Applying hardware settings: type=" << aim.hardware_type 
+                      << " method=" << selected_method
                       << " com_port=" << aim.com_port
                       << " bypass=" << aim.bypass_mode
                       << " kmbox_ip=" << aim.net_ip
@@ -1052,6 +1056,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             
             // Пересоздаём устройство ввода с новыми настройками
             aim.CloseHardware();
+            
+            // Переопределяем hardware_type на основе выбранного метода ввода мыши
+            // Это позволяет использовать SendInput даже в режиме 2PC для тестирования
+            aim.hardware_type = selected_method;
+            
             aim.InitHardware();
         }
         if (overlay.apply_res_flag) {
