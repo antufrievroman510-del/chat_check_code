@@ -4,13 +4,14 @@
 #include <thread>
 #include <chrono>
 #include <sstream>
+#include "MakcuState.h"  // Подключаем заголовок с определением глобальных переменных
 
 // Глобальные атомарные переменные для состояния кнопок (как в reference проекте)
 // Эти переменные должны обновляться из отдельного потока мониторинга
 namespace pwnz_ai {
     std::atomic<bool> g_makcu_aiming{false};      // RMB - прицеливание
     std::atomic<bool> g_makcu_shooting{false};    // LMB - стрельба
-    std::atomic<bool> g_makcu_zooming{false};     // MMB - зум (если нужно)
+    std::atomic<bool> g_makcu_zooming{false};     // MMB - зум
 }
 
 // Протокол Makcu ESP32S3 (прошивка MAKCM) использует текстовые команды формата:

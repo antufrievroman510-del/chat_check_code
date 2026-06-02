@@ -5,13 +5,7 @@
 #include <string>
 #include <mutex>
 #include <atomic>
-
-// Глобальные атомарные переменные для состояния кнопок (как в reference проекте)
-namespace pwnz_ai {
-    extern std::atomic<bool> g_makcu_aiming;      // RMB - прицеливание
-    extern std::atomic<bool> g_makcu_shooting;    // LMB - стрельба
-    extern std::atomic<bool> g_makcu_zooming;     // MMB - зум (если нужно)
-}
+#include "MakcuState.h"  // Подключаем заголовок с объявлением глобальных переменных
 
 // Контроллер для работы с платой Makcu через UART (COM-порт)
 // Протокол: Текстовые команды "km.move(x,y)\r\n" и "km.click(b)\r\n"
