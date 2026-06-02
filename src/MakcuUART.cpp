@@ -201,8 +201,11 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
     }
 
     // Формируем имя порта для Windows (\\.\COM3)
-    // Правильное экранирование: четыре обратных слэша дают два в строке, плюс точка и ещё два слэша
+    // Для портов выше COM9 обязательно использование префикса \\\.
     std::string fullPortName = "\\\\.\\" + portName;
+    
+    std::cout << "[MakcuUART] Attempting to connect to: " << fullPortName
+              << " at " << baudRate << " baud..." << std::endl;
     
     hComPort = CreateFileA(
         fullPortName.c_str(),
@@ -252,6 +255,17 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
     timeouts.WriteTotalTimeoutConstant = 500;
     timeouts.WriteTotalTimeoutMultiplier = 0;
     SetCommTimeouts(hComPort, &timeouts);
+
+    // Очистка буферов перед началом работы
+    PurgeComm(hComPort, PURGE_TXCLEAR | PURGE_RXCLEAR);
+    
+    // Включаем DTR и RTS для питания ESP32
+    dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE;
+    dcbSerialParams.fRtsControl = RTS_CONTROL_ENABLE;
+    SetCommState(hComPort, &dcbSerialParams);
+    
+    // Небольшая задержка для стабилизации соединения
+    Sleep(100);
 
     isConnected = true;
     return true;
