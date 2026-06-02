@@ -6,6 +6,13 @@
 #include <cstring>
 #include <sstream>
 
+// Определение глобальных переменных состояния кнопок
+namespace pwnz_ai {
+    std::atomic<bool> g_makcu_aiming{false};    // Состояние ПКМ (прицеливание)
+    std::atomic<bool> g_makcu_shooting{false};  // Состояние ЛКМ (стрельба)
+    std::atomic<bool> g_makcu_zooming{false};   // Состояние СКМ (зум)
+}
+
 // Протокол Makcu Text Protocol согласно https://github.com/K4HVH/makcu и https://www.makcu.com/en/api
 // Команды:
 //   km.move(dx,dy)\r\n      - движение мыши
@@ -333,22 +340,37 @@ void MakcuUART::ParseResponse(const char* buffer, size_t length) {
                 bool rmb = (btnValue & 0x02) != 0;
                 bool mmb = (btnValue & 0x04) != 0;
                 
-                // Обновляем состояние только если изменилось
+                // Обновляем локальное состояние и глобальные переменные
                 if (m_lmb_pressed.load() != lmb) {
                     m_lmb_pressed.store(lmb);
-                    std::cout << "[MakcuUART] LMB state changed: " << (lmb ? "pressed" : "released") << std::endl;
+                    pwnz_ai::g_makcu_shooting.store(lmb);  // Синхронизация
+                    std::cout << "[MakcuUART] LMB state changed: " << (lmb ? "pressed" : "released") 
+                              << " (btnValue=" << btnValue << ")" << std::endl;
                 }
                 if (m_rmb_pressed.load() != rmb) {
                     m_rmb_pressed.store(rmb);
-                    std::cout << "[MakcuUART] RMB state changed: " << (rmb ? "pressed" : "released") << std::endl;
+                    pwnz_ai::g_makcu_aiming.store(rmb);  // Синхронизация
+                    std::cout << "[MakcuUART] RMB state changed: " << (rmb ? "pressed" : "released") 
+                              << " (btnValue=" << btnValue << ")" << std::endl;
                 }
                 if (m_mmb_pressed.load() != mmb) {
                     m_mmb_pressed.store(mmb);
-                    std::cout << "[MakcuUART] MMB state changed: " << (mmb ? "pressed" : "released") << std::endl;
+                    pwnz_ai::g_makcu_zooming.store(mmb);  // Синхронизация
+                    std::cout << "[MakcuUART] MMB state changed: " << (mmb ? "pressed" : "released") 
+                              << " (btnValue=" << btnValue << ")" << std::endl;
                 }
-            } catch (...) {
-                // Игнорируем ошибки парсинга
+            } catch (const std::exception& e) {
+                std::cerr << "[MakcuUART] Parse error: " << e.what() << ", data: " << valueStr << std::endl;
             }
+        } else {
+            // Ответ без завершения \r\n - возможно, неполный пакет
+            std::cout << "[MakcuUART] Incomplete response: " << data << std::endl;
+        }
+    } else {
+        // Данные не начинаются с "btn:" - возможно, это что-то другое
+        // Выводим только если данные не пустые
+        if (length > 0 && data.find_first_not_of("\r\n ") != std::string::npos) {
+            std::cout << "[MakcuUART] Unknown response: " << data << std::endl;
         }
     }
 }
