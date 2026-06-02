@@ -405,47 +405,66 @@ void MakcuUART::StopMonitoring() {
 void MakcuUART::monitoringLoop() {
     std::cout << "[MakcuUART] Monitoring loop started" << std::endl;
     
+    // Настраиваем таймауты для неблокирующего чтения
+    COMMTIMEOUTS timeouts = {};
+    timeouts.ReadIntervalTimeout = MAXDWORD;        // Максимальный интервал между байтами
+    timeouts.ReadTotalTimeoutMultiplier = 0;        // Не добавлять время на байт
+    timeouts.ReadTotalTimeoutConstant = 0;          // Не ждать вообще, если буфер пуст
+    timeouts.WriteTotalTimeoutConstant = 1000;      // Таймаут на запись 1 сек
+    timeouts.WriteTotalTimeoutMultiplier = 0;
+
+    if (!SetCommTimeouts(hComPort, &timeouts)) {
+        std::cerr << "[MakcuUART] Failed to set timeouts, error: " << GetLastError() << std::endl;
+    } else {
+        std::cout << "[MakcuUART] Non-blocking timeouts set successfully." << std::endl;
+    }
+
     int pollCounter = 0;
-    
+    char buffer[256];
+    DWORD bytesRead;
+    std::string pollCmd = "km.get_state()\r\n";
+
     while (!m_stopMonitoring.load() && isConnected) {
-        // Очищаем буфер перед чтением
+        // Очищаем входной буфер от старого мусора перед опросом
         PurgeComm(hComPort, PURGE_RXCLEAR);
-        
-        // Каждые 100мс отправляем запрос на получение состояния кнопок
-        // Прошивка MAKCM поддерживает команду "km.get_buttons()" или аналогичную
-        if (pollCounter % 10 == 0) {
-            std::string pollCmd = "km.get_state()\r\n";
-            DWORD bytesWritten;
-            WriteFile(hComPort, pollCmd.c_str(), static_cast<DWORD>(pollCmd.length()), &bytesWritten, nullptr);
-            FlushFileBuffers(hComPort);
-            std::cout << "[MakcuUART] Sent poll command: " << pollCmd << std::endl;
+
+        // Отправляем запрос состояния каждые 50мс (чаще для лучшей отзывчивости)
+        DWORD bytesWritten;
+        if (!WriteFile(hComPort, pollCmd.c_str(), static_cast<DWORD>(pollCmd.length()), &bytesWritten, nullptr)) {
+            // Ошибка записи, возможно порт закрыт
+            std::cerr << "[MakcuUART] Write failed: " << GetLastError() << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            continue;
         }
-        pollCounter++;
         
-        char buffer[256];
-        DWORD bytesRead;
-        
-        // Неблокирующее чтение с таймаутом
+        // Даем устройству немного времени на ответ (ESP32 быстрый, 5-10мс достаточно)
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+        // Читаем ответ (вернется сразу из-за таймаутов, даже если данных нет)
         if (ReadFile(hComPort, buffer, sizeof(buffer) - 1, &bytesRead, nullptr)) {
             if (bytesRead > 0) {
                 buffer[bytesRead] = '\0';
                 std::string response(buffer);
                 
-                // Логируем ВСЕ ответы для отладки
-                std::cout << "[MakcuUART] RAW Received (" << bytesRead << " bytes): \"" << response << "\"" << std::endl;
-                
-                // Парсим ответ
-                ParseResponse(response);
+                // Парсим только если ответ не пустой
+                if (!response.empty()) {
+                    // Для отладки можно раскомментировать:
+                    // std::cout << "[MakcuUART] RX: " << response << std::endl;
+                    ParseResponse(response);
+                }
             }
         } else {
+            // Ошибка чтения, отличная от "нет данных" (из-за таймаутов)
             DWORD err = GetLastError();
-            if (err != ERROR_TIMEOUT && err != ERROR_IO_PENDING) {
-                std::cerr << "[MakcuUART] ReadFile error: " << err << std::endl;
+            if (err != ERROR_SUCCESS) { 
+                 // При неблокирующем чтении с таймаутами ошибки могут быть нормой, 
+                 // но если это ERROR_INVALID_HANDLE, значит порт закрыт
+                 if (err == ERROR_INVALID_HANDLE) break;
             }
         }
-        
-        // Небольшая задержка чтобы не грузить CPU
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        // Цикл опроса 50мс (20 раз в секунду)
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     
     std::cout << "[MakcuUART] Monitoring loop ended" << std::endl;
