@@ -39,6 +39,7 @@ public:
     void CloseHardware();
     void SendHardwareMove(int x, int y);
     void SendHardwareClick();
+    void SendHardwareClick(int button);  // Клик указанной кнопкой
     void SendHardwarePress(int button);  // Нажатие кнопки (удержание)
     void SendHardwareRelease(int button);  // Отпускание кнопки
 

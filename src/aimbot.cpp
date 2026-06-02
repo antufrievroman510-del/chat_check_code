@@ -316,6 +316,21 @@ void Aimbot::SendHardwareClick() {
     }
 }
 
+void Aimbot::SendHardwareClick(int button) {
+    // Клик указанной кнопкой через полиморфный интерфейс
+    if (m_mouseInput) {
+        m_mouseInput->Click(button);
+        return;
+    }
+
+    // Fallback: если m_mouseInput не создан, создаём его заново
+    std::cerr << "[AIM WARNING] m_mouseInput is null for click(button)! Re-initializing..." << std::endl;
+    InitHardware();
+    if (m_mouseInput) {
+        m_mouseInput->Click(button);
+    }
+}
+
 void Aimbot::SendHardwarePress(int button) {
     // Отправка команды нажатия кнопки через полиморфный интерфейс
     if (m_mouseInput) {
