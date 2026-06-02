@@ -7,9 +7,12 @@
 
 // Протокол Makcu ESP32S3 (прошивка MAKCM) использует текстовые команды формата:
 // km.move(x,y)      - движение мыши
-// km.press(button)  - нажать кнопку (button: L=ЛКМ, R=ПКМ, M=колесо, 4=боковая1, 5=боковая2)
-// km.release(button)- отпустить кнопку
-// Важно: Для корректного клика нужно отправить пару команд press -> release
+// km.left(1/0)      - нажать/отпустить ЛКМ
+// km.right(1/0)     - нажать/отпустить ПКМ
+// km.middle(1/0)    - нажать/отпустить колесо
+// km.side1(1/0)     - нажать/отпустить боковую кнопку 1
+// km.side2(1/0)     - нажать/отпустить боковую кнопку 2
+// Важно: Для корректного клика нужно отправить пару команд button(1) -> button(0)
 
 MakcuUART::MakcuUART() 
     : hComPort(nullptr), isConnected(false), packetDelayMs(5), m_portName("COM3"), m_baudRate(115200) {}
@@ -39,30 +42,30 @@ bool MakcuUART::ClickMouse(int button) {
 
     std::lock_guard<std::mutex> lock(mtx);
 
-    // Формируем обозначение кнопки
-    // button: 0=ЛКМ (L), 1=ПКМ (R), 2=Колесо (M), 3=Боковая1 (4), 4=Боковая2 (5)
-    std::string buttonStr;
+    // Формируем обозначение кнопки для нового протокола
+    // button: 0=ЛКМ (left), 1=ПКМ (right), 2=Колесо (middle), 3=Боковая1 (side1), 4=Боковая2 (side2)
+    std::string buttonCmd;
     switch (button) {
-        case 0: buttonStr = "L"; break;   // ЛКМ
-        case 1: buttonStr = "R"; break;   // ПКМ
-        case 2: buttonStr = "M"; break;   // Колесо (нажатие)
-        case 3: buttonStr = "4"; break;   // Боковая кнопка 1
-        case 4: buttonStr = "5"; break;   // Боковая кнопка 2
-        default: buttonStr = "L"; break;  // По умолчанию ЛКМ
+        case 0: buttonCmd = "left"; break;   // ЛКМ
+        case 1: buttonCmd = "right"; break;  // ПКМ
+        case 2: buttonCmd = "middle"; break; // Колесо (нажатие)
+        case 3: buttonCmd = "side1"; break;  // Боковая кнопка 1
+        case 4: buttonCmd = "side2"; break;  // Боковая кнопка 2
+        default: buttonCmd = "left"; break;  // По умолчанию ЛКМ
     }
     
-    // Прошивка MAKCM требует раздельные команды press и release для корректного клика
-    // Формируем команду нажатия: km.press(button)\r\n
+    // Прошивка MAKCM требует раздельные команды нажатия (1) и отпускания (0)
+    // Формируем команду нажатия: km.button(1)\r\n
     std::ostringstream pressCmd;
-    pressCmd << "km.press(" << buttonStr << ")\r\n";
+    pressCmd << "km." << buttonCmd << "(1)\r\n";
     std::string pressCommand = pressCmd.str();
     
-    // Формируем команду отпускания: km.release(button)\r\n
+    // Формируем команду отпускания: km.button(0)\r\n
     std::ostringstream releaseCmd;
-    releaseCmd << "km.release(" << buttonStr << ")\r\n";
+    releaseCmd << "km." << buttonCmd << "(0)\r\n";
     std::string releaseCommand = releaseCmd.str();
 
-    std::cout << "[MakcuUART] Sending click: press(" << buttonStr << ") -> release(" << buttonStr << ")" << std::endl;
+    std::cout << "[MakcuUART] Sending click: " << buttonCmd << "(1) -> " << buttonCmd << "(0)" << std::endl;
     
     // Отправляем нажатие
     bool pressResult = WriteBytes(reinterpret_cast<const unsigned char*>(pressCommand.c_str()), pressCommand.length());
@@ -223,6 +226,9 @@ bool MakcuUART::WriteBytes(const unsigned char* data, size_t length) {
         Disconnect();
         return false;
     }
+    
+    // Принудительно сбрасываем буфер вывода, чтобы данные сразу ушли в ESP32
+    FlushFileBuffers(hComPort);
     
     return true;
 }
