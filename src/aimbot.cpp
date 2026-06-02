@@ -14,7 +14,8 @@
 #include "AimMath.h"
 #include "MouseController.h"
 #include "overlay.h"  // [ДОБАВЛЕНО] Для типа Overlay в SyncFromOverlay()
-#include "MakcuUART.h"  // [ДОБАВЛЕНО] Для доступа к g_makcu_aiming/g_makcu_shooting
+#include "MakcuUART.h"  // Для доступа к классу MakcuUART
+#include "MakcuState.h"  // [ДОБАВЛЕНО] Для доступа к g_makcu_aiming/g_makcu_shooting
 
 #pragma comment(lib, "ws2_32.lib")
 
