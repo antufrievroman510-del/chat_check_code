@@ -1497,6 +1497,10 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
                 bool result = hw.ConnectMacku(this->com_port_buf, baud_values[baud_rate_idx]);
                 if (result) {
                     std::cout << "[OVERLAY] Successfully connected to " << this->com_port_buf << std::endl;
+                    // === КРИТИЧНО: Запускаем поток опроса кнопок для 2PC-связки ===
+                    auto& aimbot = Aimbot::Instance();
+                    aimbot.StartButtonMonitor();
+                    std::cout << "[OVERLAY] Button monitor started for 2PC mode" << std::endl;
                 } else {
                     std::cerr << "[OVERLAY] Failed to connect to " << this->com_port_buf << std::endl;
                 }
