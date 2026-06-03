@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstring>
 #include <sstream>
+#include <vector>
 
 // Определение глобальных переменных состояния кнопок
 namespace pwnz_ai {
@@ -16,21 +17,46 @@ namespace pwnz_ai {
 // Глобальная переменная для 2PC-связки (объявлена в main.cpp)
 extern std::atomic<bool> g_remote_aim_key;
 
-// Протокол Makcu Text Protocol согласно https://github.com/K4HVH/makcu и https://www.makcu.com/en/api
-// Команды:
-//   km.move(dx,dy)\r\n      - движение мыши
-//   km.left(1)\r\n           - нажать ЛКМ
-//   km.left(0)\r\n           - отпустить ЛКМ
-//   km.right(1)\r\n          - нажать ПКМ
-//   km.right(0)\r\n          - отпустить ПКМ
-//   km.middle(1)\r\n         - нажать СКМ
-//   km.middle(0)\r\n         - отпустить СКМ
-//   km.buttons(1)\r\n        - включить стрим состояния кнопок
-// Ответы при включенном стриме кнопок:
-//   btn:1\r\n  - ЛКМ нажата
-//   btn:2\r\n  - ПКМ нажата
-//   btn:4\r\n  - СКМ нажата
-//   btn:0\r\n  - все кнопки отпущены
+// ============================================================
+// ПРОТОКОЛ MAKCU NATIVE API (согласно https://makcu.k4tech.net/native)
+// ============================================================
+// Команды (передаются как ASCII текст):
+//   km.version()\r\n          - запрос версии прошивки
+//   km.move(dx,dy)\r\n        - движение мыши (dx, dy - int16)
+//   km.left(1)\r\n            - нажать ЛКМ
+//   km.left(0)\r\n            - отпустить ЛКМ
+//   km.right(1)\r\n           - нажать ПКМ
+//   km.right(0)\r\n           - отпустить ПКМ
+//   km.middle(1)\r\n          - нажать СКМ
+//   km.middle(0)\r\n          - отпустить СКМ
+//   km.buttons(1)\r\n         - включить стрим событий кнопок
+//   km.buttons(0)\r\n         - выключить стрим событий кнопок
+//
+// Ответы устройства:
+//   - Все ответы заканчиваются промптом ">>>" [reference:1]
+//   - Пример: "km.version()\r\nMAKCU v3.7\r\n>>>" 
+//   - События кнопок: префикс "km." (6B 6D 2E) + 1 байт маска кнопок [reference:5]
+//
+// Маска кнопок (биты):
+//   Бит 0 - левая кнопка (ЛКМ)
+//   Бит 1 - правая кнопка (ПКМ)  
+//   Бит 2 - средняя кнопка (СКМ)
+//   Бит 3 - боковая 1
+//   Бит 4 - боковая 2
+//
+// Последовательность подключения [reference:3]:
+//   1. Открыть порт на 4 Мбит/с (4000000)
+//   2. Отправить km.version()\r\n
+//   3. Если в ответе есть "km.MAKCU" - связь установлена
+//   4. Если нет - выполнить смену скорости:
+//      a. Открыть порт на 115200
+//      b. Отправить бинарный фрейм смены скорости: DE AD 05 00 A5 00 09 3D 00
+//      c. Ждать 100 мс
+//      d. Закрыть порт
+//      e. Открыть порт на 4 Мбит/с
+//      f. Ждать 50 мс, сбросить входной буфер
+//      g. Отправить km.version()\r\n
+//      h. Если ответа нет - подключение не удалось
 
 MakcuUART::MakcuUART() 
     : hComPort(nullptr), isConnected(false), packetDelayMs(1), m_portName("COM3"), m_baudRate(115200) {}
@@ -68,8 +94,13 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
     // Формируем имя порта для Windows
     std::string fullPortName = "\\\\.\\" + portName;
     
-    std::cout << "[MakcuUART] Connecting to: " << fullPortName 
-              << " at " << baudRate << " baud..." << std::endl;
+    std::cout << "[MakcuUART] Starting connection sequence for: " << fullPortName << std::endl;
+    
+    // ============================================================
+    // ШАГ 1: Пробуем подключиться сразу на 4 Мбит/с [reference:3]
+    // ============================================================
+    const int HIGH_SPEED_BAUD = 4000000;  // 4 Мбит/с - рабочая скорость MAKCU
+    const int LOW_SPEED_BAUD = 115200;     // Скорость по умолчанию
     
     hComPort = CreateFileA(
         fullPortName.c_str(),
@@ -86,15 +117,10 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
         hComPort = nullptr;
         std::cerr << "[MakcuUART] Failed to open COM port: " << portName 
                   << " (Error: " << err << ")" << std::endl;
-        if (err == ERROR_ACCESS_DENIED) {
-            std::cerr << "[MakcuUART] Port is busy or access denied. Run as Administrator." << std::endl;
-        } else if (err == ERROR_FILE_NOT_FOUND) {
-            std::cerr << "[MakcuUART] Port does not exist. Check Device Manager." << std::endl;
-        }
         return false;
     }
 
-    // Настройка параметров COM-порта
+    // Настраиваем порт на 4 Мбит/с
     DCB dcbSerialParams = { 0 };
     dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
 
@@ -103,7 +129,7 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
         return false;
     }
 
-    dcbSerialParams.BaudRate = baudRate;
+    dcbSerialParams.BaudRate = HIGH_SPEED_BAUD;
     dcbSerialParams.ByteSize = 8;
     dcbSerialParams.StopBits = ONESTOPBIT;
     dcbSerialParams.Parity = NOPARITY;
@@ -113,9 +139,12 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
         return false;
     }
 
-    // Таймауты для записи
+    // Таймауты для чтения/записи
     COMMTIMEOUTS timeouts = { 0 };
-    timeouts.WriteTotalTimeoutConstant = 500;
+    timeouts.ReadIntervalTimeout = 50;
+    timeouts.ReadTotalTimeoutConstant = 100;
+    timeouts.ReadTotalTimeoutMultiplier = 0;
+    timeouts.WriteTotalTimeoutConstant = 100;
     timeouts.WriteTotalTimeoutMultiplier = 0;
     SetCommTimeouts(hComPort, &timeouts);
 
@@ -127,28 +156,180 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
     dcbSerialParams.fRtsControl = RTS_CONTROL_ENABLE;
     SetCommState(hComPort, &dcbSerialParams);
     
-    Sleep(100); // Задержка для стабилизации
+    Sleep(50); // Задержка для стабилизации
 
-    isConnected = true;
-    std::cout << "[MakcuUART] Connected successfully!" << std::endl;
+    // ============================================================
+    // ШАГ 2: Отправляем km.version() и проверяем ответ [reference:3]
+    // ============================================================
+    std::cout << "[MakcuUART] Sending km.version() at 4 Mbit/s..." << std::endl;
     
-    // === КРИТИЧНО: Сначала очищаем буфер от старых данных перед отправкой команд ===
+    // Очищаем буфер перед отправкой
     PurgeComm(hComPort, PURGE_RXCLEAR);
-    Sleep(50);
+    Sleep(10);
     
-    // Отправляем команду включения стрима кнопок
-    // Устройство начнёт отправлять btn:X\r\n при изменении состояния кнопок
-    WriteCommand("km.buttons(1)\r\n");
-    std::cout << "[MakcuUART] Sent button stream enable command (km.buttons(1))" << std::endl;
+    // Отправляем команду версии
+    const char* versionCmd = "km.version()\r\n";
+    DWORD bytesWritten;
+    WriteFile(hComPort, versionCmd, static_cast<DWORD>(strlen(versionCmd)), &bytesWritten, nullptr);
     
-    // Даём устройству время на ответ
+    // Ждём ответ
     Sleep(100);
     
-    // Очищаем буфер ещё раз после команды
+    // Читаем ответ
+    char responseBuffer[256] = { 0 };
+    DWORD bytesRead = 0;
+    ReadFile(hComPort, responseBuffer, sizeof(responseBuffer) - 1, &bytesRead, nullptr);
+    responseBuffer[bytesRead] = '\0';
+    
+    std::cout << "[MakcuUART] Response: " << responseBuffer << std::endl;
+    
+    // Проверяем наличие "km.MAKCU" в ответе
+    bool isConnectedAtHighSpeed = (strstr(responseBuffer, "km.MAKCU") != nullptr || 
+                                   strstr(responseBuffer, "MAKCU") != nullptr);
+    
+    if (isConnectedAtHighSpeed) {
+        std::cout << "[MakcuUART] Successfully connected at 4 Mbit/s!" << std::endl;
+        isConnected = true;
+        m_portName = portName;
+        m_baudRate = HIGH_SPEED_BAUD;
+        
+        // Запускаем поток мониторинга кнопок
+        StartMonitoring();
+        
+        // Включаем стрим событий кнопок [reference:4]
+        Sleep(50);
+        WriteCommand("km.buttons(1)\r\n");
+        std::cout << "[MakcuUART] Enabled button event stream (km.buttons(1))" << std::endl;
+        
+        return true;
+    }
+    
+    // ============================================================
+    // ШАГ 3: Если не удалось - выполняем смену скорости [reference:3]
+    // ============================================================
+    std::cout << "[MakcuUART] High speed connection failed. Trying baud rate switch sequence..." << std::endl;
+    
+    // Закрываем порт
+    CloseHandle(hComPort);
+    hComPort = nullptr;
+    Sleep(50);
+    
+    // Открываем порт на 115200
+    hComPort = CreateFileA(
+        fullPortName.c_str(),
+        GENERIC_READ | GENERIC_WRITE,
+        0,
+        nullptr,
+        OPEN_EXISTING,
+        0,
+        nullptr
+    );
+    
+    if (hComPort == INVALID_HANDLE_VALUE) {
+        std::cerr << "[MakcuUART] Failed to open port at 115200 for speed switch" << std::endl;
+        return false;
+    }
+    
+    // Настраиваем на 115200
+    dcbSerialParams = { 0 };
+    dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+    GetCommState(hComPort, &dcbSerialParams);
+    dcbSerialParams.BaudRate = LOW_SPEED_BAUD;
+    dcbSerialParams.ByteSize = 8;
+    dcbSerialParams.StopBits = ONESTOPBIT;
+    dcbSerialParams.Parity = NOPARITY;
+    SetCommState(hComPort, &dcbSerialParams);
+    
+    // Отправляем бинарный фрейм смены скорости [reference:3]
+    // DE AD 05 00 A5 00 09 3D 00
+    const uint8_t speedSwitchFrame[] = { 0xDE, 0xAD, 0x05, 0x00, 0xA5, 0x00, 0x09, 0x3D, 0x00 };
+    WriteFile(hComPort, speedSwitchFrame, sizeof(speedSwitchFrame), &bytesWritten, nullptr);
+    std::cout << "[MakcuUART] Sent speed switch binary frame" << std::endl;
+    
+    // Ждём 100 мс [reference:3]
+    Sleep(100);
+    
+    // Закрываем порт
+    CloseHandle(hComPort);
+    hComPort = nullptr;
+    Sleep(50);
+    
+    // Открываем порт на 4 Мбит/с
+    hComPort = CreateFileA(
+        fullPortName.c_str(),
+        GENERIC_READ | GENERIC_WRITE,
+        0,
+        nullptr,
+        OPEN_EXISTING,
+        0,
+        nullptr
+    );
+    
+    if (hComPort == INVALID_HANDLE_VALUE) {
+        std::cerr << "[MakcuUART] Failed to reopen port at 4 Mbit/s after speed switch" << std::endl;
+        return false;
+    }
+    
+    // Настраиваем на 4 Мбит/с
+    dcbSerialParams = { 0 };
+    dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+    GetCommState(hComPort, &dcbSerialParams);
+    dcbSerialParams.BaudRate = HIGH_SPEED_BAUD;
+    dcbSerialParams.ByteSize = 8;
+    dcbSerialParams.StopBits = ONESTOPBIT;
+    dcbSerialParams.Parity = NOPARITY;
+    SetCommState(hComPort, &dcbSerialParams);
+    
+    // Ждём 50 мс, сбрасываем входной буфер [reference:3]
+    Sleep(50);
     PurgeComm(hComPort, PURGE_RXCLEAR);
     
-    // Запускаем поток мониторинга для чтения состояния кнопок
+    // Включаем DTR и RTS
+    dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE;
+    dcbSerialParams.fRtsControl = RTS_CONTROL_ENABLE;
+    SetCommState(hComPort, &dcbSerialParams);
+    
+    // Отправляем km.version() ещё раз
+    std::cout << "[MakcuUART] Sending km.version() after speed switch..." << std::endl;
+    PurgeComm(hComPort, PURGE_RXCLEAR);
+    Sleep(10);
+    
+    WriteFile(hComPort, versionCmd, static_cast<DWORD>(strlen(versionCmd)), &bytesWritten, nullptr);
+    
+    // Ждём ответ
+    Sleep(100);
+    
+    // Читаем ответ
+    bytesRead = 0;
+    memset(responseBuffer, 0, sizeof(responseBuffer));
+    ReadFile(hComPort, responseBuffer, sizeof(responseBuffer) - 1, &bytesRead, nullptr);
+    responseBuffer[bytesRead] = '\0';
+    
+    std::cout << "[MakcuUART] Response after speed switch: " << responseBuffer << std::endl;
+    
+    // Проверяем ответ
+    bool isConnectedAfterSwitch = (strstr(responseBuffer, "km.MAKCU") != nullptr || 
+                                   strstr(responseBuffer, "MAKCU") != nullptr);
+    
+    if (!isConnectedAfterSwitch) {
+        std::cerr << "[MakcuUART] Connection failed after speed switch sequence" << std::endl;
+        Disconnect();
+        return false;
+    }
+    
+    // Успешное подключение
+    std::cout << "[MakcuUART] Successfully connected after speed switch!" << std::endl;
+    isConnected = true;
+    m_portName = portName;
+    m_baudRate = HIGH_SPEED_BAUD;
+    
+    // Запускаем поток мониторинга кнопок
     StartMonitoring();
+    
+    // Включаем стрим событий кнопок [reference:4]
+    Sleep(50);
+    WriteCommand("km.buttons(1)\r\n");
+    std::cout << "[MakcuUART] Enabled button event stream (km.buttons(1))" << std::endl;
     
     return true;
 }
@@ -333,42 +514,117 @@ void MakcuUART::monitoringLoop() {
     timeouts.ReadTotalTimeoutMultiplier = 0;
     SetCommTimeouts(hComPort, &timeouts);
     
-    char buffer[256];
-    std::string leftover;  // Буфер для неполных пакетов
+    // Буфер для чтения сырых байтов
+    uint8_t buffer[512];
+    
+    // Буфер для накопления данных между итерациями
+    std::vector<uint8_t> leftover;
+    
+    // Префикс событий кнопок: "km." = 0x6B 0x6D 0x2E [reference:5]
+    const uint8_t KM_PREFIX[3] = {0x6B, 0x6D, 0x2E};
     
     while (!m_stopMonitoring.load() && isConnected && hComPort != nullptr) {
         DWORD bytesRead = 0;
-        BOOL readResult = ReadFile(hComPort, buffer, sizeof(buffer) - 1, &bytesRead, nullptr);
+        BOOL readResult = ReadFile(hComPort, buffer, sizeof(buffer), &bytesRead, nullptr);
         
         if (readResult && bytesRead > 0) {
-            buffer[bytesRead] = '\0';
+            // Добавляем новые данные к остатку
+            leftover.insert(leftover.end(), buffer, buffer + bytesRead);
             
-            // Объединяем с предыдущим остатком
-            std::string data = leftover + std::string(buffer, bytesRead);
-            
-            // Ищем полные пакеты, оканчивающиеся на \r\n
-            size_t pos = 0;
-            while ((pos = data.find("\r\n")) != std::string::npos) {
-                std::string line = data.substr(0, pos);
+            // Ищем префикс "km." в потоке данных
+            while (leftover.size() >= 4) {  // Минимум 4 байта: префикс (3) + маска (1)
+                // Ищем позицию префикса
+                size_t prefixPos = 0;
+                bool found = false;
                 
-                // Пропускаем промпты >>> и пустые строки
-                if (line.find(">>>") == std::string::npos && !line.empty()) {
-                    // Парсим только значимые данные
-                    ParseResponse(line.c_str(), line.length());
+                for (size_t i = 0; i <= leftover.size() - 3; i++) {
+                    if (leftover[i] == KM_PREFIX[0] && 
+                        leftover[i+1] == KM_PREFIX[1] && 
+                        leftover[i+2] == KM_PREFIX[2]) {
+                        prefixPos = i;
+                        found = true;
+                        break;
+                    }
                 }
                 
-                // Удаляем обработанную часть
-                data = data.substr(pos + 2);
+                if (!found) {
+                    // Префикс не найден, очищаем буфер от старых данных
+                    leftover.clear();
+                    break;
+                }
+                
+                // Удаляем всё до префикса
+                if (prefixPos > 0) {
+                    leftover.erase(leftover.begin(), leftover.begin() + prefixPos);
+                }
+                
+                // Проверяем, есть ли у нас маска кнопки после префикса
+                if (leftover.size() < 4) {
+                    break;  // Ждём ещё данных
+                }
+                
+                // Байт маски кнопки идёт сразу после префикса "km." [reference:5]
+                uint8_t buttonMask = leftover[3];
+                
+                // Извлекаем биты кнопок из маски
+                bool lmb = (buttonMask & 0x01) != 0;  // Бит 0 - левая кнопка
+                bool rmb = (buttonMask & 0x02) != 0;  // Бит 1 - правая кнопка
+                bool mmb = (buttonMask & 0x04) != 0;  // Бит 2 - средняя кнопка
+                bool side1 = (buttonMask & 0x08) != 0;  // Бит 3 - боковая 1
+                bool side2 = (buttonMask & 0x10) != 0;  // Бит 4 - боковая 2
+                
+                // Обновляем состояние кнопок
+                UpdateButtonState(lmb, rmb, mmb);
+                
+                #ifdef _DEBUG
+                std::cout << "[MakcuUART] Button event: mask=0x" << std::hex << (int)buttonMask << std::dec
+                          << " LMB=" << lmb << " RMB=" << rmb << " MMB=" << mmb << std::endl;
+                #endif
+                
+                // Удаляем обработанные 4 байта
+                leftover.erase(leftover.begin(), leftover.begin() + 4);
             }
-            
-            // Сохраняем остаток для следующей итерации
-            leftover = data;
         }
         
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));  // Уменьшаем задержку для более быстрой реакции
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));  // Минимальная задержка для быстрой реакции
     }
     
     std::cout << "[MakcuUART] Monitoring loop ended" << std::endl;
+}
+
+// Обновление состояния кнопок с синхронизацией глобальных переменных
+void MakcuUART::UpdateButtonState(bool lmb, bool rmb, bool mmb) {
+    // Обновляем локальное состояние и глобальные переменные
+    if (m_lmb_pressed.load() != lmb) {
+        m_lmb_pressed.store(lmb);
+        pwnz_ai::g_makcu_shooting.store(lmb);  // Синхронизация
+        std::cout << "[MakcuUART] LMB state changed: " << (lmb ? "pressed" : "released") << std::endl;
+    }
+    if (m_rmb_pressed.load() != rmb) {
+        m_rmb_pressed.store(rmb);
+        pwnz_ai::g_makcu_aiming.store(rmb);  // Синхронизация
+        std::cout << "[MakcuUART] RMB state changed: " << (rmb ? "pressed" : "released") << std::endl;
+    }
+    if (m_mmb_pressed.load() != mmb) {
+        m_mmb_pressed.store(mmb);
+        pwnz_ai::g_makcu_zooming.store(mmb);  // Синхронизация
+        std::cout << "[MakcuUART] MMB state changed: " << (mmb ? "pressed" : "released") << std::endl;
+    }
+    
+    // === КРИТИЧНО ДЛЯ 2PC: также обновляем g_remote_aim_key для совместимости ===
+    // Это позволяет аимботу работать как через g_makcu_aiming, так и через g_remote_aim_key
+    if (rmb || lmb) {
+        g_remote_aim_key.store(true);
+        #ifdef _DEBUG
+        std::cout << "[MakcuUART] 2PC: Aim key ACTIVE" << std::endl;
+        #endif
+    } else {
+        // Только если обе кнопки отпущены, сбрасываем g_remote_aim_key
+        g_remote_aim_key.store(false);
+        #ifdef _DEBUG
+        std::cout << "[MakcuUART] 2PC: Aim key INACTIVE" << std::endl;
+        #endif
+    }
 }
 
 void MakcuUART::ParseResponse(const char* buffer, size_t length) {
