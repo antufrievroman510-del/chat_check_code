@@ -102,4 +102,5 @@ private:
     void monitoringLoop();
     bool WriteCommand(const char* command);
     void ParseResponse(const char* buffer, size_t length);
+    void UpdateButtonState(bool lmb, bool rmb, bool mmb);  // Обновление состояния кнопок
 };
