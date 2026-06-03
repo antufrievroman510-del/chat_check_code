@@ -1073,6 +1073,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             aim.hardware_type = selected_method;
             
             aim.InitHardware();
+            
+            // === КРИТИЧНО: Запускаем поток опроса кнопок для 2PC-связки с Makcu ===
+            if (aim.hardware_type == 1) {  // 1 = Makcu
+                std::cout << "[MAIN] Starting button monitor thread for Makcu 2PC mode" << std::endl;
+                aim.StartButtonMonitor();
+            } else {
+                // Останавливаем поток, если переключились на другой режим
+                aim.StopButtonMonitor();
+            }
         }
         if (overlay.apply_res_flag) {
             overlay.apply_res_flag = false;

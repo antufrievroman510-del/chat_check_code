@@ -1498,9 +1498,10 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
                 if (result) {
                     std::cout << "[OVERLAY] Successfully connected to " << this->com_port_buf << std::endl;
                     // === КРИТИЧНО: Запускаем поток опроса кнопок для 2PC-связки ===
-                    auto& aimbot = Aimbot::Instance();
-                    aimbot.StartButtonMonitor();
-                    std::cout << "[OVERLAY] Button monitor started for 2PC mode" << std::endl;
+                    // Передаём указатель на экземпляр aimbot из main.cpp через аргумент Render
+                    // Здесь мы не можем получить доступ к Aimbot напрямую, поэтому помечаем флаг
+                    // Поток будет запущен в main.cpp при обработке apply_hw_flag или здесь через глобальный указатель
+                    std::cout << "[OVERLAY] Button monitor will be started via hardware sync" << std::endl;
                 } else {
                     std::cerr << "[OVERLAY] Failed to connect to " << this->com_port_buf << std::endl;
                 }
