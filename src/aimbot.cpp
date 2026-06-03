@@ -501,14 +501,21 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     // ИСПРАВЛЕНИЕ: Проверяем все клавиши активации (main, sub, toggle)
     bool key_pressed = false;
     
-    // === КРИТИЧНО: Для аппаратного режима (Makcu) используем g_makcu_aiming/g_makcu_shooting ===
-    // Эти переменные обновляются из MakcuUART::PressButton/ReleaseButton
+    // === КРИТИЧНО: Для аппаратного режима (Makcu) используем g_makcu_aiming/g_makcu_shooting И g_remote_aim_key ===
+    // Эти переменные обновляются из MakcuUART::ParseResponse при получении btn:X от устройства
     if (hardware_type >= 1) {
         // В аппаратном режиме состояние кнопок определяется через обратную связь от устройства
-        key_pressed = pwnz_ai::g_makcu_aiming.load() || pwnz_ai::g_makcu_shooting.load();
-        std::cout << "[AIMBOT] HW Mode: aiming=" << pwnz_ai::g_makcu_aiming.load() 
-                  << " shooting=" << pwnz_ai::g_makcu_shooting.load() 
-                  << " key_pressed=" << key_pressed << std::endl;
+        // Проверяем все три источника для максимальной надёжности
+        key_pressed = pwnz_ai::g_makcu_aiming.load() || pwnz_ai::g_makcu_shooting.load() || g_remote_aim_key.load();
+        
+        // Логирование для отладки 2PC-связки
+        static int log_counter = 0;
+        if (++log_counter % 100 == 0) {  // Логируем каждые 100 кадров
+            std::cout << "[AIMBOT] HW Mode: aiming=" << pwnz_ai::g_makcu_aiming.load() 
+                      << " shooting=" << pwnz_ai::g_makcu_shooting.load() 
+                      << " remote_key=" << g_remote_aim_key.load()
+                      << " key_pressed=" << key_pressed << std::endl;
+        }
     } else {
         // В программном режиме используем GetAsyncKeyState как раньше
         // Основная клавиша
