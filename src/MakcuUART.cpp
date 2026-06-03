@@ -187,6 +187,13 @@ bool MakcuUART::MoveMouse(int dx, int dy) {
     
     bool result = WriteCommand(cmd.str().c_str());
     
+    // DEBUG логирование для отладки 2PC-связки
+#ifdef _DEBUG
+    if (result) {
+        std::cout << "[MakcuUART] Sent move: (" << dx << ", " << dy << ")" << std::endl;
+    }
+#endif
+    
     if (result && packetDelayMs > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(packetDelayMs));
     }
