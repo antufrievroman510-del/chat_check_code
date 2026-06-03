@@ -1,3 +1,4 @@
+исправление-протокола-makcu-43ca6
 ```
 # Compiled and build artifacts
 *.o
@@ -67,4 +68,10 @@ htmlcov/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
+
+(src/MakcuUART.cpp is a source file, and there are no build artifacts, dependencies, or temporary files in the change list. According to rule 6, an empty .gitignore should be output.)
+
+```gitignore
+
+main
 ```
