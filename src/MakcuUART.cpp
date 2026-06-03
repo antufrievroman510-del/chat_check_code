@@ -8,10 +8,13 @@
 
 // Определение глобальных переменных состояния кнопок
 namespace pwnz_ai {
-    std::atomic<bool> g_makcu_aiming{false};    // Состояние ПКМ (прицеливание)
-    std::atomic<bool> g_makcu_shooting{false};  // Состояние ЛКМ (стрельба)
-    std::atomic<bool> g_makcu_zooming{false};   // Состояние СКМ (зум)
+    std::atomic<bool> g_makcu_aiming{false};    // Состояние ПКМ (прицеливание) - для 2PC
+    std::atomic<bool> g_makcu_shooting{false};  // Состояние ЛКМ (стрельба) - для 2PC
+    std::atomic<bool> g_makcu_zooming{false};   // Состояние СКМ (зум) - для 2PC
 }
+
+// Глобальная переменная для 2PC-связки (объявлена в main.cpp)
+extern std::atomic<bool> g_remote_aim_key;
 
 // Протокол Makcu Text Protocol согласно https://github.com/K4HVH/makcu и https://www.makcu.com/en/api
 // Команды:
@@ -129,11 +132,23 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
     isConnected = true;
     std::cout << "[MakcuUART] Connected successfully!" << std::endl;
     
-    // Отправляем команду включения стрима кнопок
-    WriteCommand("km.buttons(1)\r\n");
-    std::cout << "[MakcuUART] Sent button stream enable command" << std::endl;
-    
+    // === КРИТИЧНО: Сначала очищаем буфер от старых данных перед отправкой команд ===
+    PurgeComm(hComPort, PURGE_RXCLEAR);
     Sleep(50);
+    
+    // Отправляем команду включения стрима кнопок
+    // Устройство начнёт отправлять btn:X\r\n при изменении состояния кнопок
+    WriteCommand("km.buttons(1)\r\n");
+    std::cout << "[MakcuUART] Sent button stream enable command (km.buttons(1))" << std::endl;
+    
+    // Даём устройству время на ответ
+    Sleep(100);
+    
+    // Очищаем буфер ещё раз после команды
+    PurgeComm(hComPort, PURGE_RXCLEAR);
+    
+    // Запускаем поток мониторинга для чтения состояния кнопок
+    StartMonitoring();
     
     return true;
 }
@@ -144,8 +159,9 @@ void MakcuUART::Disconnect() {
     StopMonitoring();
     
     if (hComPort != nullptr) {
-        // Отключаем стрим кнопок
+        // Отключаем стрим кнопок перед закрытием
         WriteCommand("km.buttons(0)\r\n");
+        Sleep(50);  // Даём время на отправку команды
         
         CloseHandle(hComPort);
         hComPort = nullptr;
@@ -249,17 +265,21 @@ void MakcuUART::SetPacketDelayMs(int ms) {
 bool MakcuUART::WriteCommand(const char* command) {
     size_t len = strlen(command);
     DWORD bytesWritten;
+    
+    // Записываем команду в COM-порт
     BOOL result = WriteFile(hComPort, command, static_cast<DWORD>(len), &bytesWritten, nullptr);
     
     if (!result || bytesWritten != len) {
         DWORD err = GetLastError();
-        std::cerr << "[MakcuUART] Write failed: " << err << " (written=" << bytesWritten << ", expected=" << len << ")" << std::endl;
+        std::cerr << "[MakcuUART] Write failed: " << err << " (written=" << bytesWritten 
+                  << ", expected=" << len << ")" << std::endl;
         Disconnect();
         return false;
     }
     
-    // Сбрасываем буферы для немедленной отправки
-    FlushFileBuffers(hComPort);
+    // ВАЖНО: НЕ используем FlushFileBuffers здесь!
+    // Это блокирует асинхронную отправку и нарушает синхронизацию с устройством.
+    // Устройство должно само обработать команду и отправить ответ >>>
     
     return true;
 }
@@ -303,6 +323,7 @@ void MakcuUART::monitoringLoop() {
     SetCommTimeouts(hComPort, &timeouts);
     
     char buffer[256];
+    std::string leftover;  // Буфер для неполных пакетов
     
     while (!m_stopMonitoring.load() && isConnected && hComPort != nullptr) {
         DWORD bytesRead = 0;
@@ -310,18 +331,37 @@ void MakcuUART::monitoringLoop() {
         
         if (readResult && bytesRead > 0) {
             buffer[bytesRead] = '\0';
-            // Парсим текстовые данные
-            ParseResponse(buffer, bytesRead);
+            
+            // Объединяем с предыдущим остатком
+            std::string data = leftover + std::string(buffer, bytesRead);
+            
+            // Ищем полные пакеты, оканчивающиеся на \r\n
+            size_t pos = 0;
+            while ((pos = data.find("\r\n")) != std::string::npos) {
+                std::string line = data.substr(0, pos);
+                
+                // Пропускаем промпты >>> и пустые строки
+                if (line.find(">>>") == std::string::npos && !line.empty()) {
+                    // Парсим только значимые данные
+                    ParseResponse(line.c_str(), line.length());
+                }
+                
+                // Удаляем обработанную часть
+                data = data.substr(pos + 2);
+            }
+            
+            // Сохраняем остаток для следующей итерации
+            leftover = data;
         }
         
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));  // Уменьшаем задержку для более быстрой реакции
     }
     
     std::cout << "[MakcuUART] Monitoring loop ended" << std::endl;
 }
 
 void MakcuUART::ParseResponse(const char* buffer, size_t length) {
-    // Ищем ответы вида "btn:X\r\n" где X - битовая маска кнопок
+    // Парсим ответы вида "btn:X" где X - битовая маска кнопок
     // btn:1 = ЛКМ, btn:2 = ПКМ, btn:4 = СКМ, btn:0 = все отпущены
     
     std::string data(buffer, length);
@@ -331,46 +371,52 @@ void MakcuUART::ParseResponse(const char* buffer, size_t length) {
     if (pos != std::string::npos) {
         // Извлекаем значение после "btn:"
         size_t endPos = data.find("\r\n", pos);
-        if (endPos != std::string::npos) {
-            std::string valueStr = data.substr(pos + 4, endPos - pos - 4);
-            try {
-                int btnValue = std::stoi(valueStr);
-                
-                bool lmb = (btnValue & 0x01) != 0;
-                bool rmb = (btnValue & 0x02) != 0;
-                bool mmb = (btnValue & 0x04) != 0;
-                
-                // Обновляем локальное состояние и глобальные переменные
-                if (m_lmb_pressed.load() != lmb) {
-                    m_lmb_pressed.store(lmb);
-                    pwnz_ai::g_makcu_shooting.store(lmb);  // Синхронизация
-                    std::cout << "[MakcuUART] LMB state changed: " << (lmb ? "pressed" : "released") 
-                              << " (btnValue=" << btnValue << ")" << std::endl;
-                }
-                if (m_rmb_pressed.load() != rmb) {
-                    m_rmb_pressed.store(rmb);
-                    pwnz_ai::g_makcu_aiming.store(rmb);  // Синхронизация
-                    std::cout << "[MakcuUART] RMB state changed: " << (rmb ? "pressed" : "released") 
-                              << " (btnValue=" << btnValue << ")" << std::endl;
-                }
-                if (m_mmb_pressed.load() != mmb) {
-                    m_mmb_pressed.store(mmb);
-                    pwnz_ai::g_makcu_zooming.store(mmb);  // Синхронизация
-                    std::cout << "[MakcuUART] MMB state changed: " << (mmb ? "pressed" : "released") 
-                              << " (btnValue=" << btnValue << ")" << std::endl;
-                }
-            } catch (const std::exception& e) {
-                std::cerr << "[MakcuUART] Parse error: " << e.what() << ", data: " << valueStr << std::endl;
-            }
-        } else {
-            // Ответ без завершения \r\n - возможно, неполный пакет
-            std::cout << "[MakcuUART] Incomplete response: " << data << std::endl;
+        if (endPos == std::string::npos) {
+            endPos = data.length();  // Если нет \r\n, берём до конца строки
         }
-    } else {
-        // Данные не начинаются с "btn:" - возможно, это что-то другое
-        // Выводим только если данные не пустые
-        if (length > 0 && data.find_first_not_of("\r\n ") != std::string::npos) {
-            std::cout << "[MakcuUART] Unknown response: " << data << std::endl;
+        
+        std::string valueStr = data.substr(pos + 4, endPos - pos - 4);
+        try {
+            int btnValue = std::stoi(valueStr);
+            
+            bool lmb = (btnValue & 0x01) != 0;
+            bool rmb = (btnValue & 0x02) != 0;
+            bool mmb = (btnValue & 0x04) != 0;
+            
+            // Обновляем локальное состояние и глобальные переменные
+            if (m_lmb_pressed.load() != lmb) {
+                m_lmb_pressed.store(lmb);
+                pwnz_ai::g_makcu_shooting.store(lmb);  // Синхронизация
+                std::cout << "[MakcuUART] LMB state changed: " << (lmb ? "pressed" : "released") 
+                          << " (btnValue=" << btnValue << ")" << std::endl;
+            }
+            if (m_rmb_pressed.load() != rmb) {
+                m_rmb_pressed.store(rmb);
+                pwnz_ai::g_makcu_aiming.store(rmb);  // Синхронизация
+                std::cout << "[MakcuUART] RMB state changed: " << (rmb ? "pressed" : "released") 
+                          << " (btnValue=" << btnValue << ")" << std::endl;
+            }
+            if (m_mmb_pressed.load() != mmb) {
+                m_mmb_pressed.store(mmb);
+                pwnz_ai::g_makcu_zooming.store(mmb);  // Синхронизация
+                std::cout << "[MakcuUART] MMB state changed: " << (mmb ? "pressed" : "released") 
+                          << " (btnValue=" << btnValue << ")" << std::endl;
+            }
+            
+            // === КРИТИЧНО ДЛЯ 2PC: также обновляем g_remote_aim_key для совместимости ===
+            // Это позволяет аимботу работать как через g_makcu_aiming, так и через g_remote_aim_key
+            if (rmb || lmb) {
+                g_remote_aim_key.store(true);
+            } else {
+                // Только если обе кнопки отпущены, сбрасываем g_remote_aim_key
+                // Это нужно чтобы не сбросить если другая кнопка ещё нажата
+                if (!rmb && !lmb) {
+                    g_remote_aim_key.store(false);
+                }
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "[MakcuUART] Parse error: " << e.what() << ", data: " << valueStr << std::endl;
         }
     }
+    // Игнорируем все остальные данные (промпты >>>, версии и т.д.)
 }

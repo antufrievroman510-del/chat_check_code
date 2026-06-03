@@ -1,4 +1,3 @@
-```
 # Compiled and build artifacts
 *.o
 *.obj
@@ -67,4 +66,3 @@ htmlcov/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
-```
