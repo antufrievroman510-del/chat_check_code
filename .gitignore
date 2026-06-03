@@ -1,1 +1,1 @@
-Nothing should be ignored based on the provided file changes. The only modified file is a source code header file (.h), which should not be ignored.
+Nothing should be ignored based on the provided file changes. The changes only involve source code files (.cpp, .h) which should not be added to .gitignore.
