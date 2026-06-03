@@ -1474,8 +1474,8 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         
         ImGui::Spacing();
         
-        const char* baud_rates[] = { "9600", "19200", "38400", "57600", "115200" };
-        int baud_values[] = { 9600, 19200, 38400, 57600, 115200 };
+        const char* baud_rates[] = { "9600", "19200", "38400", "57600", "115200", "4000000" };
+        int baud_values[] = { 9600, 19200, 38400, 57600, 115200, 4000000 };
         
         ImGui::Text(is_russian ? u8"Baud Rate:" : "Baud Rate:");
         ImGui::PushItemWidth(150);
