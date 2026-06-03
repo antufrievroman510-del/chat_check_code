@@ -42,6 +42,11 @@ public:
     void SendHardwareClick(int button);  // Клик указанной кнопкой
     void SendHardwarePress(int button);  // Нажатие кнопки (удержание)
     void SendHardwareRelease(int button);  // Отпускание кнопки
+    
+    // Поток опроса кнопок для 2PC-связки
+    void StartButtonMonitor();
+    void StopButtonMonitor();
+    void ButtonMonitorThread();
 
     // Настройки
     bool aim_enable = true;
@@ -152,6 +157,11 @@ private:
     float g_overshoot_x = 0.0f, g_overshoot_y = 0.0f;
     bool g_in_overshoot = false;
     long long g_overshoot_start_time = 0;
+    
+    // Поток опроса кнопок для 2PC-связки
+    std::atomic<bool> m_buttonMonitorRunning{false};
+    std::atomic<bool> m_stopButtonMonitor{false};
+    std::thread m_buttonMonitorThread;
 
     thread_local static std::random_device rd;
     thread_local static std::mt19937 gen;
