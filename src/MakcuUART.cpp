@@ -193,13 +193,13 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
         m_portName = portName;
         m_baudRate = HIGH_SPEED_BAUD;
         
-        // Запускаем поток мониторинга кнопок
-        StartMonitoring();
-        
-        // Включаем стрим событий кнопок [reference:4]
+        // Включаем стрим событий кнопок [reference:4] СРАЗУ после подключения
         Sleep(50);
         WriteCommand("km.buttons(1)\r\n");
         std::cout << "[MakcuUART] Enabled button event stream (km.buttons(1))" << std::endl;
+        
+        // Запускаем поток мониторинга кнопок ПОСЛЕ включения стрима
+        StartMonitoring();
         
         return true;
     }
@@ -323,13 +323,13 @@ bool MakcuUART::Connect(const std::string& portName, int baudRate) {
     m_portName = portName;
     m_baudRate = HIGH_SPEED_BAUD;
     
-    // Запускаем поток мониторинга кнопок
-    StartMonitoring();
-    
-    // Включаем стрим событий кнопок [reference:4]
+    // Включаем стрим событий кнопок [reference:4] СРАЗУ после подключения
     Sleep(50);
     WriteCommand("km.buttons(1)\r\n");
     std::cout << "[MakcuUART] Enabled button event stream (km.buttons(1))" << std::endl;
+    
+    // Запускаем поток мониторинга кнопок ПОСЛЕ включения стрима
+    StartMonitoring();
     
     return true;
 }
@@ -451,6 +451,11 @@ void MakcuUART::SetPacketDelayMs(int ms) {
 }
 
 bool MakcuUART::WriteCommand(const char* command) {
+    if (!isConnected || hComPort == nullptr) {
+        std::cerr << "[MakcuUART] WriteCommand: Not connected!" << std::endl;
+        return false;
+    }
+    
     size_t len = strlen(command);
     DWORD bytesWritten;
     
@@ -465,10 +470,9 @@ bool MakcuUART::WriteCommand(const char* command) {
         return false;
     }
     
-    // Логирование для отладки 2PC-связки
-#ifdef _DEBUG
+    // Логирование для отладки 2PC-связки - ВСЕГДА включено для диагностики
     std::cout << "[MakcuUART] Sent command: " << command << std::endl;
-#endif
+    
     // ВАЖНО: НЕ используем FlushFileBuffers здесь!
     // Это блокирует асинхронную отправку и нарушает синхронизацию с устройством.
     // Устройство должно само обработать команду и отправить ответ >>>
@@ -523,11 +527,29 @@ void MakcuUART::monitoringLoop() {
     // Префикс событий кнопок: "km." = 0x6B 0x6D 0x2E [reference:5]
     const uint8_t KM_PREFIX[3] = {0x6B, 0x6D, 0x2E};
     
+    // Счётчик для периодического логирования
+    int log_counter = 0;
+    
     while (!m_stopMonitoring.load() && isConnected && hComPort != nullptr) {
         DWORD bytesRead = 0;
         BOOL readResult = ReadFile(hComPort, buffer, sizeof(buffer), &bytesRead, nullptr);
         
         if (readResult && bytesRead > 0) {
+            // === ОТЛАДКА: Выводим ВСЕ полученные байты в hex ===
+            std::cout << "[MakcuUART] RAW DATA received (" << bytesRead << " bytes): ";
+            for (DWORD i = 0; i < bytesRead; i++) {
+                printf("%02X ", buffer[i]);
+            }
+            std::cout << " | ASCII: ";
+            for (DWORD i = 0; i < bytesRead; i++) {
+                if (buffer[i] >= 32 && buffer[i] <= 126) {
+                    printf("%c", buffer[i]);
+                } else {
+                    printf(".");
+                }
+            }
+            std::cout << std::endl;
+            
             // Добавляем новые данные к остатку
             leftover.insert(leftover.end(), buffer, buffer + bytesRead);
             
@@ -549,6 +571,7 @@ void MakcuUART::monitoringLoop() {
                 
                 if (!found) {
                     // Префикс не найден, очищаем буфер от старых данных
+                    std::cout << "[MakcuUART] No 'km.' prefix found, clearing old data" << std::endl;
                     leftover.clear();
                     break;
                 }
@@ -576,10 +599,8 @@ void MakcuUART::monitoringLoop() {
                 // Обновляем состояние кнопок
                 UpdateButtonState(lmb, rmb, mmb);
                 
-                #ifdef _DEBUG
-                std::cout << "[MakcuUART] Button event: mask=0x" << std::hex << (int)buttonMask << std::dec
+                std::cout << "[MakcuUART] BUTTON EVENT: mask=0x" << std::hex << (int)buttonMask << std::dec
                           << " LMB=" << lmb << " RMB=" << rmb << " MMB=" << mmb << std::endl;
-                #endif
                 
                 // Удаляем обработанные 4 байта
                 leftover.erase(leftover.begin(), leftover.begin() + 4);
