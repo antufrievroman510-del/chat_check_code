@@ -2,17 +2,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-
-// ============================================
-// РЕАЛИЗАЦИЯ C API ДЛЯ MAKCU
-// ============================================
-// Это реализация C API функций которые объявлены в заголовке
-// В реальном проекте эти функции будут вызывать библиотеку makcu-cpp
-// ============================================
-
-// Внутреннее состояние подключения
-static bool g_makcu_connected = false;
-static std::string g_makcu_port = "";
+#include <cstring>
 
 // Глобальные переменные для 2PC синхронизации (определения)
 namespace pwnz_ai {
@@ -21,201 +11,10 @@ namespace pwnz_ai {
     std::atomic<bool> g_makcu_zooming{false};   // СКМ - зум
 }
 
-// ============================================
-// C API ФУНКЦИИ - РЕАЛИЗАЦИЯ
-// ============================================
-
-extern "C" {
-
-/**
- * @brief Инициализация подключения к Makcu
- * @param port_name Имя COM-порта (например "COM3")
- * @return 0 при успехе, отрицательное значение при ошибке
- */
-int makcu_init(const char* port_name) {
-    if (!port_name) {
-        std::cerr << "[MAKCU] Error: null port name" << std::endl;
-        return -1;
-    }
-
-    std::cout << "[MAKCU] Initializing connection to " << port_name << std::endl;
-
-    // Здесь будет вызов реальной библиотеки makcu-cpp
-    // Для примера эмулируем успешное подключение
-    // В реальности здесь будет:
-    // makcu::Device device;
-    // device.connect(port_name);
-    
-    // Эмуляция подключения для демонстрации
-    g_makcu_port = port_name;
-    g_makcu_connected = true;
-    
-    std::cout << "[MAKCU] Successfully connected to " << port_name << std::endl;
-    std::cout << "[MAKCU] Device VID:PID = 1A86:55D3" << std::endl;
-    std::cout << "[MAKCU] Using C API wrapper for C++17 compatibility" << std::endl;
-    
-    return 0;
-}
-
-/**
- * @brief Закрытие соединения с Makcu
- * @return 0 при успехе
- */
-int makcu_deinit() {
-    std::cout << "[MAKCU] Disconnecting from " << g_makcu_port << std::endl;
-    
-    // Здесь будет вызов реальной библиотеки makcu-cpp для отключения
-    
-    g_makcu_connected = false;
-    g_makcu_port = "";
-    
-    std::cout << "[MAKCU] Disconnected" << std::endl;
-    return 0;
-}
-
-/**
- * @brief Проверка состояния подключения
- * @return 1 если подключено, 0 если нет
- */
-int makcu_is_connected() {
-    return g_makcu_connected ? 1 : 0;
-}
-
-/**
- * @brief Перемещение мыши
- * @param dx Смещение по X
- * @param dy Смещение по Y
- * @return 0 при успехе
- */
-int makcu_move(int dx, int dy) {
-    if (!g_makcu_connected) {
-        std::cerr << "[MAKCU] Error: not connected, cannot move" << std::endl;
-        return -1;
-    }
-
-    // Здесь будет вызов реальной библиотеки makcu-cpp
-    // device.mouseMove(dx, dy);
-    
-    // Эмуляция для демонстрации
-#ifdef _DEBUG
-    std::cout << "[MAKCU] Move: (" << dx << ", " << dy << ")" << std::endl;
-#endif
-    
-    return 0;
-}
-
-/**
- * @brief Нажатие кнопки мыши
- * @param button Кнопка (MAKCU_MOUSE_BUTTON_*)
- * @return 0 при успехе
- */
-int makcu_press(MakcuMouseButton button) {
-    if (!g_makcu_connected) {
-        std::cerr << "[MAKCU] Error: not connected, cannot press" << std::endl;
-        return -1;
-    }
-
-    // Здесь будет вызов реальной библиотеки makcu-cpp
-    // device.buttonPress(button);
-    
-    // Обновляем глобальные переменные для 2PC синхронизации
-    switch (button) {
-        case MAKCU_MOUSE_BUTTON_LEFT:
-            pwnz_ai::g_makcu_shooting.store(true);
-            std::cout << "[MAKCU] Press LEFT (shooting=true)" << std::endl;
-            break;
-        case MAKCU_MOUSE_BUTTON_RIGHT:
-            pwnz_ai::g_makcu_aiming.store(true);
-            std::cout << "[MAKCU] Press RIGHT (aiming=true)" << std::endl;
-            break;
-        case MAKCU_MOUSE_BUTTON_MIDDLE:
-            pwnz_ai::g_makcu_zooming.store(true);
-            std::cout << "[MAKCU] Press MIDDLE (zooming=true)" << std::endl;
-            break;
-        default:
-            std::cout << "[MAKCU] Press button " << button << std::endl;
-            break;
-    }
-    
-    return 0;
-}
-
-/**
- * @brief Отпускание кнопки мыши
- * @param button Кнопка (MAKCU_MOUSE_BUTTON_*)
- * @return 0 при успехе
- */
-int makcu_release(MakcuMouseButton button) {
-    if (!g_makcu_connected) {
-        std::cerr << "[MAKCU] Error: not connected, cannot release" << std::endl;
-        return -1;
-    }
-
-    // Здесь будет вызов реальной библиотеки makcu-cpp
-    // device.buttonRelease(button);
-    
-    // Обновляем глобальные переменные для 2PC синхронизации
-    switch (button) {
-        case MAKCU_MOUSE_BUTTON_LEFT:
-            pwnz_ai::g_makcu_shooting.store(false);
-            std::cout << "[MAKCU] Release LEFT (shooting=false)" << std::endl;
-            break;
-        case MAKCU_MOUSE_BUTTON_RIGHT:
-            pwnz_ai::g_makcu_aiming.store(false);
-            std::cout << "[MAKCU] Release RIGHT (aiming=false)" << std::endl;
-            break;
-        case MAKCU_MOUSE_BUTTON_MIDDLE:
-            pwnz_ai::g_makcu_zooming.store(false);
-            std::cout << "[MAKCU] Release MIDDLE (zooming=false)" << std::endl;
-            break;
-        default:
-            std::cout << "[MAKCU] Release button " << button << std::endl;
-            break;
-    }
-    
-    return 0;
-}
-
-/**
- * @brief Клик (нажатие + отпускание)
- * @param button Кнопка (MAKCU_MOUSE_BUTTON_*)
- * @return 0 при успехе
- */
-int makcu_click(MakcuMouseButton button) {
-    makcu_press(button);
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    makcu_release(button);
-    return 0;
-}
-
-/**
- * @brief Получение состояния кнопки
- * @param button Кнопка (MAKCU_MOUSE_BUTTON_*)
- * @return 1 если нажата, 0 если нет
- */
-int makcu_get_button_state(MakcuMouseButton button) {
-    switch (button) {
-        case MAKCU_MOUSE_BUTTON_LEFT:
-            return pwnz_ai::g_makcu_shooting.load() ? 1 : 0;
-        case MAKCU_MOUSE_BUTTON_RIGHT:
-            return pwnz_ai::g_makcu_aiming.load() ? 1 : 0;
-        case MAKCU_MOUSE_BUTTON_MIDDLE:
-            return pwnz_ai::g_makcu_zooming.load() ? 1 : 0;
-        default:
-            return 0;
-    }
-}
-
-} // extern "C"
-
-// ============================================
-// РЕАЛИЗАЦИЯ КЛАССА MakcuMouse
-// ============================================
-
 namespace pwnz_ai {
 
 MakcuMouse::MakcuMouse(const std::string& com_port)
-    : m_com_port(com_port), m_initialized(false) {
+    : m_com_port(com_port), m_device(nullptr), m_initialized(false) {
 }
 
 MakcuMouse::~MakcuMouse() {
@@ -232,63 +31,143 @@ bool MakcuMouse::Init() {
         return false;
     }
 
-    int result = makcu_init(m_com_port.c_str());
-    
-    if (result != 0) {
-        std::cerr << "[MakcuMouse] Failed to initialize Makcu (error code: " << result << ")" << std::endl;
+    // Создаём устройство через C API
+    m_device = makcu_device_create();
+    if (!m_device) {
+        std::cerr << "[MakcuMouse] ERROR: Failed to create makcu device!" << std::endl;
         return false;
     }
 
+    // Подключаемся к устройству
+    makcu_error_t error = makcu_connect(m_device, m_com_port.c_str());
+    if (error != MAKCU_SUCCESS) {
+        std::cerr << "[MakcuMouse] ERROR: Failed to connect to Makcu on " << m_com_port 
+                  << " (error: " << makcu_error_string(error) << ")" << std::endl;
+        makcu_device_destroy(m_device);
+        m_device = nullptr;
+        return false;
+    }
+
+    // Проверяем подключение
+    if (!makcu_is_connected(m_device)) {
+        std::cerr << "[MakcuMouse] ERROR: Device reports not connected after connect()" << std::endl;
+        makcu_disconnect(m_device);
+        makcu_device_destroy(m_device);
+        m_device = nullptr;
+        return false;
+    }
+
+    // Получаем версию устройства для проверки
+    char version[64];
+    error = makcu_get_version(m_device, version, sizeof(version));
+    if (error == MAKCU_SUCCESS) {
+        std::cout << "[MakcuMouse] Successfully connected! Device version: " << version << std::endl;
+    } else {
+        std::cout << "[MakcuMouse] Successfully connected! (version query failed: " 
+                  << makcu_error_string(error) << ")" << std::endl;
+    }
+
+    // Включаем мониторинг кнопок для 2PC синхронизации
+    error = makcu_enable_button_monitoring(m_device, true);
+    if (error != MAKCU_SUCCESS) {
+        std::cout << "[MakcuMouse] Warning: Could not enable button monitoring: " 
+                  << makcu_error_string(error) << std::endl;
+    } else {
+        std::cout << "[MakcuMouse] Button monitoring enabled for 2PC sync" << std::endl;
+    }
+
     m_initialized = true;
-    std::cout << "[MakcuMouse] Successfully initialized!" << std::endl;
+    std::cout << "[MakcuMouse] Initialization complete!" << std::endl;
     return true;
 }
 
 void MakcuMouse::Move(int dx, int dy) {
-    if (!m_initialized) {
+    if (!m_initialized || !m_device) {
         return;
     }
     
-    makcu_move(dx, dy);
+    makcu_error_t error = makcu_mouse_move(m_device, dx, dy);
+    if (error != MAKCU_SUCCESS) {
+#ifdef _DEBUG
+        std::cerr << "[MakcuMouse] Move failed: " << makcu_error_string(error) << std::endl;
+#endif
+    }
 }
 
 void MakcuMouse::Click(int button) {
-    if (!m_initialized) {
+    if (!m_initialized || !m_device) {
         std::cerr << "[MakcuMouse] Click called but not initialized!" << std::endl;
         return;
     }
 
-    MakcuMouseButton btn = IntToButton(button);
-    makcu_click(btn);
+    makcu_mouse_button_t btn = IntToButton(button);
+    makcu_error_t error = makcu_mouse_click(m_device, btn);
+    if (error != MAKCU_SUCCESS) {
+        std::cerr << "[MakcuMouse] Click failed: " << makcu_error_string(error) << std::endl;
+    }
+    
+    // Для 2PC синхронизации обновляем состояние (кратковременно)
+    UpdateButtonState(btn, true);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    UpdateButtonState(btn, false);
 }
 
 void MakcuMouse::Press(int button) {
-    if (!m_initialized) {
+    if (!m_initialized || !m_device) {
         std::cerr << "[MakcuMouse] Press called but not initialized!" << std::endl;
         return;
     }
 
-    MakcuMouseButton btn = IntToButton(button);
-    makcu_press(btn);
+    makcu_mouse_button_t btn = IntToButton(button);
+    makcu_error_t error = makcu_mouse_down(m_device, btn);
+    if (error != MAKCU_SUCCESS) {
+        std::cerr << "[MakcuMouse] Press failed: " << makcu_error_string(error) << std::endl;
+        return;
+    }
+    
+    // Обновляем глобальные переменные для 2PC синхронизации
+    UpdateButtonState(btn, true);
 }
 
 void MakcuMouse::Release(int button) {
-    if (!m_initialized) {
+    if (!m_initialized || !m_device) {
         std::cerr << "[MakcuMouse] Release called but not initialized!" << std::endl;
         return;
     }
 
-    MakcuMouseButton btn = IntToButton(button);
-    makcu_release(btn);
+    makcu_mouse_button_t btn = IntToButton(button);
+    makcu_error_t error = makcu_mouse_up(m_device, btn);
+    if (error != MAKCU_SUCCESS) {
+        std::cerr << "[MakcuMouse] Release failed: " << makcu_error_string(error) << std::endl;
+        return;
+    }
+    
+    // Обновляем глобальные переменные для 2PC синхронизации
+    UpdateButtonState(btn, false);
 }
 
 void MakcuMouse::Shutdown() {
-    if (!m_initialized) {
+    if (!m_initialized || !m_device) {
         return;
     }
 
-    makcu_deinit();
+    std::cout << "[MakcuMouse] Shutting down..." << std::endl;
+    
+    // Отключаем мониторинг кнопок
+    makcu_enable_button_monitoring(m_device, false);
+    
+    // Отключаемся и уничтожаем устройство
+    makcu_disconnect(m_device);
+    makcu_device_destroy(m_device);
+    
+    m_device = nullptr;
     m_initialized = false;
+    
+    // Сбрасываем глобальные переменные
+    g_makcu_aiming.store(false);
+    g_makcu_shooting.store(false);
+    g_makcu_zooming.store(false);
+    
     std::cout << "[MakcuMouse] Shutdown complete" << std::endl;
 }
 
@@ -300,17 +179,48 @@ void MakcuMouse::SetPort(const std::string& port) {
 }
 
 bool MakcuMouse::IsConnected() const {
-    return m_initialized && (makcu_is_connected() != 0);
+    if (!m_initialized || !m_device) {
+        return false;
+    }
+    return makcu_is_connected(m_device);
 }
 
-MakcuMouse::MakcuMouseButton MakcuMouse::IntToButton(int button) {
+makcu_mouse_button_t MakcuMouse::IntToButton(int button) {
     switch (button) {
-        case 0: return MAKCU_MOUSE_BUTTON_LEFT;
-        case 1: return MAKCU_MOUSE_BUTTON_RIGHT;
-        case 2: return MAKCU_MOUSE_BUTTON_MIDDLE;
-        case 3: return MAKCU_MOUSE_BUTTON_SIDE1;
-        case 4: return MAKCU_MOUSE_BUTTON_SIDE2;
-        default: return MAKCU_MOUSE_BUTTON_LEFT;
+        case 0: return MAKCU_MOUSE_LEFT;
+        case 1: return MAKCU_MOUSE_RIGHT;
+        case 2: return MAKCU_MOUSE_MIDDLE;
+        case 3: return MAKCU_MOUSE_SIDE1;
+        case 4: return MAKCU_MOUSE_SIDE2;
+        default: return MAKCU_MOUSE_LEFT;
+    }
+}
+
+void MakcuMouse::UpdateButtonState(makcu_mouse_button_t button, bool pressed) {
+    switch (button) {
+        case MAKCU_MOUSE_LEFT:
+            g_makcu_shooting.store(pressed);
+#ifdef _DEBUG
+            std::cout << "[MakcuMouse] LEFT button " << (pressed ? "pressed" : "released") 
+                      << " (shooting=" << pressed << ")" << std::endl;
+#endif
+            break;
+        case MAKCU_MOUSE_RIGHT:
+            g_makcu_aiming.store(pressed);
+#ifdef _DEBUG
+            std::cout << "[MakcuMouse] RIGHT button " << (pressed ? "pressed" : "released") 
+                      << " (aiming=" << pressed << ")" << std::endl;
+#endif
+            break;
+        case MAKCU_MOUSE_MIDDLE:
+            g_makcu_zooming.store(pressed);
+#ifdef _DEBUG
+            std::cout << "[MakcuMouse] MIDDLE button " << (pressed ? "pressed" : "released") 
+                      << " (zooming=" << pressed << ")" << std::endl;
+#endif
+            break;
+        default:
+            break;
     }
 }
 
