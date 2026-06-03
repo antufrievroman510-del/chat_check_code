@@ -4,43 +4,14 @@
 #include <atomic>
 
 // ============================================
-// ВСТРОЕННЫЙ C API ЗАГОЛОВОК ДЛЯ MAKCU
+// ПОДКЛЮЧЕНИЕ ОФИЦИАЛЬНОГО C API MAKCU
 // ============================================
-// Это упрощённая версия C API из библиотеки makcu-cpp
-// которая совместима с C++17 и не требует C++23
+// Используем C API из библиотеки makcu-cpp для совместимости с C++17
+// Заголовочный файл находится в: /workspace/makcu-cpp/makcu-cpp/include/makcu_c.h
 // ============================================
 
 extern "C" {
-    // Типы данных из C API
-    typedef enum {
-        MAKCU_MOUSE_BUTTON_LEFT = 0,
-        MAKCU_MOUSE_BUTTON_RIGHT = 1,
-        MAKCU_MOUSE_BUTTON_MIDDLE = 2,
-        MAKCU_MOUSE_BUTTON_SIDE1 = 3,
-        MAKCU_MOUSE_BUTTON_SIDE2 = 4
-    } MakcuMouseButton;
-
-    typedef struct {
-        int x;
-        int y;
-    } MakcuMouseDelta;
-
-    // Основные функции C API
-    // Возвращает 0 при успехе, отрицательное значение при ошибке
-    int makcu_init(const char* port_name);
-    int makcu_deinit();
-    int makcu_is_connected();
-    
-    // Движение мыши
-    int makcu_move(int dx, int dy);
-    
-    // Кнопки
-    int makcu_press(MakcuMouseButton button);
-    int makcu_release(MakcuMouseButton button);
-    int makcu_click(MakcuMouseButton button);
-    
-    // Получение состояния кнопок (для 2PC синхронизации)
-    int makcu_get_button_state(MakcuMouseButton button);
+#include <makcu_c.h>
 }
 
 // Глобальные переменные для синхронизации с 2PC режимом
@@ -75,10 +46,14 @@ namespace pwnz_ai {
 
     private:
         std::string m_com_port;
+        makcu_device_t* m_device;  // Указатель на устройство из C API
         bool m_initialized;
         
         // Вспомогательный метод для конвертации номера кнопки
-        MakcuMouseButton IntToButton(int button);
+        makcu_mouse_button_t IntToButton(int button);
+        
+        // Обновление состояния кнопок для 2PC синхронизации
+        void UpdateButtonState(makcu_mouse_button_t button, bool pressed);
     };
 
 } // namespace pwnz_ai

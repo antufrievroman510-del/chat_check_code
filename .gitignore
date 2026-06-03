@@ -1,1 +1,47 @@
-Nothing should be ignored based on the provided file changes. The changes only involve source code files (.cpp, .h) which should not be added to .gitignore.
+```
+# Build artifacts
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+*.cmake
+conanfile.txt
+*.so
+*.dylib
+*.dll
+*.exe
+*.a
+*.lib
+*.o
+*.obj
+*.ilk
+*.pdb
+*.dSYM/
+*.out
+
+# Dependencies
+.externalNativeBuild/
+.gradle/
+node_modules/
+vendor/
+
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+*.env.*
+```
