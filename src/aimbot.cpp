@@ -234,6 +234,13 @@ bool Aimbot::InitHardware() {
         }
 
         std::cout << "[Aimbot] Hardware initialized successfully. Type=" << hardware_type << std::endl;
+        
+        // === КРИТИЧНО: Для 2PC-связки запускаем поток опроса кнопок ===
+        if (hardware_type == 1) { // Makcu mode
+            StartButtonMonitor();
+            std::cout << "[Aimbot] Button monitor auto-started for Makcu 2PC mode" << std::endl;
+        }
+        
         return true;
     }
     catch (const std::exception& e) {

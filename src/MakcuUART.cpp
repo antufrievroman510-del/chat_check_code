@@ -277,6 +277,10 @@ bool MakcuUART::WriteCommand(const char* command) {
         return false;
     }
     
+    // Логирование для отладки 2PC-связки
+#ifdef _DEBUG
+    std::cout << "[MakcuUART] Sent command: " << command << std::endl;
+#endif
     // ВАЖНО: НЕ используем FlushFileBuffers здесь!
     // Это блокирует асинхронную отправку и нарушает синхронизацию с устройством.
     // Устройство должно само обработать команду и отправить ответ >>>
@@ -407,11 +411,17 @@ void MakcuUART::ParseResponse(const char* buffer, size_t length) {
             // Это позволяет аимботу работать как через g_makcu_aiming, так и через g_remote_aim_key
             if (rmb || lmb) {
                 g_remote_aim_key.store(true);
+                #ifdef _DEBUG
+                std::cout << "[MakcuUART] 2PC: Aim key ACTIVE (btnValue=" << btnValue << ")" << std::endl;
+                #endif
             } else {
                 // Только если обе кнопки отпущены, сбрасываем g_remote_aim_key
                 // Это нужно чтобы не сбросить если другая кнопка ещё нажата
                 if (!rmb && !lmb) {
                     g_remote_aim_key.store(false);
+                    #ifdef _DEBUG
+                    std::cout << "[MakcuUART] 2PC: Aim key INACTIVE (btnValue=" << btnValue << ")" << std::endl;
+                    #endif
                 }
             }
         } catch (const std::exception& e) {

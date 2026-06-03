@@ -149,6 +149,11 @@ bool HardwareBackend::SendMackuMove(int x, int y) {
     // Устройство само обработает команду и отправит ответ >>> в фоновом потоке мониторинга.
     // См. MakcuUART::monitoringLoop() для чтения ответов.
     
+    // Логирование для отладки 2PC-связки
+    #ifdef _DEBUG
+    std::cout << "[HardwareBackend] Sent Makcu move: (" << x << ", " << y << ")" << std::endl;
+    #endif
+    
     return true;
 #else
     return false;
@@ -204,6 +209,11 @@ bool HardwareBackend::SendMackuClick(uint8_t button) {
     // ВАЖНО: НЕ используем FlushFileBuffers здесь!
     // Это блокирует асинхронную отправку и нарушает синхронизацию с устройством Makcu.
     // Устройство само обработает команду и отправит ответ >>> в фоновом потоке мониторинга.
+    
+    // Логирование для отладки 2PC-связки
+    #ifdef _DEBUG
+    std::cout << "[HardwareBackend] Sent Makcu click: button=" << (int)button << std::endl;
+    #endif
     
     return true;
 #else
