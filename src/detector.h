@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <span>
 #include <onnxruntime_cxx_api.h>
 #include <dml_provider_factory.h>
 
@@ -17,7 +18,7 @@ public:
     Detector();
     ~Detector();
     bool initialize(const std::string& model_path, int force_w = 0, int force_h = 0);
-    std::vector<Detection> run_inference(const unsigned char* pixel_data, int w, int h,
+    std::vector<Detection> run_inference(std::span<const unsigned char> pixel_data, int w, int h,
         float body_conf_threshold, float head_conf_threshold,
         float nms_threshold, int max_det,
         bool elite_smoke_vision = false);

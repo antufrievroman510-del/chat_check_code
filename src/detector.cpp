@@ -7,6 +7,8 @@
 #include <dxgi.h> 
 #include <limits>
 #include <chrono>
+#include <span>
+#include <cstring>
 
 #pragma comment(lib, "dxgi.lib")
 
@@ -22,10 +24,10 @@ struct DetectionExt {
 };
 
 inline float CalculateIoU(const Detection& a, const Detection& b) {
-    float x1 = (std::max)(a.box.x, b.box.x);
-    float y1 = (std::max)(a.box.y, b.box.y);
-    float x2 = (std::min)(a.box.x + a.box.w, b.box.x + b.box.w);
-    float y2 = (std::min)(a.box.y + a.box.h, b.box.y + b.box.h);
+    float x1 = std::max(a.box.x, b.box.x);
+    float y1 = std::max(a.box.y, b.box.y);
+    float x2 = std::min(a.box.x + a.box.w, b.box.x + b.box.w);
+    float y2 = std::min(a.box.y + a.box.h, b.box.y + b.box.h);
     if (x2 < x1 || y2 < y1) return 0.0f;
     float intersection = (x2 - x1) * (y2 - y1);
     return intersection / (a.box.w * a.box.h + b.box.w * b.box.h - intersection);
@@ -59,10 +61,10 @@ void NMS_Improved(std::vector<Detection>& detections, float nms_threshold, std::
         for (size_t j = i + 1; j < detections.size(); ++j) {
             if (suppress[j]) continue;
 
-            float x1 = (std::max)(detections[i].box.x, detections[j].box.x);
-            float y1 = (std::max)(detections[i].box.y, detections[j].box.y);
-            float x2 = (std::min)(detections[i].box.x + detections[i].box.w, detections[j].box.x + detections[j].box.w);
-            float y2 = (std::min)(detections[i].box.y + detections[i].box.h, detections[j].box.y + detections[j].box.h);
+            float x1 = std::max(detections[i].box.x, detections[j].box.x);
+            float y1 = std::max(detections[i].box.y, detections[j].box.y);
+            float x2 = std::min(detections[i].box.x + detections[i].box.w, detections[j].box.x + detections[j].box.w);
+            float y2 = std::min(detections[i].box.y + detections[i].box.h, detections[j].box.y + detections[j].box.h);
 
             if (x2 > x1 && y2 > y1) {
                 float intersection = (x2 - x1) * (y2 - y1);
@@ -81,12 +83,18 @@ void NMS_Improved(std::vector<Detection>& detections, float nms_threshold, std::
 // ============================================================================
 // ПРЕПРОЦЕССИНГ (прямая конвертация BGRA → CHW float [0..1])
 // ============================================================================
-void PreprocessDirect(const unsigned char* src, std::vector<float>& dst, int w, int h) {
+void PreprocessDirect(std::span<const unsigned char> src, std::vector<float>& dst, int w, int h) {
     int channel_size = w * h;
     float* r_ptr = dst.data();
     float* g_ptr = dst.data() + channel_size;
     float* b_ptr = dst.data() + channel_size * 2;
     const float inv255 = 0.003921568f;
+    
+    // Проверка границ span для безопасности
+    const std::size_t required_size = static_cast<std::size_t>(w) * h * 4;
+    if (src.size_bytes() < required_size) {
+        return;
+    }
     
     // Входное изображение в формате BGRA (4 канала)
     // Конвертируем в RGB планарный формат (3 канала, float нормализованный)
@@ -188,12 +196,18 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
     }
 }
 
-std::vector<Detection> Detector::run_inference(const unsigned char* pixel_data, int w, int h,
+std::vector<Detection> Detector::run_inference(std::span<const unsigned char> pixel_data, int w, int h,
     float body_conf_threshold, float head_conf_threshold,
     float nms_threshold, int max_det, bool elite_smoke_vision) {
 
     std::vector<Detection> final_results;
     if (!session) return final_results;
+
+    // Проверка границ span для безопасности
+    const std::size_t required_size = static_cast<std::size_t>(w) * h * 4;
+    if (pixel_data.size_bytes() < required_size) {
+        return final_results;
+    }
 
     // Сохраняем оригинальные размеры для масштабирования координат
     const int orig_w = w;
@@ -241,8 +255,8 @@ std::vector<Detection> Detector::run_inference(const unsigned char* pixel_data, 
                     const float oy_frac = oy - oy_int;
                     
                     // Ограничиваем координаты
-                    const int x0 = (std::min)(ox_int, w - 2);
-                    const int y0 = (std::min)(oy_int, h - 2);
+                    const int x0 = std::min(ox_int, w - 2);
+                    const int y0 = std::min(oy_int, h - 2);
                     const int x1 = x0 + 1;
                     const int y1 = y0 + 1;
                     

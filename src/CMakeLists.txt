@@ -1,15 +1,18 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 project(PWNZ_AI)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Определяем флаги для MSVC и GCC/Clang
 if(MSVC)
-    add_compile_options(/arch:AVX2 /O2 /Zi)
+    add_compile_options(/std:c++23 /arch:AVX2 /O2 /Zi /permissive-)
+    # Отключаем предупреждения для чистоты компиляции
+    add_compile_options(/W4 /WX- /wd4267 /wd4244 /wd4996)
 else()
     # Для GCC/MinGW в Linux/Wine эти флаги не применяются
-    add_compile_options(-O2 -g)
+    add_compile_options(-std=c++23 -O2 -g -Wall -Wextra)
 endif()
 
 # --- ПУТИ К БИБЛИОТЕКАМ ---

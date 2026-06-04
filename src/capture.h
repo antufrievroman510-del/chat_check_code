@@ -5,6 +5,7 @@
 #include <d3d11.h>
 #include <dxgi1_2.h>
 #include <mutex>
+#include <span>
 
 class DXGICapture {
 public:
@@ -12,7 +13,7 @@ public:
     ~DXGICapture();
 
     bool Initialize();
-    bool GetHardwareROIFrame(unsigned char* out_pixels, int roi_x, int roi_y, int roi_w, int roi_h);
+    bool GetHardwareROIFrame(std::span<std::byte> out_pixels, int roi_x, int roi_y, int roi_w, int roi_h);
     void Cleanup();
 
 private:
