@@ -20,12 +20,19 @@
 
 namespace pwnz_ai {
 
+// ============================================
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ДЛЯ 2PC РЕЖИМА
+// Эти переменные обновляются из callback и используются в aimbot.cpp
+// ============================================
+extern std::atomic<bool> g_makcu_aiming;      // SIDE2 (Mouse5) - прицеливание
+extern std::atomic<bool> g_makcu_shooting;    // LMB - стрельба
+extern std::atomic<bool> g_makcu_zooming;     // RMB - зум
+
 /**
  * @brief Основной класс для работы с устройством Makcu
  * 
  * Архитектура как в референсе:
- * - Состояние кнопок хранится внутри класса (не глобальные переменные)
- * - Callback обновляет внутреннее состояние
+ * - Callback обновляет глобальные переменные g_makcu_*
  * - Методы aimingActive(), shootingActive(), zoomingActive() возвращают состояние
  */
 class MakcuWrapper : public IMouseInput {
@@ -45,10 +52,10 @@ public:
     void Release(int button) override;
     void Shutdown() override { Disconnect(); }
     
-    // Методы для получения состояния кнопок (как в референсе)
-    bool aimingActive() const { return m_aiming_active.load(); }
-    bool shootingActive() const { return m_shooting_active.load(); }
-    bool zoomingActive() const { return m_zooming_active.load(); }
+    // Методы для получения состояния кнопок (дублируют глобальные переменные)
+    bool aimingActive() const { return g_makcu_aiming.load(); }
+    bool shootingActive() const { return g_makcu_shooting.load(); }
+    bool zoomingActive() const { return g_makcu_zooming.load(); }
 
     /**
      * @brief Инициализация подключения к устройству
