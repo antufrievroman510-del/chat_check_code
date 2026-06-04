@@ -17,7 +17,7 @@
 class IMouseInput {
 public:
     // Virtual destructor for correct deletion of derived classes
-    virtual ~IMouseInput() = default;
+    virtual ~IMouseInput() noexcept = default;
 
     /**
      * @brief Initialize the input method

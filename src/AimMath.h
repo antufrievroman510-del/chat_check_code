@@ -86,3 +86,5 @@ private:
     static std::mt19937 gen;
     static std::uniform_real_distribution<float> dis;
 };
+
+#endif // AIMMATH_H

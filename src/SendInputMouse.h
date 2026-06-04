@@ -13,7 +13,7 @@ namespace pwnz_ai {
 class SendInputMouse : public IMouseInput {
 public:
     SendInputMouse() = default;
-    ~SendInputMouse() override = default;
+    ~SendInputMouse() noexcept override = default;
 
     // Запрет копирования
     SendInputMouse(const SendInputMouse&) = delete;
@@ -33,7 +33,7 @@ private:
      * @param dx Смещение по X (если применимо)
      * @param dy Смещение по Y (если применимо)
      */
-    void SendMouseInput(DWORD flags, int dx = 0, int dy = 0);
+    void SendMouseInput(DWORD flags, int dx = 0, int dy = 0) override;
 
     bool m_initialized = false;
 };
