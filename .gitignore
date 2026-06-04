@@ -1,1 +1,40 @@
-Nothing should be ignored in this case. The modified file 'PWNZ_AI/AimMath.h' is a source code file (.h header file) which should not be added to .gitignore according to rule #7. Since there are no build artifacts, dependencies, or temporary files in the changes, the .gitignore should remain empty per rule #6.
+```
+# Compiled and build artifacts
+*.o
+*.obj
+*.out
+build/
+dist/
+
+# Dependencies
+venv/
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+node_modules/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# System
+.DS_Store
+Thumbs.db
+```
