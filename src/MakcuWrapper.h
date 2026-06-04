@@ -11,7 +11,9 @@
 #include <memory>
 #include <functional>
 
-// Подключаем C API библиотеки makcu-cpp
+  // Подключаем C API библиотеки makcu-cpp
+  // Forward declarations уже определены в заголовочном файле
+  
 extern "C" {
 #include <makcu/makcu_c.h>
 }
