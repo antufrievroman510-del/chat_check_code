@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 project(PWNZ_AI)
 
+# --- НАСТРОЙКИ ПЛАТФОРМЫ ---
+# Явно указываем набор инструментов v143 (Visual Studio 2022), чтобы избежать ошибки MSB8020 с v145
+set(CMAKE_VS_PLATFORM_TOOLSET "v143")
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
