@@ -22,7 +22,7 @@ set(IMGUI_DIR "C:/BOGX_DEV/Imgui" CACHE PATH "Path to ImGui")
 set(BYTE_TRACK_DIR "C:/BOGX_DEV/byte-track-eigen-main" CACHE PATH "Path to ByteTrack")
 set(EIGEN_DIR "C:/BOGX_DEV/eigen-master" CACHE PATH "Path to Eigen")
 set(HIDAPI_DIR "C:/BOGX_DEV/hid_api" CACHE PATH "Path to HIDAPI")
-set(MAKCU_DIR "C:/PWNZ AI/macku2pc" CACHE PATH "Path to Makcu C++ library source")
+set(MAKCU_DIR "${CMAKE_SOURCE_DIR}/../macku2pc" CACHE PATH "Path to Makcu C++ library source")
 
 include_directories("${CMAKE_SOURCE_DIR}")
 include_directories("${ONNX_DIR}/include")

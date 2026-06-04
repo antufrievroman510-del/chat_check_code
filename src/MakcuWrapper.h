@@ -1,22 +1,20 @@
 #pragma once
 
 // ============================================
-// MakcuWrapper - Обертка для работы с Makcu через C API
-// Совместимо с C++17 для проекта PWNZ AI
+// MakcuWrapper - Обертка для работы с Makcu через C++ API
+// Совместимо с C++23 для проекта PWNZ AI
 // ============================================
 
 #include <string>
 #include <atomic>
-#include <thread>
 #include <memory>
 #include <functional>
+#include <expected>
+#include <mutex>
+#include <optional>
 
-  // Подключаем C API библиотеки makcu-cpp
-  // Forward declarations уже определены в заголовочном файле
-  
-extern "C" {
-#include <makcu/makcu_c.h>
-}
+// Подключаем C++ API библиотеки makcu-cpp
+#include <makcu.h>
 
 namespace pwnz_ai {
 
@@ -26,11 +24,11 @@ namespace pwnz_ai {
  * Эти переменные обновляются в реальном времени при получении событий от Makcu
  * и используются логикой аимбота для активации функций.
  */
-extern std::atomic<bool> g_makcu_aiming;    // ПКМ - прицеливание
+extern std::atomic<bool> g_makcu_aiming;    // Mouse5 (Side2) - прицеливание
 extern std::atomic<bool> g_makcu_shooting;  // ЛКМ - стрельба
-extern std::atomic<bool> g_makcu_zooming;   // СКМ - зум
-extern std::atomic<bool> g_makcu_side1;     // Боковая кнопка 1
-extern std::atomic<bool> g_makcu_side2;     // Боковая кнопка 2
+extern std::atomic<bool> g_makcu_zooming;   // ПКМ - зум
+extern std::atomic<bool> g_makcu_side1;     // Боковая кнопка 1 (Mouse4)
+extern std::atomic<bool> g_makcu_side2;     // Боковая кнопка 2 (используется для aiming)
 
 /**
  * @brief Конфигурация для подключения Makcu
@@ -39,8 +37,8 @@ struct MakcuConfig {
     std::string com_port = "";          // Если пусто, будет автопоиск
     uint16_t vid = 0x1A86;              // VID устройства (CH341 chipset)
     uint16_t pid = 0x55D3;              // PID устройства
+    int baud_rate = 115200;             // Скорость соединения
     bool enable_monitoring = true;      // Включить мониторинг кнопок
-    int polling_interval_ms = 1;        // Интервал опроса (мс)
 };
 
 /**
@@ -48,13 +46,14 @@ struct MakcuConfig {
  * 
  * Реализует:
  * - Автопоиск устройства по VID:PID
- * - Мониторинг состояния кнопок в отдельном потоке
+ * - Мониторинг состояния кнопок через callback (без polling)
  * - Управление движением мыши и кликами
- * - Обработку ошибок подключения
+ * - Обработку ошибок подключения через std::expected
+ * - Горячее переподключение
  */
 class MakcuWrapper {
 public:
-    using ButtonCallback = std::function<void(makcu_mouse_button_t button, bool pressed)>;
+    using ButtonCallback = std::function<void(makcu::MouseButton button, bool pressed)>;
 
     explicit MakcuWrapper(const MakcuConfig& config = MakcuConfig{});
     ~MakcuWrapper();
@@ -65,9 +64,9 @@ public:
 
     /**
      * @brief Инициализация подключения к устройству
-     * @return true если успешно подключено
+     * @return std::expected<void, std::string> - результат или ошибка
      */
-    bool Initialize();
+    std::expected<void, std::string> Initialize();
 
     /**
      * @brief Завершение работы и отключение
@@ -78,7 +77,7 @@ public:
      * @brief Удобная обертка для Initialize()
      * @return true если успешно подключено
      */
-    bool Connect() { return Initialize(); }
+    bool Connect();
 
     /**
      * @brief Удобная обертка для Shutdown()
@@ -137,11 +136,9 @@ public:
      * @brief Статический метод для поиска первого устройства Makcu по VID:PID
      * @param vid Vendor ID
      * @param pid Product ID
-     * @param out_port Буфер для имени COM-порта
-     * @param port_size Размер буфера
-     * @return true если устройство найдено
+     * @return std::optional<std::string> - COM-порт или nullopt
      */
-    static bool FindDeviceByVidPid(uint16_t vid, uint16_t pid, char* out_port, size_t port_size);
+    static std::optional<std::string> FindDeviceByVidPid(uint16_t vid, uint16_t pid);
 
     /**
      * @brief Найти все устройства Makcu в системе
@@ -149,28 +146,34 @@ public:
      */
     static std::vector<std::string> FindAllDevices();
 
+    /**
+     * @brief Попытка переподключения при потере устройства
+     * @return true если успешно переподключено
+     */
+    bool TryReconnect();
+
 private:
     MakcuConfig m_config;
-    makcu_device_t* m_device;
+    std::unique_ptr<makcu::Device> m_device;
     std::atomic<bool> m_initialized;
-    std::atomic<bool> m_running;
-    std::unique_ptr<std::thread> m_monitor_thread;
+    std::atomic<bool> m_connected;
     ButtonCallback m_button_callback;
+    mutable std::mutex m_mutex;
 
     /**
-     * @brief Поток мониторинга состояния кнопок
+     * @brief Обработка событий кнопок из callback
      */
-    void MonitorThreadFunc();
+    void OnButtonEvent(makcu::MouseButton button, bool pressed);
+
+    /**
+     * @brief Конвертация номера кнопки в тип C++ API
+     */
+    static makcu::MouseButton IntToButton(int button);
 
     /**
      * @brief Обновление глобальных переменных состояния кнопок
      */
-    void UpdateGlobalButtonState(makcu_mouse_button_t button, bool pressed);
-
-    /**
-     * @brief Конвертация номера кнопки в тип C API
-     */
-    static makcu_mouse_button_t IntToButton(int button);
+    void UpdateGlobalButtonState(makcu::MouseButton button, bool pressed);
 };
 
 } // namespace pwnz_ai
