@@ -40,6 +40,7 @@
 #include <functional>
 
 #include <iphlpapi.h>
+#include "MakcuWrapper.h"
 #include <shlobj.h>
 #include <wincrypt.h>
 #include <cstring>
@@ -51,7 +52,6 @@
 #include "VMProtectSDK.h"
 #include "head_smoother.h"
 #include "HardwareBackend.h"
-#include "MakcuWrapper.h"
 
 extern HeadSmoother g_head_smoother;
 #pragma comment(lib, "dwmapi.lib")
@@ -1487,7 +1487,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
 
         // === КРИТИЧНО: Используем MakcuWrapper для 2PC-связки ===
         // MakcuWrapper имеет встроенный поток мониторинга кнопок через C API
-        static std::unique_ptr<MakcuWrapper> g_makcu_wrapper;
+        static std::unique_ptr<pwnz_ai::MakcuWrapper> g_makcu_wrapper;
         
         bool connected = (g_makcu_wrapper != nullptr && g_makcu_wrapper->IsConnected());
 
@@ -1501,7 +1501,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
                 
                 // Создаём объект MakcuWrapper если ещё не создан
                 if (!g_makcu_wrapper) {
-                    g_makcu_wrapper = std::make_unique<MakcuWrapper>();
+                    g_makcu_wrapper = std::make_unique<pwnz_ai::MakcuWrapper>();
                 }
                 
                 // Подключаемся через MakcuWrapper (автопоиск по VID:PID 1A86:55D3)
