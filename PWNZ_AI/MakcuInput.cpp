@@ -4,6 +4,11 @@
 
 namespace pwnz_ai {
 
+// Определение глобальных атомарных переменных для состояния кнопок Makcu (2PC режим)
+std::atomic<bool> g_makcu_aiming{false};    // SIDE2 (Mouse5) - прицеливание
+std::atomic<bool> g_makcu_zooming{false};   // RMB - зум
+std::atomic<bool> g_makcu_shooting{false};  // LMB - стрельба
+
 MakcuInput::MakcuInput() {
     std::cout << "[MakcuInput] Constructor called" << std::endl;
 }
@@ -202,14 +207,16 @@ bool MakcuInput::IsConnected() const {
 }
 
 void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
-    // Обновляем атомарные флаги состояния кнопок
+    // Обновляем атомарные флаги состояния кнопок (локальные)
     switch (button) {
         case makcu::MouseButton::LEFT:
             m_btnLmb.store(pressed);
+            g_makcu_shooting.store(pressed);  // LMB = стрельба
             std::cout << "[MakcuInput] LMB " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         case makcu::MouseButton::RIGHT:
             m_btnRmb.store(pressed);
+            g_makcu_zooming.store(pressed);   // RMB = зум
             std::cout << "[MakcuInput] RMB " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         case makcu::MouseButton::MIDDLE:
@@ -222,6 +229,7 @@ void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
             break;
         case makcu::MouseButton::SIDE2:
             m_btnSide2.store(pressed);
+            g_makcu_aiming.store(pressed);    // SIDE2 = прицеливание
             std::cout << "[MakcuInput] SIDE2 " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         default:

@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef AIMMATH_H
-#define AIMMATH_H
-
 #include "WinHeaders.h"
 #include <cmath>
 #include <random>
@@ -90,5 +87,3 @@ private:
     static std::mt19937 gen;
     static std::uniform_real_distribution<float> dis;
 };
-
-#endif // AIMMATH_H
