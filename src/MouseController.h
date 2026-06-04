@@ -2,6 +2,8 @@
 #include "WinHeaders.h"
 #include "AimMath.h"
 #include "HardwareController.h"
+#include "MakcuWrapper.h"
+#include "KMBoxNet.h"
 
 // Перечисление методов ввода для Mouse Bypass
 enum class MouseMethod {

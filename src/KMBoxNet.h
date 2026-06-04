@@ -5,6 +5,7 @@
 #include <string>
 #include <mutex>
 #include <vector>
+#include <cstdint>
 
 // Контроллер для работы с платой KMbox Net через TCP/IP сеть
 // Протокол: Бинарный пакет с checksum
