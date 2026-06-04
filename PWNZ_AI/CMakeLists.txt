@@ -20,38 +20,43 @@ else()
 endif()
 
 # --- ПУТИ К БИБЛИОТЕКАМ ---
-# Пути по умолчанию для Windows (можно переопределить через -D при запуске cmake)
-set(ONNX_DIR "C:/BOGX_DEV/ONNX_1_18" CACHE PATH "Path to ONNX Runtime")
-set(IMGUI_DIR "C:/BOGX_DEV/Imgui" CACHE PATH "Path to ImGui")
-set(BYTE_TRACK_DIR "C:/BOGX_DEV/byte-track-eigen-main" CACHE PATH "Path to ByteTrack")
-set(EIGEN_DIR "C:/BOGX_DEV/eigen-master" CACHE PATH "Path to Eigen")
-set(HIDAPI_DIR "C:/BOGX_DEV/hid_api" CACHE PATH "Path to HIDAPI")
-set(MAKCU_DIR "${CMAKE_SOURCE_DIR}/../macku2pc" CACHE PATH "Path to Makcu C++ library source")
+# Используем библиотеки из репозитория source_logic для Linux-сборки
+set(IMGUI_DIR "/workspace/source_logic/source_logic/modules/imgui-1.92.8" CACHE PATH "Path to ImGui")
+
+# ИСПОЛЬЗУЕМ локальную библиотеку macku2pc внутри проекта PWNZ_AI
+set(MAKCU_DIR "${CMAKE_SOURCE_DIR}/macku2pc" CACHE PATH "Path to Makcu C++ library source")
 
 # Проверка существования директории makcu2pc
 if(NOT EXISTS "${MAKCU_DIR}")
-    message(FATAL_ERROR "Makcu library directory not found at ${MAKCU_DIR}. Please ensure macku2pc folder exists in parent directory.")
+    message(FATAL_ERROR "Makcu library directory not found at ${MAKCU_DIR}. Please ensure macku2pc folder exists in project root.")
 endif()
 
 include_directories("${CMAKE_SOURCE_DIR}")
-include_directories("${ONNX_DIR}/include")
 include_directories("${IMGUI_DIR}")
-include_directories("${BYTE_TRACK_DIR}/include")
-include_directories("${EIGEN_DIR}")
-include_directories("${HIDAPI_DIR}/include")
+include_directories("${IMGUI_DIR}/backends")
+# Подключаем заголовки Makcu из внутренней папки
 include_directories("${MAKCU_DIR}/include")
 
-# [ДОБАВЛЕНО] Исходники Makcu2PC (компилируем библиотеку из исходников)
+# --- СОЗДАНИЕ ОТДЕЛЬНОЙ БИБЛИОТЕКИ MAKCU2PC ---
+# Собираем исходники Makcu в отдельную статическую библиотеку для изоляции
 set(MAKCU_SOURCES 
     "${MAKCU_DIR}/src/makcu.cpp"
     "${MAKCU_DIR}/src/makcu_c.cpp"
     "${MAKCU_DIR}/src/serialport.cpp"
 )
 
-# [ДОБАВЛЕНО] Исходники ByteTrack-Eigen (KalmanFilter, STrack, BYTETracker, lapjv и т.д.)
-file(GLOB BYTE_TRACK_SOURCES "${BYTE_TRACK_DIR}/src/*.cpp")
+add_library(Makcu2PC_Lib STATIC ${MAKCU_SOURCES})
+target_include_directories(Makcu2PC_Lib PUBLIC "${MAKCU_DIR}/include")
 
-add_executable(PWNZ_AI WIN32
+# Для Linux добавляем необходимые системные библиотеки
+if(UNIX AND NOT APPLE)
+    find_package(Threads REQUIRED)
+endif()
+
+# Временная сборка без BYTETracker и ONNX для проверки интеграции Makcu
+# Примечание: main.cpp использует BYTETracker.h - нужен стаб или моки
+# ImGui файлы берутся из backends подкаталога
+add_executable(PWNZ_AI
     "main.cpp"
     "capture.cpp"
     "capture.h"
@@ -74,38 +79,40 @@ add_executable(PWNZ_AI WIN32
     "MouseController.cpp"
     "HardwareController.h"
     "HardwareController.cpp"
-    "MakcuWrapper.h"
-    "MakcuWrapper.cpp"
+    "MakcuInput.h"
+    "MakcuInput.cpp"
     "KMBoxNet.h"
     "KMBoxNet.cpp"
     "HardwareBackend.h"
     "HardwareBackend.cpp"
+    "IMouseInput.h"
+    "SendInputMouse.h"
+    "SendInputMouse.cpp"
+    "KMboxMouse.h"
+    "KMboxMouse.cpp"
     "${IMGUI_DIR}/imgui.cpp"
     "${IMGUI_DIR}/imgui_draw.cpp"
     "${IMGUI_DIR}/imgui_widgets.cpp"
     "${IMGUI_DIR}/imgui_tables.cpp"
-    "${IMGUI_DIR}/imgui_impl_dx11.cpp"
-    "${IMGUI_DIR}/imgui_impl_win32.cpp"
-    "${IMGUI_DIR}/implot.cpp"
-    "${IMGUI_DIR}/implot_items.cpp"
-    ${BYTE_TRACK_SOURCES}
-    ${MAKCU_SOURCES}
+    "${IMGUI_DIR}/backends/imgui_impl_dx11.cpp"
+    "${IMGUI_DIR}/backends/imgui_impl_win32.cpp"
 )
 
-target_link_libraries(PWNZ_AI PRIVATE
-    d3d11.lib dxgi.lib d3dcompiler.lib dwmapi.lib setupapi.lib user32.lib gdi32.lib
-    windowsapp.lib ws2_32.lib
-    "${ONNX_DIR}/lib/onnxruntime.lib"
-    "${ONNX_DIR}/lib/DirectML.lib"
-    "${CMAKE_SOURCE_DIR}/VMProtectSDK64.lib"
-    "${HIDAPI_DIR}/x64/hidapi.lib"
-)
+# Подключаем нашу статическую библиотеку Makcu2PC к проекту
+target_link_libraries(PWNZ_AI PRIVATE Makcu2PC_Lib)
 
-set_target_properties(PWNZ_AI PROPERTIES LINK_FLAGS "/DEBUG /OPT:REF /OPT:ICF /SUBSYSTEM:WINDOWS")
+# Системные библиотеки для Linux
+if(UNIX AND NOT APPLE)
+    target_link_libraries(PWNZ_AI PRIVATE 
+        Threads::Threads
+        stdc++
+    )
+endif()
 
-add_custom_command(TARGET PWNZ_AI POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ONNX_DIR}/lib/onnxruntime.dll" $<TARGET_FILE_DIR:PWNZ_AI>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ONNX_DIR}/lib/onnxruntime_providers_shared.dll" $<TARGET_FILE_DIR:PWNZ_AI>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ONNX_DIR}/lib/DirectML.dll" $<TARGET_FILE_DIR:PWNZ_AI>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${HIDAPI_DIR}/x64/hidapi.dll" $<TARGET_FILE_DIR:PWNZ_AI>
-)
+# Windows библиотеки (для кросс-компиляции или документации)
+if(WIN32 OR MSVC)
+    target_link_libraries(PWNZ_AI PRIVATE
+        d3d11.lib dxgi.lib d3dcompiler.lib dwmapi.lib setupapi.lib user32.lib gdi32.lib
+        windowsapp.lib ws2_32.lib
+    )
+endif()

@@ -1,16 +1,9 @@
 #pragma once
 
-#ifndef AIMMATH_H
-#define AIMMATH_H
-
 #include "WinHeaders.h"
 #include <cmath>
 #include <random>
 #include <algorithm>
-
-// Forward declarations для избежания циклических зависимостей
-struct AimResult;
-class AimMath;
 
 // Простая структура вектора для математики
 struct Vector2 {
@@ -94,5 +87,3 @@ private:
     static std::mt19937 gen;
     static std::uniform_real_distribution<float> dis;
 };
-
-#endif // AIMMATH_H
