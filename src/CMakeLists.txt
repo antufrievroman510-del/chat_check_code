@@ -19,7 +19,7 @@ set(IMGUI_DIR "C:/BOGX_DEV/Imgui" CACHE PATH "Path to ImGui")
 set(BYTE_TRACK_DIR "C:/BOGX_DEV/byte-track-eigen-main" CACHE PATH "Path to ByteTrack")
 set(EIGEN_DIR "C:/BOGX_DEV/eigen-master" CACHE PATH "Path to Eigen")
 set(HIDAPI_DIR "C:/BOGX_DEV/hid_api" CACHE PATH "Path to HIDAPI")
-set(MAKCU_DIR "C:/BOGX_DEV/makcu-cpp" CACHE PATH "Path to Makcu C++ library")
+set(MAKCU_DIR "C:/makcu1.3.5" CACHE PATH "Path to Makcu C++ library")
 
 include_directories("${CMAKE_SOURCE_DIR}")
 include_directories("${ONNX_DIR}/include")
@@ -27,7 +27,7 @@ include_directories("${IMGUI_DIR}")
 include_directories("${BYTE_TRACK_DIR}/include")
 include_directories("${EIGEN_DIR}")
 include_directories("${HIDAPI_DIR}/include")
-include_directories("${MAKCU_DIR}/makcu-cpp/include")
+include_directories("${MAKCU_DIR}/include")
 
 # [ДОБАВЛЕНО] Исходники ByteTrack-Eigen (KalmanFilter, STrack, BYTETracker, lapjv и т.д.)
 file(GLOB BYTE_TRACK_SOURCES "${BYTE_TRACK_DIR}/src/*.cpp")
@@ -55,8 +55,8 @@ add_executable(PWNZ_AI WIN32
     "MouseController.cpp"
     "HardwareController.h"
     "HardwareController.cpp"
-    "MakcuMouse.h"
-    "MakcuMouse.cpp"
+    "MakcuWrapper.h"
+    "MakcuWrapper.cpp"
     "KMBoxNet.h"
     "KMBoxNet.cpp"
     "HardwareBackend.h"
@@ -79,7 +79,7 @@ target_link_libraries(PWNZ_AI PRIVATE
     "${ONNX_DIR}/lib/DirectML.lib"
     "${CMAKE_SOURCE_DIR}/VMProtectSDK64.lib"
     "${HIDAPI_DIR}/x64/hidapi.lib"
-    "${MAKCU_DIR}/build/lib/makcu-cpp.lib"
+    "${MAKCU_DIR}/lib/makcu-cpp.lib"
 )
 
 set_target_properties(PWNZ_AI PROPERTIES LINK_FLAGS "/DEBUG /OPT:REF /OPT:ICF /SUBSYSTEM:WINDOWS")
@@ -89,7 +89,6 @@ add_custom_command(TARGET PWNZ_AI POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ONNX_DIR}/lib/onnxruntime_providers_shared.dll" $<TARGET_FILE_DIR:PWNZ_AI>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ONNX_DIR}/lib/DirectML.dll" $<TARGET_FILE_DIR:PWNZ_AI>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${HIDAPI_DIR}/x64/hidapi.dll" $<TARGET_FILE_DIR:PWNZ_AI>
-    # Копируем DLL библиотеки Makcu (путь зависит от платформы)
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MAKCU_DIR}/build/lib/makcu-cpp.dll" $<TARGET_FILE_DIR:PWNZ_AI>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MAKCU_DIR}/build/bin/makcu-cpp.dll" $<TARGET_FILE_DIR:PWNZ_AI>
+    # Копируем DLL библиотеки Makcu (из новой структуры папок)
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MAKCU_DIR}/bin/makcu-cpp.dll" $<TARGET_FILE_DIR:PWNZ_AI>
 )
