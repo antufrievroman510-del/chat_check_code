@@ -28,7 +28,7 @@ MakcuWrapper::MakcuWrapper(const MakcuConfig& config)
 
 MakcuWrapper::~MakcuWrapper() {
     if (m_initialized.load()) {
-        Shutdown();
+        ShutdownInternal();
     }
 }
 
@@ -193,7 +193,7 @@ std::expected<void, std::string> MakcuWrapper::Initialize() {
     }
 }
 
-void MakcuWrapper::Shutdown() {
+void MakcuWrapper::ShutdownInternal() {
     std::lock_guard<std::mutex> lock(m_mutex);
     
     if (!m_initialized.load()) {
@@ -382,7 +382,7 @@ bool MakcuWrapper::TryReconnect() {
     std::cout << "[MakcuWrapper] Attempting to reconnect..." << std::endl;
     
     // Сначала полностью закрываем старое соединение
-    Shutdown();
+    ShutdownInternal();
     
     // Пробуем заново инициализировать
     return Connect();
