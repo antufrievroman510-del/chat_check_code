@@ -1,3 +1,6 @@
+ интеграция-makcu-esp32s3-в-c++23-342f9
+Nothing should be ignored based on the provided file changes. The only modified file is `PWNZ_AI/CMakeLists.txt`, which is a source/config file and should not be added to .gitignore.
+
 ```
 # Compiled and build artifacts
 *.o
@@ -73,3 +76,4 @@ htmlcov/
 *.tar.xz
 *.tar.zst
 ```
+ main
