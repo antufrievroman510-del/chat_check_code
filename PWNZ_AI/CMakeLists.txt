@@ -24,6 +24,11 @@ set(EIGEN_DIR "C:/BOGX_DEV/eigen-master" CACHE PATH "Path to Eigen")
 set(HIDAPI_DIR "C:/BOGX_DEV/hid_api" CACHE PATH "Path to HIDAPI")
 set(MAKCU_DIR "${CMAKE_SOURCE_DIR}/../macku2pc" CACHE PATH "Path to Makcu C++ library source")
 
+# Проверка существования директории makcu2pc
+if(NOT EXISTS "${MAKCU_DIR}")
+    message(FATAL_ERROR "Makcu library directory not found at ${MAKCU_DIR}. Please ensure macku2pc folder exists in parent directory.")
+endif()
+
 include_directories("${CMAKE_SOURCE_DIR}")
 include_directories("${ONNX_DIR}/include")
 include_directories("${IMGUI_DIR}")
