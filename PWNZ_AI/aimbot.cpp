@@ -566,17 +566,23 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     bool key_pressed = false;
     
     // === КРИТИЧНО: Для аппаратного режима (Makcu) используем g_makcu_aiming/g_makcu_shooting И g_remote_aim_key ===
-    // Эти переменные обновляются из MakcuWrapper::MonitorThreadFunc при получении событий от устройства
+    // Эти переменные обновляются из MakcuWrapper::OnButtonEvent при получении событий от устройства
     if (hardware_type >= 1) {
         // В аппаратном режиме состояние кнопок определяется через обратную связь от устройства
-        // Проверяем все три источника для максимальной надёжности
-        key_pressed = pwnz_ai::g_makcu_aiming.load() || pwnz_ai::g_makcu_shooting.load() || g_remote_aim_key.load();
+        // Проверяем все источники: SIDE2 (aiming), RMB (zooming), LMB (shooting), remote_key
+        bool makcu_aiming = pwnz_ai::g_makcu_aiming.load();      // SIDE2 (Mouse5)
+        bool makcu_zooming = pwnz_ai::g_makcu_zooming.load();    // RMB
+        bool makcu_shooting = pwnz_ai::g_makcu_shooting.load();  // LMB
+        
+        // Активация аимбота если нажата ЛЮБАЯ кнопка прицеливания или стрельбы
+        key_pressed = makcu_aiming || makcu_zooming || makcu_shooting || g_remote_aim_key.load();
         
         // Логирование для отладки 2PC-связки
         static int log_counter = 0;
         if (++log_counter % 100 == 0) {  // Логируем каждые 100 кадров
-            std::cout << "[AIMBOT] HW Mode: aiming=" << pwnz_ai::g_makcu_aiming.load() 
-                      << " shooting=" << pwnz_ai::g_makcu_shooting.load() 
+            std::cout << "[AIMBOT] HW Mode: aiming(SIDE2)=" << makcu_aiming 
+                      << " zooming(RMB)=" << makcu_zooming
+                      << " shooting(LMB)=" << makcu_shooting
                       << " remote_key=" << g_remote_aim_key.load()
                       << " key_pressed=" << key_pressed << std::endl;
         }
@@ -826,21 +832,29 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         static bool hw_rmb_pressed = false;
         
         // Получаем актуальное состояние кнопок из глобальных переменных
-        bool aiming_now = pwnz_ai::g_makcu_aiming.load();   // RMB - прицеливание
+        // В РЕФЕРЕНСЕ: SIDE2 (Mouse5) = aiming, RMB = zooming, LMB = shooting
+        bool aiming_now = pwnz_ai::g_makcu_aiming.load();   // SIDE2 (Mouse5) - прицеливание
+        bool zooming_now = pwnz_ai::g_makcu_zooming.load(); // RMB - зум
         bool shooting_now = pwnz_ai::g_makcu_shooting.load(); // LMB - стрельба
         
-        std::cout << "[AIMBOT] HW Loop: aiming=" << aiming_now << " shooting=" << shooting_now << std::endl;
+        // Для совместимости: считаем aiming активным если нажат SIDE2 или RMB
+        bool aim_active = aiming_now || zooming_now;
         
-        // Обработка ПКМ (прицеливание) - переходы
-        if (aiming_now && !hw_rmb_pressed) {
-            std::cout << "[AIMBOT] Right button PRESSED (aiming)" << std::endl;
+        std::cout << "[AIMBOT] HW Loop: aiming(SIDE2)=" << aiming_now 
+                  << " zooming(RMB)=" << zooming_now 
+                  << " shooting(LMB)=" << shooting_now 
+                  << " aim_active=" << aim_active << std::endl;
+        
+        // Обработка ПКМ/RMB (зум/прицеливание) - переходы
+        if (zooming_now && !hw_rmb_pressed) {
+            std::cout << "[AIMBOT] Right button PRESSED (zoom/aim)" << std::endl;
             SendHardwarePress(1);
             hw_rmb_pressed = true;
-        } else if (!aiming_now && hw_rmb_pressed) {
-            std::cout << "[AIMBOT] Right button RELEASED (aiming)" << std::endl;
+        } else if (!zooming_now && hw_rmb_pressed) {
+            std::cout << "[AIMBOT] Right button RELEASED (zoom/aim)" << std::endl;
             SendHardwareRelease(1);
             hw_rmb_pressed = false;
-            hw_lmb_pressed = false;
+            hw_lmb_pressed = false;  // Сбрасываем LMB при отпускании RMB
         }
         
         // Обработка ЛКМ (стрельба) - переходы
@@ -854,8 +868,8 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
             hw_lmb_pressed = false;
         }
         
-        // Авто-огонь при прицеливании (ПКМ)
-        if (hw_rmb_pressed) {
+        // Авто-огонь при прицеливании (RMB или SIDE2)
+        if (hw_rmb_pressed || aiming_now) {
             static long long last_shot_time = 0;
             long long current_time = current_time_ms;
             if (current_time - last_shot_time > 100) {
