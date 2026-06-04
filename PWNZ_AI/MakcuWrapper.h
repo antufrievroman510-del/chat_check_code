@@ -108,37 +108,12 @@ public:
     std::string GetDeviceInfo() const;
 
     /**
-     * @brief Движение мыши
-     * @param dx Смещение по X
-     * @param dy Смещение по Y
-     */
-    void Move(int dx, int dy);
-
-    /**
      * @brief Плавное движение мыши
      * @param dx Смещение по X
      * @param dy Смещение по Y
      * @param segments Количество сегментов для плавности
      */
     void MoveSmooth(int dx, int dy, uint32_t segments = 10);
-
-    /**
-     * @brief Клик кнопкой мыши
-     * @param button Номер кнопки (0=ЛКМ, 1=ПКМ, 2=СКМ, 3=Side1, 4=Side2)
-     */
-    void Click(int button);
-
-    /**
-     * @brief Нажатие кнопки (без отпускания)
-     * @param button Номер кнопки
-     */
-    void Press(int button);
-
-    /**
-     * @brief Отпускание кнопки
-     * @param button Номер кнопки
-     */
-    void Release(int button);
 
     /**
      * @brief Установить callback для событий кнопок

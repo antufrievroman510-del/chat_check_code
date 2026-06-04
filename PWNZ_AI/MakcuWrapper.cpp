@@ -268,25 +268,6 @@ std::string MakcuWrapper::GetDeviceInfo() const {
     }
 }
 
-void MakcuWrapper::Move(int dx, int dy) {
-    if (!m_initialized.load() || !m_connected.load()) {
-        return;
-    }
-    
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (!m_device) {
-        return;
-    }
-    
-    try {
-        m_device->mouseMove(dx, dy);
-    } catch (...) {
-#ifdef _DEBUG
-        std::cerr << "[MakcuWrapper] Move failed" << std::endl;
-#endif
-    }
-}
-
 void MakcuWrapper::MoveSmooth(int dx, int dy, uint32_t segments) {
     if (!m_initialized.load() || !m_connected.load()) {
         return;
@@ -302,6 +283,25 @@ void MakcuWrapper::MoveSmooth(int dx, int dy, uint32_t segments) {
     } catch (...) {
 #ifdef _DEBUG
         std::cerr << "[MakcuWrapper] MoveSmooth failed" << std::endl;
+#endif
+    }
+}
+
+void MakcuWrapper::Move(int dx, int dy) {
+    if (!m_initialized.load() || !m_connected.load()) {
+        return;
+    }
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_device) {
+        return;
+    }
+    
+    try {
+        m_device->mouseMove(dx, dy);
+    } catch (...) {
+#ifdef _DEBUG
+        std::cerr << "[MakcuWrapper] Move failed" << std::endl;
 #endif
     }
 }
