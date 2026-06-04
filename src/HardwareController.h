@@ -1,7 +1,7 @@
 #pragma once
 
 #include "WinHeaders.h"
-#include "HardwareBackend.h"
+#include "HardwareBackend.h"  // Явное включение для HardwareConfig и HardwareMode
 #include "MakcuWrapper.h"
 #include "KMBoxNet.h"
 

@@ -1,4 +1,5 @@
 #include "HardwareController.h"
+#include "HardwareBackend.h"  // Явное включение для HardwareConfig и HardwareMode
 #include "MakcuWrapper.h"
 #include "KMBoxNet.h"
 #include <iostream>
