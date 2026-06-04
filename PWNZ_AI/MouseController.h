@@ -3,7 +3,7 @@
 #include "AimMath.h"
 #include "HardwareController.h"
 #include "HardwareBackend.h"  // Явное включение для HardwareConfig
-#include "MakcuWrapper.h"
+#include "MakcuInput.h"
 #include "KMBoxNet.h"
 
 // Перечисление методов ввода для Mouse Bypass
