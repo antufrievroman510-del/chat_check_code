@@ -5,15 +5,19 @@
 namespace pwnz_ai {
 
 // ============================================
+// ОПРЕДЕЛЕНИЕ ГЛОБАЛЬНЫХ ПЕРЕМЕННЫХ ДЛЯ 2PC РЕЖИМА
+// ============================================
+std::atomic<bool> g_makcu_aiming{false};      // SIDE2 (Mouse5) - прицеливание
+std::atomic<bool> g_makcu_shooting{false};    // LMB - стрельба
+std::atomic<bool> g_makcu_zooming{false};     // RMB - зум
+
+// ============================================
 // Реализация MakcuWrapper (архитектура как в референсе)
 // ============================================
 
 MakcuWrapper::MakcuWrapper(const std::string& port, unsigned int baud_rate)
     : m_device(nullptr)
     , m_is_open(false)
-    , m_aiming_active(false)
-    , m_shooting_active(false)
-    , m_zooming_active(false)
 {
     // Пустой конструктор - инициализация в Connect()
 }
@@ -74,8 +78,8 @@ bool MakcuWrapper::Connect() {
         // ============================================
         // КРИТИЧНО: Порядок инициализации как в референсе!
         // 1. Сначала устанавливаем callback
-        // 2. Включаем мониторинг кнопок
-        // 3. Только потом подключаемся
+        // 2. Подключаемся
+        // 3. ТОЛЬКО ПОСЛЕ подключения включаем мониторинг кнопок
         // ============================================
 
         // Устанавливаем callback ДО подключения для обработки событий кнопок
@@ -83,15 +87,6 @@ bool MakcuWrapper::Connect() {
             onButtonCallback(button, pressed);
         });
         std::cout << "[MakcuWrapper] Button callback installed" << std::endl;
-
-        // Включаем мониторинг кнопок ДО подключения - КРИТИЧНО для 2PC!
-        std::cout << "[MakcuWrapper] Enabling button monitoring BEFORE connect..." << std::endl;
-        bool monitor_result = m_device->enableButtonMonitoring(true);
-        if (monitor_result) {
-            std::cout << "[MakcuWrapper] Button monitoring ENABLED before connect" << std::endl;
-        } else {
-            std::cerr << "[MakcuWrapper] WARNING: Could not enable button monitoring before connect!" << std::endl;
-        }
 
         // Подключаемся к устройству
         std::cout << "[MakcuWrapper] Connecting to device..." << std::endl;
@@ -110,6 +105,18 @@ bool MakcuWrapper::Connect() {
             return false;
         }
         std::cout << "[MakcuWrapper] Device isConnected() = true" << std::endl;
+
+        // ============================================
+        // КРИТИЧНО: Включаем мониторинг кнопок ТОЛЬКО ПОСЛЕ успешного подключения!
+        // enableButtonMonitoring проверяет connected.load() и вернет false если не подключено
+        // ============================================
+        std::cout << "[MakcuWrapper] Enabling button monitoring AFTER connect..." << std::endl;
+        bool monitor_result = m_device->enableButtonMonitoring(true);
+        if (monitor_result) {
+            std::cout << "[MakcuWrapper] Button monitoring ENABLED successfully" << std::endl;
+        } else {
+            std::cerr << "[MakcuWrapper] WARNING: Could not enable button monitoring! Check device firmware." << std::endl;
+        }
 
         // Получаем версию устройства
         try {
@@ -131,6 +138,7 @@ bool MakcuWrapper::Connect() {
         
         std::cout << "[MakcuWrapper] ==============================================" << std::endl;
         std::cout << "[MakcuWrapper] 2PC MODE READY - Waiting for button presses..." << std::endl;
+        std::cout << "[MakcuWrapper] Monitoring status: " << (m_device->isButtonMonitoringEnabled() ? "ACTIVE" : "INACTIVE") << std::endl;
         std::cout << "[MakcuWrapper] ==============================================" << std::endl;
         
         return true;
@@ -172,10 +180,10 @@ void MakcuWrapper::Disconnect() {
         m_device.reset();
     }
 
-    // Сбрасываем состояние кнопок
-    m_aiming_active.store(false);
-    m_shooting_active.store(false);
-    m_zooming_active.store(false);
+    // Сбрасываем ГЛОБАЛЬНЫЕ переменные состояния кнопок
+    g_makcu_aiming.store(false);
+    g_makcu_shooting.store(false);
+    g_makcu_zooming.store(false);
 
     m_is_open.store(false);
     
@@ -328,18 +336,18 @@ void MakcuWrapper::onButtonCallback(makcu::MouseButton button, bool pressed) {
     std::cout << "[MakcuWrapper] CALLBACK: Button " << static_cast<int>(button) 
               << " " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
     
-    // Обновляем внутреннее состояние (как в референсе)
+    // Обновляем ГЛОБАЛЬНЫЕ переменные (как в референсе для 2PC режима)
     switch (button) {
         case makcu::MouseButton::LEFT:
             // LMB = shooting
-            std::cout << "[MakcuWrapper] Setting m_shooting_active = " << pressed << std::endl;
-            m_shooting_active.store(pressed);
+            std::cout << "[MakcuWrapper] Setting g_makcu_shooting = " << pressed << std::endl;
+            g_makcu_shooting.store(pressed);
             break;
             
         case makcu::MouseButton::RIGHT:
             // RMB = zooming
-            std::cout << "[MakcuWrapper] Setting m_zooming_active = " << pressed << std::endl;
-            m_zooming_active.store(pressed);
+            std::cout << "[MakcuWrapper] Setting g_makcu_zooming = " << pressed << std::endl;
+            g_makcu_zooming.store(pressed);
             break;
             
         case makcu::MouseButton::MIDDLE:
@@ -354,8 +362,8 @@ void MakcuWrapper::onButtonCallback(makcu::MouseButton button, bool pressed) {
             
         case makcu::MouseButton::SIDE2:
             // Mouse5 (Side2) = aiming - ЭТО ГЛАВНАЯ КНОПКА ПРИЦЕЛИВАНИЯ!
-            std::cout << "[MakcuWrapper] Setting m_aiming_active = " << pressed << " (SIDE2)" << std::endl;
-            m_aiming_active.store(pressed);
+            std::cout << "[MakcuWrapper] Setting g_makcu_aiming = " << pressed << " (SIDE2)" << std::endl;
+            g_makcu_aiming.store(pressed);
             break;
             
         default:
@@ -364,9 +372,9 @@ void MakcuWrapper::onButtonCallback(makcu::MouseButton button, bool pressed) {
     }
     
     // Финальный статус всех переменных
-    std::cout << "[MakcuWrapper] State: aiming=" << m_aiming_active.load() 
-              << " shooting=" << m_shooting_active.load() 
-              << " zooming=" << m_zooming_active.load() << std::endl;
+    std::cout << "[MakcuWrapper] Global state: aiming=" << g_makcu_aiming.load() 
+              << " shooting=" << g_makcu_shooting.load() 
+              << " zooming=" << g_makcu_zooming.load() << std::endl;
 }
 
 } // namespace pwnz_ai
