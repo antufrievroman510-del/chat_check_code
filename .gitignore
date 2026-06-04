@@ -1,48 +1,46 @@
-```cpp
-# Compiled and build artifacts
+```
+# Build artifacts
 *.o
 *.obj
 *.a
+*.lib
 *.so
 *.dll
 *.exe
 *.out
+
+# CMake build directory
 build/
-dist/
 
 # Dependencies
 venv/
 .venv/
 __pycache__/
 *.egg-info/
-.Python
+node_modules/
 
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-*.swo
-
-# Environment
-.env
-.env.local
-*.env.*
-
-# Editors
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS specific
-.DS_Store
-Thumbs.db
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
 
-# Coverage
-.coverage
+# Environment files
+.env
+.env.local
+*.env.*
+
+# Coverage reports
 coverage/
 htmlcov/
+*.coverage
 
-# MyPy
-.mypy_cache/
+# OS generated files
+.DS_Store
+Thumbs.db
 ```

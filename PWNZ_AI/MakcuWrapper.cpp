@@ -1,380 +1,279 @@
 #include "MakcuWrapper.h"
-#include <iostream>
-#include <algorithm>
 
 namespace pwnz_ai {
 
-// ============================================
-// ОПРЕДЕЛЕНИЕ ГЛОБАЛЬНЫХ ПЕРЕМЕННЫХ ДЛЯ 2PC РЕЖИМА
-// ============================================
-std::atomic<bool> g_makcu_aiming{false};      // SIDE2 (Mouse5) - прицеливание
-std::atomic<bool> g_makcu_shooting{false};    // LMB - стрельба
-std::atomic<bool> g_makcu_zooming{false};     // RMB - зум
+// ============================================================
+// Глобальные переменные состояния кнопок
+// ============================================================
+std::atomic<bool> g_makcu_aiming{false};    // SIDE2 (Mouse5)
+std::atomic<bool> g_makcu_zooming{false};   // RMB
+std::atomic<bool> g_makcu_shooting{false};  // LMB
 
-// ============================================
-// Реализация MakcuWrapper (архитектура как в референсе)
-// ============================================
-
-MakcuWrapper::MakcuWrapper(const std::string& port, unsigned int baud_rate)
-    : m_device(nullptr)
-    , m_is_open(false)
-{
-    // Пустой конструктор - инициализация в Connect()
+// ============================================================
+// Конструктор / Деструктор
+// ============================================================
+MakcuWrapper::MakcuWrapper(const MakcuConfig& config)
+    : m_config(config) {
+    std::cout << "[MakcuWrapper] Constructor called with VID:PID " 
+              << std::hex << config.vid << ":" << config.pid << std::dec << std::endl;
 }
 
 MakcuWrapper::~MakcuWrapper() {
-    Disconnect();
+    Shutdown();
 }
 
-std::optional<std::string> MakcuWrapper::FindDeviceByVidPid(uint16_t vid, uint16_t pid) {
-    try {
-        auto devices = makcu::Device::findDevices();
-        
-        // Ищем устройство с нужными VID:PID
-        for (const auto& device : devices) {
-            if (device.vid == vid && device.pid == pid) {
-                std::cout << "[MakcuWrapper] Found device at " << device.port 
-                          << " (VID:0x" << std::hex << vid << ", PID:0x" << pid << std::dec << ")" << std::endl;
-                return device.port;
-            }
-        }
-
-        // Если не нашли по точному совпадению, пробуем первое доступное устройство Makcu
-        if (!devices.empty()) {
-            std::cout << "[MakcuWrapper] Device with exact VID:PID not found, using first available: " 
-                      << devices[0].port << std::endl;
-            return devices[0].port;
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "[MakcuWrapper] Error finding device: " << e.what() << std::endl;
-    }
-
-    return std::nullopt;
-}
-
-bool MakcuWrapper::Connect() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    
-    if (m_is_open.load()) {
-        std::cout << "[MakcuWrapper] Already connected!" << std::endl;
-        return true;
-    }
+// ============================================================
+// Инициализация - КРИТИЧНЫЙ ПОРЯДОК как в референсе
+// ============================================================
+bool MakcuWrapper::Initialize() {
+    std::cout << "[MakcuWrapper] Starting initialization..." << std::endl;
 
     try {
-        // Создаем устройство
+        // ШАГ 1: Создание объекта устройства
+        std::cout << "[MakcuWrapper] Step 1: Creating makcu::Device object..." << std::endl;
         m_device = std::make_unique<makcu::Device>();
-        
-        // Определяем COM-порт
-        std::string port = FindDeviceByVidPid().value_or("");
-        
-        if (port.empty()) {
-            std::cerr << "[MakcuWrapper] ERROR: No Makcu device found!" << std::endl;
-            m_device.reset();
+        if (!m_device) {
+            std::cerr << "[MakcuWrapper] Failed to create Device object!" << std::endl;
             return false;
         }
+        std::cout << "[MakcuWrapper] Device object created successfully." << std::endl;
 
-        std::cout << "[MakcuWrapper] Using COM port: " << port << std::endl;
-
-        // ============================================
-        // КРИТИЧНО: Порядок инициализации как в референсе!
-        // 1. Сначала устанавливаем callback
-        // 2. Подключаемся
-        // 3. ТОЛЬКО ПОСЛЕ подключения включаем мониторинг кнопок
-        // ============================================
-
-        // Устанавливаем callback ДО подключения для обработки событий кнопок
-        m_device->setMouseButtonCallback([this](makcu::MouseButton button, bool pressed) {
-            onButtonCallback(button, pressed);
+        // ШАГ 2: Установка коллбэка ДО подключения
+        std::cout << "[MakcuWrapper] Step 2: Setting mouse button callback..." << std::endl;
+        m_device->setMouseButtonCallback([this](makcu::MouseButton button, bool isPressed) {
+            OnButtonEvent(button, isPressed);
         });
-        std::cout << "[MakcuWrapper] Button callback installed" << std::endl;
+        std::cout << "[MakcuWrapper] Callback set successfully." << std::endl;
 
-        // Подключаемся к устройству
-        std::cout << "[MakcuWrapper] Connecting to device..." << std::endl;
-        if (!m_device->connect(port)) {
-            std::cerr << "[MakcuWrapper] ERROR: Failed to connect to Makcu on " << port << std::endl;
-            m_device.reset();
+        // ШАГ 3: Включение мониторинга кнопок ДО подключения
+        std::cout << "[MakcuWrapper] Step 3: Enabling button monitoring..." << std::endl;
+        if (!m_device->enableButtonMonitoring(true)) {
+            std::cerr << "[MakcuWrapper] Failed to enable button monitoring!" << std::endl;
             return false;
         }
-        std::cout << "[MakcuWrapper] Connect() returned success" << std::endl;
+        std::cout << "[MakcuWrapper] Button monitoring enabled." << std::endl;
 
-        // Проверяем подключение
+        // ШАГ 4: Поиск устройства и подключение
+        std::cout << "[MakcuWrapper] Step 4: Finding and connecting to device..." << std::endl;
+        auto devices = makcu::Device::findDevices();
+        if (devices.empty()) {
+            std::cerr << "[MakcuWrapper] No Makcu devices found!" << std::endl;
+            return false;
+        }
+
+        std::cout << "[MakcuWrapper] Found " << devices.size() << " device(s):" << std::endl;
+        for (const auto& dev : devices) {
+            std::cout << "  - Port: " << dev.port 
+                      << ", VID:PID=" << std::hex << dev.vid << ":" << dev.pid << std::dec
+                      << ", Desc: " << dev.description << std::endl;
+        }
+
+        // Пытаемся подключиться к первому найденному устройству
+        std::string port = devices[0].port;
+        std::cout << "[MakcuWrapper] Attempting to connect to port: " << port << std::endl;
+        
+        bool connected = m_device->connect(port, m_config.high_speed_mode);
+        if (!connected) {
+            std::cerr << "[MakcuWrapper] Connection failed!" << std::endl;
+            return false;
+        }
+        std::cout << "[MakcuWrapper] Device connected successfully!" << std::endl;
+
+        // Проверка статуса подключения
         if (!m_device->isConnected()) {
-            std::cerr << "[MakcuWrapper] ERROR: Device reports not connected after connect()" << std::endl;
-            m_device->disconnect();
-            m_device.reset();
+            std::cerr << "[MakcuWrapper] Device reports not connected after connect()!" << std::endl;
             return false;
         }
-        std::cout << "[MakcuWrapper] Device isConnected() = true" << std::endl;
+        std::cout << "[MakcuWrapper] Connection verified." << std::endl;
 
-        // ============================================
-        // КРИТИЧНО: Включаем мониторинг кнопок ТОЛЬКО ПОСЛЕ успешного подключения!
-        // enableButtonMonitoring проверяет connected.load() и вернет false если не подключено
-        // ============================================
-        std::cout << "[MakcuWrapper] Enabling button monitoring AFTER connect..." << std::endl;
-        bool monitor_result = m_device->enableButtonMonitoring(true);
-        if (monitor_result) {
-            std::cout << "[MakcuWrapper] Button monitoring ENABLED successfully" << std::endl;
-        } else {
-            std::cerr << "[MakcuWrapper] WARNING: Could not enable button monitoring! Check device firmware." << std::endl;
-        }
-
-        // Получаем версию устройства
+        // Получение версии устройства для лога
         try {
             std::string version = m_device->getVersion();
-            std::cout << "[MakcuWrapper] Successfully connected! Device version: " << version << std::endl;
+            std::cout << "[MakcuWrapper] Device version: " << version << std::endl;
         } catch (...) {
-            std::cout << "[MakcuWrapper] Successfully connected!" << std::endl;
+            std::cout << "[MakcuWrapper] Could not get device version." << std::endl;
         }
 
-        m_is_open.store(true);
+        // ШАГ 5: Запуск потока обработки событий
+        std::cout << "[MakcuWrapper] Step 5: Starting monitor thread..." << std::endl;
+        m_running.store(true);
+        m_monitorThread = std::thread(&MakcuWrapper::MonitorThreadFunc, this);
         
-        // Включаем высокопроизводительный режим ПОСЛЕ успешного подключения
-        try {
-            m_device->enableHighPerformanceMode(true);
-            std::cout << "[MakcuWrapper] High performance mode enabled" << std::endl;
-        } catch (...) {
-            std::cout << "[MakcuWrapper] Warning: Could not enable high performance mode" << std::endl;
-        }
-        
-        std::cout << "[MakcuWrapper] ==============================================" << std::endl;
-        std::cout << "[MakcuWrapper] 2PC MODE READY - Waiting for button presses..." << std::endl;
-        std::cout << "[MakcuWrapper] Monitoring status: " << (m_device->isButtonMonitoringEnabled() ? "ACTIVE" : "INACTIVE") << std::endl;
-        std::cout << "[MakcuWrapper] ==============================================" << std::endl;
-        
+        m_initialized.store(true);
+        std::cout << "[MakcuWrapper] === INITIALIZATION COMPLETE ===" << std::endl;
         return true;
-        
-    } catch (const makcu::ConnectionException& e) {
-        std::cerr << "[MakcuWrapper] Connection error: " << e.what() << std::endl;
-        m_device.reset();
-        return false;
-    } catch (const makcu::MakcuException& e) {
-        std::cerr << "[MakcuWrapper] Makcu error: " << e.what() << std::endl;
-        m_device.reset();
-        return false;
+
     } catch (const std::exception& e) {
-        std::cerr << "[MakcuWrapper] Unexpected error: " << e.what() << std::endl;
-        m_device.reset();
+        std::cerr << "[MakcuWrapper] Exception during initialization: " << e.what() << std::endl;
+        return false;
+    } catch (...) {
+        std::cerr << "[MakcuWrapper] Unknown exception during initialization!" << std::endl;
         return false;
     }
 }
 
-void MakcuWrapper::Disconnect() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    
-    if (!m_is_open.load()) {
-        return;
-    }
-
+// ============================================================
+// Завершение работы
+// ============================================================
+void MakcuWrapper::Shutdown() {
     std::cout << "[MakcuWrapper] Shutting down..." << std::endl;
 
+    // Останавливаем поток
+    m_running.store(false);
+    if (m_monitorThread.joinable()) {
+        m_monitorThread.join();
+    }
+
+    // Отключаем устройство
     if (m_device) {
         try {
-            // Отключаем мониторинг кнопок
-            m_device->enableButtonMonitoring(false);
-            
-            // Отключаемся и уничтожаем устройство
             m_device->disconnect();
+            std::cout << "[MakcuWrapper] Device disconnected." << std::endl;
         } catch (...) {
-            // Игнорируем ошибки при отключении
+            std::cerr << "[MakcuWrapper] Error disconnecting device." << std::endl;
         }
         m_device.reset();
     }
 
-    // Сбрасываем ГЛОБАЛЬНЫЕ переменные состояния кнопок
+    // Сбрасываем глобальные флаги
     g_makcu_aiming.store(false);
-    g_makcu_shooting.store(false);
     g_makcu_zooming.store(false);
+    g_makcu_shooting.store(false);
 
-    m_is_open.store(false);
-    
-    std::cout << "[MakcuWrapper] Shutdown complete" << std::endl;
+    m_initialized.store(false);
+    std::cout << "[MakcuWrapper] Shutdown complete." << std::endl;
 }
 
-bool MakcuWrapper::IsConnected() const {
-    if (!m_is_open.load()) {
-        return false;
-    }
-    
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (!m_device) {
-        return false;
-    }
-    
-    return m_device->isConnected();
-}
-
-std::string MakcuWrapper::GetDeviceInfo() const {
-    if (!m_is_open.load()) {
-        return "Not initialized";
-    }
-
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (!m_device) {
-        return "No device";
-    }
-
-    try {
-        auto info = m_device->getDeviceInfo();
-        return info.port + " (VID:" + std::to_string(info.vid) + 
-               ", PID:" + std::to_string(info.pid) + ")";
-    } catch (...) {
-        return "Unknown";
-    }
-}
-
-void MakcuWrapper::MoveSmooth(int dx, int dy, uint32_t segments) {
-    if (!m_is_open.load()) {
+// ============================================================
+// Методы управления мышью
+// ============================================================
+void MakcuWrapper::Move(int x, int y) {
+    if (!m_initialized.load() || !m_device) {
         return;
     }
-    
-    std::lock_guard<std::mutex> lock(m_write_mutex);
-    if (!m_device) {
-        return;
-    }
-    
-    try {
-        m_device->mouseMoveSmooth(dx, dy, segments);
-    } catch (...) {
-#ifdef _DEBUG
-        std::cerr << "[MakcuWrapper] MoveSmooth failed" << std::endl;
-#endif
-    }
-}
-
-void MakcuWrapper::Move(int dx, int dy) {
-    if (!m_is_open.load()) {
-        return;
-    }
-    
-    std::lock_guard<std::mutex> lock(m_write_mutex);
-    if (!m_device) {
-        return;
-    }
-    
-    try {
-        m_device->mouseMove(dx, dy);
-    } catch (...) {
-#ifdef _DEBUG
-        std::cerr << "[MakcuWrapper] Move failed" << std::endl;
-#endif
-    }
+    m_device->mouseMove(x, y);
 }
 
 void MakcuWrapper::Click(int button) {
-    if (!m_is_open.load()) {
-        std::cerr << "[MakcuWrapper] Click called but not initialized!" << std::endl;
+    if (!m_initialized.load() || !m_device) {
         return;
     }
-
-    std::lock_guard<std::mutex> lock(m_write_mutex);
-    if (!m_device) {
-        return;
+    
+    makcu::MouseButton mb = makcu::MouseButton::LEFT;
+    switch (button) {
+        case 0: mb = makcu::MouseButton::LEFT; break;
+        case 1: mb = makcu::MouseButton::RIGHT; break;
+        case 2: mb = makcu::MouseButton::MIDDLE; break;
+        case 3: mb = makcu::MouseButton::SIDE1; break;
+        case 4: mb = makcu::MouseButton::SIDE2; break;
+        default: mb = makcu::MouseButton::LEFT; break;
     }
-
-    try {
-        makcu::MouseButton btn = static_cast<makcu::MouseButton>(button);
-        m_device->click(btn);
-    } catch (...) {
-        std::cerr << "[MakcuWrapper] Click failed" << std::endl;
-    }
+    
+    m_device->click(mb);
 }
 
 void MakcuWrapper::Press(int button) {
-    if (!m_is_open.load()) {
-        std::cerr << "[MakcuWrapper] Press called but not initialized!" << std::endl;
+    if (!m_initialized.load() || !m_device) {
         return;
     }
-
-    std::lock_guard<std::mutex> lock(m_write_mutex);
-    if (!m_device) {
-        return;
+    
+    makcu::MouseButton mb = makcu::MouseButton::LEFT;
+    switch (button) {
+        case 0: mb = makcu::MouseButton::LEFT; break;
+        case 1: mb = makcu::MouseButton::RIGHT; break;
+        case 2: mb = makcu::MouseButton::MIDDLE; break;
+        case 3: mb = makcu::MouseButton::SIDE1; break;
+        case 4: mb = makcu::MouseButton::SIDE2; break;
+        default: mb = makcu::MouseButton::LEFT; break;
     }
-
-    try {
-        makcu::MouseButton btn = static_cast<makcu::MouseButton>(button);
-        m_device->mouseDown(btn);
-    } catch (...) {
-        std::cerr << "[MakcuWrapper] Press failed" << std::endl;
-    }
+    
+    m_device->mouseDown(mb);
 }
 
 void MakcuWrapper::Release(int button) {
-    if (!m_is_open.load()) {
-        std::cerr << "[MakcuWrapper] Release called but not initialized!" << std::endl;
+    if (!m_initialized.load() || !m_device) {
         return;
     }
-
-    std::lock_guard<std::mutex> lock(m_write_mutex);
-    if (!m_device) {
-        return;
+    
+    makcu::MouseButton mb = makcu::MouseButton::LEFT;
+    switch (button) {
+        case 0: mb = makcu::MouseButton::LEFT; break;
+        case 1: mb = makcu::MouseButton::RIGHT; break;
+        case 2: mb = makcu::MouseButton::MIDDLE; break;
+        case 3: mb = makcu::MouseButton::SIDE1; break;
+        case 4: mb = makcu::MouseButton::SIDE2; break;
+        default: mb = makcu::MouseButton::LEFT; break;
     }
-
-    try {
-        makcu::MouseButton btn = static_cast<makcu::MouseButton>(button);
-        m_device->mouseUp(btn);
-    } catch (...) {
-        std::cerr << "[MakcuWrapper] Release failed" << std::endl;
-    }
+    
+    m_device->mouseUp(mb);
 }
 
-bool MakcuWrapper::TryReconnect() {
-    if (IsConnected()) {
-        return true; // Уже подключено
-    }
-
-    std::cout << "[MakcuWrapper] Attempting to reconnect..." << std::endl;
-    
-    // Сначала полностью закрываем старое соединение
-    Disconnect();
-    
-    // Пробуем заново инициализировать
-    return Connect();
+bool MakcuWrapper::IsConnected() const {
+    if (!m_device) return false;
+    return m_device->isConnected();
 }
 
-void MakcuWrapper::onButtonCallback(makcu::MouseButton button, bool pressed) {
-    // Логирование ВСЕХ событий для отладки 2PC - даже в релизе
-    std::cout << "[MakcuWrapper] CALLBACK: Button " << static_cast<int>(button) 
-              << " " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
+// ============================================================
+// Обработка событий кнопок
+// ============================================================
+void MakcuWrapper::OnButtonEvent(makcu::MouseButton button, bool isPressed) {
+    // Логирование события
+    std::string buttonName;
+    switch (button) {
+        case makcu::MouseButton::LEFT: buttonName = "LMB"; break;
+        case makcu::MouseButton::RIGHT: buttonName = "RMB"; break;
+        case makcu::MouseButton::MIDDLE: buttonName = "MMB"; break;
+        case makcu::MouseButton::SIDE1: buttonName = "SIDE1"; break;
+        case makcu::MouseButton::SIDE2: buttonName = "SIDE2"; break;
+        default: buttonName = "UNKNOWN"; break;
+    }
     
-    // Обновляем ГЛОБАЛЬНЫЕ переменные (как в референсе для 2PC режима)
+    std::cout << "[MakcuWrapper] Button Event: " << buttonName 
+              << " -> " << (isPressed ? "PRESSED" : "RELEASED") << std::endl;
+
+    // Обновляем глобальные атомарные флаги
     switch (button) {
         case makcu::MouseButton::LEFT:
-            // LMB = shooting
-            std::cout << "[MakcuWrapper] Setting g_makcu_shooting = " << pressed << std::endl;
-            g_makcu_shooting.store(pressed);
+            g_makcu_shooting.store(isPressed);
+            std::cout << "[MakcuWrapper] g_makcu_shooting = " << (isPressed ? "true" : "false") << std::endl;
             break;
             
         case makcu::MouseButton::RIGHT:
-            // RMB = zooming
-            std::cout << "[MakcuWrapper] Setting g_makcu_zooming = " << pressed << std::endl;
-            g_makcu_zooming.store(pressed);
-            break;
-            
-        case makcu::MouseButton::MIDDLE:
-            // MMB - not used for now
-            std::cout << "[MakcuWrapper] MIDDLE button event (ignored)" << std::endl;
-            break;
-            
-        case makcu::MouseButton::SIDE1:
-            // Mouse4 (Side1)
-            std::cout << "[MakcuWrapper] SIDE1 button event (ignored)" << std::endl;
+            g_makcu_zooming.store(isPressed);
+            std::cout << "[MakcuWrapper] g_makcu_zooming = " << (isPressed ? "true" : "false") << std::endl;
             break;
             
         case makcu::MouseButton::SIDE2:
-            // Mouse5 (Side2) = aiming - ЭТО ГЛАВНАЯ КНОПКА ПРИЦЕЛИВАНИЯ!
-            std::cout << "[MakcuWrapper] Setting g_makcu_aiming = " << pressed << " (SIDE2)" << std::endl;
-            g_makcu_aiming.store(pressed);
+            g_makcu_aiming.store(isPressed);
+            std::cout << "[MakcuWrapper] g_makcu_aiming = " << (isPressed ? "true" : "false") << std::endl;
             break;
             
         default:
-            std::cout << "[MakcuWrapper] Unknown button event: " << static_cast<int>(button) << std::endl;
             break;
     }
+}
+
+// ============================================================
+// Поток обработки событий (опционально для доп. логики)
+// ============================================================
+void MakcuWrapper::MonitorThreadFunc() {
+    std::cout << "[MakcuWrapper] Monitor thread started." << std::endl;
     
-    // Финальный статус всех переменных
-    std::cout << "[MakcuWrapper] Global state: aiming=" << g_makcu_aiming.load() 
-              << " shooting=" << g_makcu_shooting.load() 
-              << " zooming=" << g_makcu_zooming.load() << std::endl;
+    while (m_running.load()) {
+        // В данной реализации все события обрабатываются через коллбэк
+        // Этот поток может использоваться для дополнительной логики
+        // Например, периодической проверки состояния подключения
+        
+        std::this_thread::sleep_for(std::chrono::milliseconds(m_config.polling_interval_ms * 10));
+        
+        // Проверка подключения
+        if (m_device && !m_device->isConnected()) {
+            std::cerr << "[MakcuWrapper] WARNING: Device disconnected during operation!" << std::endl;
+            // Можно добавить логику переподключения
+        }
+    }
+    
+    std::cout << "[MakcuWrapper] Monitor thread stopped." << std::endl;
 }
 
 } // namespace pwnz_ai

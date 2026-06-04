@@ -1,111 +1,76 @@
 #pragma once
+#ifndef MAKCU_WRAPPER_H
+#define MAKCU_WRAPPER_H
 
-// ============================================
-// MakcuWrapper - Обертка для работы с Makcu через C++ API
-// Совместимо с C++23 для проекта PWNZ AI
-// Архитектура как в референсе /source_logic/source_logic/mouse/Makcu.h
-// ============================================
-
-#include <string>
 #include <atomic>
 #include <memory>
+#include <thread>
+#include <string>
 #include <functional>
-#include <mutex>
+#include <iostream>
 
-// Подключаем C++ API библиотеки makcu-cpp
-#include <makcu.h>
-
-// Подключаем интерфейс IMouseInput для полиморфизма
-#include "IMouseInput.h"
+// Подключаем нашу локальную библиотеку makcu из macku2pc/include
+#include "macku2pc/include/makcu.h"
 
 namespace pwnz_ai {
 
-// ============================================
-// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ДЛЯ 2PC РЕЖИМА
-// Эти переменные обновляются из callback и используются в aimbot.cpp
-// ============================================
-extern std::atomic<bool> g_makcu_aiming;      // SIDE2 (Mouse5) - прицеливание
-extern std::atomic<bool> g_makcu_shooting;    // LMB - стрельба
-extern std::atomic<bool> g_makcu_zooming;     // RMB - зум
+// ============================================================
+// Глобальные атомарные переменные для состояния кнопок
+// Используются в aimbot.cpp для проверки состояния
+// ============================================================
+extern std::atomic<bool> g_makcu_aiming;    // SIDE2 (Mouse5) - прицеливание
+extern std::atomic<bool> g_makcu_zooming;   // RMB - зум
+extern std::atomic<bool> g_makcu_shooting;  // LMB - стрельба
 
-/**
- * @brief Основной класс для работы с устройством Makcu
- * 
- * Архитектура как в референсе:
- * - Callback обновляет глобальные переменные g_makcu_*
- * - Методы aimingActive(), shootingActive(), zoomingActive() возвращают состояние
- */
-class MakcuWrapper : public IMouseInput {
+// ============================================================
+// Конфигурация Makcu устройства
+// ============================================================
+struct MakcuConfig {
+    uint16_t vid = 0x1A86;              // CH341 chipset
+    uint16_t pid = 0x55D3;              // Makcu device
+    bool enable_monitoring = true;      // Включить мониторинг кнопок
+    int polling_interval_ms = 1;        // Интервал опроса (мс)
+    bool high_speed_mode = true;        // Высокоскоростной режим
+};
+
+// ============================================================
+// Класс MakcuWrapper - обертка над библиотекой makcu
+// ============================================================
+class MakcuWrapper {
 public:
-    explicit MakcuWrapper(const std::string& port = "", unsigned int baud_rate = 115200);
-    ~MakcuWrapper() override;
+    explicit MakcuWrapper(const MakcuConfig& config = MakcuConfig());
+    ~MakcuWrapper();
 
-    // Запрет копирования
-    MakcuWrapper(const MakcuWrapper&) = delete;
-    MakcuWrapper& operator=(const MakcuWrapper&) = delete;
-
-    // Реализация интерфейса IMouseInput
-    bool Init() override { return Connect(); }
-    void Move(int dx, int dy) override;
-    void Click(int button) override;
-    void Press(int button) override;
-    void Release(int button) override;
-    void Shutdown() override { Disconnect(); }
+    // Инициализация: поиск устройства, подключение, установка коллбэков
+    bool Initialize();
     
-    // Методы для получения состояния кнопок (дублируют глобальные переменные)
-    bool aimingActive() const { return g_makcu_aiming.load(); }
-    bool shootingActive() const { return g_makcu_shooting.load(); }
-    bool zoomingActive() const { return g_makcu_zooming.load(); }
+    // Завершение работы
+    void Shutdown();
 
-    /**
-     * @brief Инициализация подключения к устройству
-     * @return true если успешно подключено
-     */
-    bool Connect();
+    // Методы управления мышью (делегирование на makcu::Device)
+    void Move(int x, int y);
+    void Click(int button);  // 0=LMB, 1=RMB, 2=MMB, 3=Side1, 4=Side2
+    void Press(int button);
+    void Release(int button);
 
-    /**
-     * @brief Завершение работы и отключение
-     */
-    void Disconnect();
-
-    /**
-     * @brief Проверка статуса подключения
-     */
+    // Проверка состояния
     bool IsConnected() const;
-
-    /**
-     * @brief Получить информацию об устройстве
-     */
-    std::string GetDeviceInfo() const;
-
-    /**
-     * @brief Плавное движение мыши
-     */
-    void MoveSmooth(int dx, int dy, uint32_t segments = 10);
-
-    /**
-     * @brief Статический метод для поиска первого устройства Makcu по VID:PID
-     */
-    static std::optional<std::string> FindDeviceByVidPid(uint16_t vid = 0x1A86, uint16_t pid = 0x55D3);
-
-    /**
-     * @brief Попытка переподключения при потере устройства
-     */
-    bool TryReconnect();
+    bool IsInitialized() const { return m_initialized.load(); }
 
 private:
-    std::unique_ptr<makcu::Device> m_device;
-    std::atomic<bool> m_is_open{false};
-    std::atomic<bool> m_aiming_active{false};   // Mouse5 (Side2)
-    std::atomic<bool> m_shooting_active{false}; // LMB
-    std::atomic<bool> m_zooming_active{false};  // RMB
-    mutable std::mutex m_mutex;
-    mutable std::mutex m_write_mutex;
+    // Внутренний поток обработки событий от makcu
+    void MonitorThreadFunc();
 
-    /**
-     * @brief Обработка событий кнопок из callback (как в референсе)
-     */
-    void onButtonCallback(makcu::MouseButton button, bool pressed);
+    // Коллбэк для обработки событий кнопок (вызывается из makcu::Device)
+    void OnButtonEvent(makcu::MouseButton button, bool isPressed);
+
+    MakcuConfig m_config;
+    std::unique_ptr<makcu::Device> m_device;
+    std::atomic<bool> m_initialized{false};
+    std::atomic<bool> m_running{false};
+    std::thread m_monitorThread;
 };
 
 } // namespace pwnz_ai
+
+#endif // MAKCU_WRAPPER_H
