@@ -459,9 +459,9 @@ double Aimbot::currentDetectionDelaySec() const {
 }
 
 double Aimbot::currentPredictionLookaheadSec(double detectionDelaySec) const {
-    double lookahead = std::max(0.0, static_cast<double>(prediction_interval));
+    double lookahead = (std::max)(0.0, static_cast<double>(prediction_interval));
     if (kalman_compensate_detection_delay)
-        lookahead += std::max(0.0, detectionDelaySec);
+        lookahead += (std::max)(0.0, detectionDelaySec);
     lookahead += static_cast<double>(kalman_additional_prediction_ms) / 1000.0;
     return std::clamp(lookahead, 0.0, 1.5);
 }

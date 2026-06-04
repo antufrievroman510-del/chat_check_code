@@ -195,9 +195,9 @@ inline void DownscaleImage(const unsigned char* src, int src_w, int src_h, unsig
     float scale_x = static_cast<float>(src_w) / dst_w;
     float scale_y = static_cast<float>(src_h) / dst_h;
     for (int y = 0; y < dst_h; ++y) {
-        int py = std::min(static_cast<int>(y * scale_y), src_h - 1);
+        int py = (std::min)(static_cast<int>(y * scale_y), src_h - 1);
         for (int x = 0; x < dst_w; ++x) {
-            int px = std::min(static_cast<int>(x * scale_x), src_w - 1);
+            int px = (std::min)(static_cast<int>(x * scale_x), src_w - 1);
             int src_idx = (py * src_w + px) * 4;
             int dst_idx = (y * dst_w + x) * 4;
             dst[dst_idx] = src[src_idx];
@@ -340,7 +340,7 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
             smooth_rel_x.clear();
         }
 
-        int head_thresh = std::max(15, cur_thresh / 2);
+        int head_thresh = (std::max)(15, cur_thresh / 2);
         int head_buffer = cur_buffer + 15;
         if (!head_tracker || last_head_thresh_int != head_thresh || last_head_buffer_int != head_buffer) {
             head_tracker = std::make_unique<BYTETracker>(
@@ -360,8 +360,8 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
 
         float current_zoom = 1.0f;
         g_current_zoom.store(current_zoom);
-        int capture_w = std::min(static_cast<int>(current_yolo_w * current_zoom), g_capture_w);
-        int capture_h = std::min(static_cast<int>(current_yolo_h * current_zoom), g_capture_h);
+        int capture_w = (std::min)(static_cast<int>(current_yolo_w * current_zoom), g_capture_w);
+        int capture_h = (std::min)(static_cast<int>(current_yolo_h * current_zoom), g_capture_h);
         int roi_screen_x = (g_capture_w / 2) - (capture_w / 2);
         int roi_screen_y = (g_capture_h / 2) - (capture_h / 2);
 
@@ -389,8 +389,8 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
                 float body_conf = local_cfg.ai_confidence_body / 100.0f;
                 float head_conf = local_cfg.ai_confidence_head / 100.0f;
                 if (overlay->auto_confidence && g_is_target_locked.load()) {
-                    body_conf = std::max(0.35f, body_conf - 0.05f);
-                    head_conf = std::max(0.25f, head_conf - 0.05f);
+                    body_conf = (std::max)(0.35f, body_conf - 0.05f);
+                    head_conf = (std::max)(0.25f, head_conf - 0.05f);
                 }
                 std::span<const unsigned char> pixel_span{capture_buffers[current_write], 
                                                           static_cast<std::size_t>(current_yolo_w) * current_yolo_h * 4};
@@ -411,7 +411,7 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
                     for (float v : g_inference_history) { sum += v; sum_sq += v * v; }
                     float mean = sum / g_inference_history.size();
                     float variance = (sum_sq / g_inference_history.size()) - (mean * mean);
-                    g_inference_jitter = std::sqrt(std::max(0.0f, variance));
+                    g_inference_jitter = std::sqrt((std::max)(0.0f, variance));
                 }
             }
 
@@ -521,10 +521,10 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
                 for (size_t i = 0; i < head_tracks.size(); ++i) {
                     if (head_track_matched[i]) continue;
                     Eigen::Vector4d head_tlwh = head_tracks[i].tlwh();
-                    float inter_x1 = std::max(body_tlwh(0), head_tlwh(0));
-                    float inter_y1 = std::max(body_tlwh(1), head_tlwh(1));
-                    float inter_x2 = std::min(body_tlwh(0) + body_tlwh(2), head_tlwh(0) + head_tlwh(2));
-                    float inter_y2 = std::min(body_tlwh(1) + body_tlwh(3), head_tlwh(1) + head_tlwh(3));
+                    float inter_x1 = (std::max)(body_tlwh(0), head_tlwh(0));
+                    float inter_y1 = (std::max)(body_tlwh(1), head_tlwh(1));
+                    float inter_x2 = (std::min)(body_tlwh(0) + body_tlwh(2), head_tlwh(0) + head_tlwh(2));
+                    float inter_y2 = (std::min)(body_tlwh(1) + body_tlwh(3), head_tlwh(1) + head_tlwh(3));
                     if (inter_x2 > inter_x1 && inter_y2 > inter_y1) {
                         float inter_area = (inter_x2 - inter_x1) * (inter_y2 - inter_y1);
                         float body_area = body_tlwh(2) * body_tlwh(3);

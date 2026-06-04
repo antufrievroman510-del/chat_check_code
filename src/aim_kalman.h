@@ -222,7 +222,7 @@ namespace aim
             axis.p11 = oldP11 + settings_.process_noise_velocity * dt;
 
             const double innovation = measurement - axis.position;
-            const double s = std::max(1e-9, axis.p00 + settings_.measurement_noise);
+            const double s = (std::max)(1e-9, axis.p00 + settings_.measurement_noise);
             const double k0 = axis.p00 / s;
             const double k1 = axis.p10 / s;
 
@@ -235,10 +235,10 @@ namespace aim
             const double p10 = axis.p10;
             const double p11 = axis.p11;
 
-            axis.p00 = std::max(1e-9, (1.0 - k0) * p00);
+            axis.p00 = (std::max)(1e-9, (1.0 - k0) * p00);
             axis.p01 = (1.0 - k0) * p01;
             axis.p10 = p10 - k1 * p00;
-            axis.p11 = std::max(1e-9, p11 - k1 * p01);
+            axis.p11 = (std::max)(1e-9, p11 - k1 * p01);
 
             return innovation;
         }
