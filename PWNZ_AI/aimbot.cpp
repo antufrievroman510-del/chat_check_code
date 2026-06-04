@@ -14,7 +14,7 @@
 #include "AimMath.h"
 #include "MouseController.h"
 #include "overlay.h"  // [ДОБАВЛЕНО] Для типа Overlay в SyncFromOverlay()
-#include "MakcuWrapper.h"  // Для доступа к классу MakcuWrapper и глобальным переменным g_makcu_*
+#include "MakcuInput.h"  // Для доступа к классу MakcuInput
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -202,25 +202,18 @@ bool Aimbot::InitHardware() {
                 break;
             case 1: // Makcu (аппаратный ввод через COM-порт)
                 {
-                    // Используем новый MakcuWrapper с автопоиском по VID:PID
-                    pwnz_ai::MakcuConfig config;
-                    config.vid = 0x1A86;  // CH341 chipset
-                    config.pid = 0x55D3;  // Makcu device
-                    config.enable_monitoring = true;
-                    config.polling_interval_ms = 1;  // 1ms polling для минимальной задержки
+                    // Используем новый MakcuInput с автопоиском по VID:PID
+                    std::cout << "[Aimbot] Creating MakcuInput with VID:PID " 
+                              << std::hex << 0x1A86 << ":" << 0x55D3 << std::dec << std::endl;
                     
-                    std::cout << "[Aimbot] Creating MakcuWrapper with VID:PID " 
-                              << std::hex << config.vid << ":" << config.pid << std::dec << std::endl;
-                    
-                    auto makcuWrapper = std::make_unique<pwnz_ai::MakcuWrapper>(config);
-                    if (!makcuWrapper->Initialize()) {
-                        std::cerr << "[Aimbot] Failed to initialize MakcuWrapper!" << std::endl;
+                    auto makcuInstance = std::make_unique<pwnz_ai::MakcuInput>();
+                    if (!makcuInstance->Initialize(0x1A86, 0x55D3)) {
+                        std::cerr << "[Aimbot] Failed to initialize MakcuInput!" << std::endl;
                         // Fallback на SendInput
                         m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
                     } else {
-                        // Сохраняем указатель на MakcuWrapper
-                        // Для совместимости с IMouseInput интерфейсом используем его напрямую
-                        m_makcuInstance = std::move(makcuWrapper);
+                        // Сохраняем указатель на MakcuInput
+                        m_makcuInstance = std::move(makcuInstance);
                     }
                 }
                 break;
@@ -566,7 +559,7 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     bool key_pressed = false;
     
     // === КРИТИЧНО: Для аппаратного режима (Makcu) используем g_makcu_aiming/g_makcu_shooting И g_remote_aim_key ===
-    // Эти переменные обновляются из MakcuWrapper::OnButtonEvent при получении событий от устройства
+    // Эти переменные обновляются из MakcuInput::OnButtonEvent при получении событий от устройства
     if (hardware_type >= 1) {
         // В аппаратном режиме состояние кнопок определяется через обратную связь от устройства
         // Проверяем все источники: SIDE2 (aiming), RMB (zooming), LMB (shooting), remote_key
@@ -942,7 +935,7 @@ void Aimbot::ButtonMonitorThread() {
     const int poll_interval_ms = 5;
     
     while (!m_stopButtonMonitor.load() && hardware_type >= 1) {
-        // В аппаратном режиме состояние кнопок обновляется через MakcuWrapper::MonitorThreadFunc
+        // В аппаратном режиме состояние кнопок обновляется через MakcuInput::MonitorThreadFunc
         // который читает события от устройства и обновляет g_makcu_aiming/g_makcu_shooting
         // Здесь мы только логируем изменения для отладки
         

@@ -2,33 +2,34 @@
 # Build artifacts
 *.o
 *.obj
-*.a
-*.lib
-*.so
-*.dll
 *.exe
+*.dll
+*.so
+*.a
 *.out
 
-# CMake build directory
+# CMake build directory (common pattern)
 build/
 
 # Dependencies
+node_modules/
 venv/
 .venv/
 __pycache__/
-*.egg-info/
-node_modules/
+.mypy_cache/
+.pytest_cache/
+.gradle/
+target/
 
-# IDE files
+# Editor/IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Logs and temporary files
-*.log
 *.tmp
-*.temp
+
+# Logs
+*.log
 
 # Environment files
 .env
@@ -38,9 +39,9 @@ node_modules/
 # Coverage reports
 coverage/
 htmlcov/
-*.coverage
+.coverage
 
-# OS generated files
+# System files
 .DS_Store
 Thumbs.db
 ```

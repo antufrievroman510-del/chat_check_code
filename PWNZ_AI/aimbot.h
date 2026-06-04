@@ -18,7 +18,7 @@
 #include "MouseController.h"
 #include "IMouseInput.h"
 #include "SendInputMouse.h"
-#include "MakcuWrapper.h"
+#include "MakcuInput.h"
 #include "KMboxMouse.h"
 #include <memory>
 
@@ -123,8 +123,8 @@ private:
     // Полиморфный указатель на метод ввода (интерфейс IMouseInput)
     std::unique_ptr<IMouseInput> m_mouseInput;
     
-    // Указатель на экземпляр MakcuWrapper для аппаратного режима
-    std::unique_ptr<pwnz_ai::MakcuWrapper> m_makcuInstance;
+    // Указатель на экземпляр MakcuInput для аппаратного режима
+    std::unique_ptr<pwnz_ai::MakcuInput> m_makcuInstance;
 
     std::pair<double, double> degToCounts(double degX, double degY) const;
     double calculateSpeedMultiplier(double distance, int screen_h) const;
