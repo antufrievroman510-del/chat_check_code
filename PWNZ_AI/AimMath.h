@@ -8,10 +8,6 @@
 #include <random>
 #include <algorithm>
 
-// Forward declarations для избежания циклических зависимостей
-struct AimResult;
-class AimMath;
-
 // Простая структура вектора для математики
 struct Vector2 {
     float x, y;
