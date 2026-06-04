@@ -20,7 +20,7 @@ HardwareController& HardwareController::Instance() {
     return instance;
 }
 
-bool HardwareController::Initialize(const HardwareConfig& config) {
+bool HardwareController::Initialize(const ::HardwareConfig& config) {
     EnterCriticalSection(&cs_);
     
     current_config_ = config;
@@ -84,7 +84,7 @@ bool HardwareController::Initialize(const HardwareConfig& config) {
         case HardwareMode::KMboxNet:
             {
                 // Подключение через KMBoxNet класс
-                if (g_kmbox.ConnectToDevice(config.kmbox_ip, config.kmbox_port)) {
+                if (g_kmbox.ConnectToDevice(::HardwareConfig{}.kmbox_ip, ::HardwareConfig{}.kmbox_port)) {
                     connected_ = true;
                     std::cout << "[HW] Mode: KMbox Net connected to " << config.kmbox_ip << ":" << config.kmbox_port << std::endl;
                 } else {
@@ -198,7 +198,7 @@ void HardwareController::MoveKMBox(int dx, int dy) {
     g_kmbox.MoveMouse(dx, dy);
 }
 
-void HardwareController::UpdateConfig(const HardwareConfig& config) {
+void HardwareController::UpdateConfig(const ::HardwareConfig& config) {
     // Если режим изменился - переинициализация
     if (config.mode != current_mode_) {
         Shutdown();

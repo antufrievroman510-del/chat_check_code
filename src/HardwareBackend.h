@@ -44,7 +44,7 @@ struct HardwareConfig {
     int random_delay_min = 10;
     int random_delay_max = 30;
     bool enabled = false;
-};
+}; // struct HardwareConfig
 
 class HardwareBackend {
 public:
