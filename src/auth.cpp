@@ -1,8 +1,7 @@
 #include "WinHeaders.h"
 #include <winhttp.h>
-#include <sstream>
 #include <vector>
-#include <iomanip>
+#include <format>
 
 #include "auth.h"
 #include "xorstr.hpp" 
@@ -68,10 +67,7 @@ std::string GetHWID() {
     DWORD size = sizeof(compName);
     GetComputerNameA(compName, &size);
 
-    std::stringstream ss;
-    ss << std::hex << std::uppercase << volSerial << XOR("-") << compName;
-
-    cached_hwid = base_prefix + ss.str();
+    cached_hwid = base_prefix + std::format("{:08X}-{}", volSerial, compName);
 
     VMProtectEnd(); // Закрываем маркер
     return cached_hwid;

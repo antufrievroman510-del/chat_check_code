@@ -6,7 +6,8 @@
 #include <iostream>
 #include <chrono>
 #include <vector>
-#include <thread>  
+#include <thread>
+#include <stop_token>
 #include <mutex>   
 #include <atomic>  
 #include <algorithm>
@@ -898,10 +899,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     if (logfile.is_open()) { logfile << "Step 8: creating threads" << std::endl; logfile.flush(); }
 
     std::atomic<bool> show_menu(true);
-    std::thread t_inference(InferenceThread, &cap, &det, &overlay);
-    std::thread t_aimbot(AimbotLoop, &aim, &overlay);
-    std::thread t_remote(RemoteActivationServer);
-    std::thread t_hotkeys([&]() {
+    std::jthread t_inference(InferenceThread, &cap, &det, &overlay);
+    std::jthread t_aimbot(AimbotLoop, &aim, &overlay);
+    std::jthread t_remote(RemoteActivationServer);
+    std::jthread t_hotkeys([&](std::stop_token stopTok) {
         bool insert_was_pressed = false; auto last_toggle_time = std::chrono::steady_clock::now();
         while (g_running) {
             if (GetAsyncKeyState(VK_END) & 0x8000) {
@@ -1142,8 +1143,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
     }
     g_running = false;
-    t_inference.join(); t_aimbot.join(); t_hotkeys.join();
-    if (t_remote.joinable()) t_remote.join();
+    // std::jthread автоматически вызывает join() в деструкторе
     aim.CloseHardware(); timeEndPeriod(1); overlay.Cleanup(&aim);
     VMProtectEnd();
 

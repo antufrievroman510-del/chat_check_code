@@ -1,9 +1,5 @@
 ﻿#pragma execution_character_set("utf-8")
 #pragma warning(disable: 4068)
-#pragma push_macro("max")
-#pragma push_macro("min")
-#undef max
-#undef min
 
 #include "WinHeaders.h"
 #include "overlay.h"
@@ -20,7 +16,7 @@
 #include <string>
 #include <cmath>
 #include <fstream>
-#include <sstream>
+#include <format>
 #include <mmsystem.h>
 #include <dxgi.h>
 #include <shellapi.h>
@@ -2573,10 +2569,10 @@ void Overlay::RenderVisualsAndZone(const std::vector<Detection>& detections, Aim
             draw_list->AddRect(start_pos, mouse_pos, IM_COL32(255, 0, 0, 255), 0, 0, 2.0f);
         }
         if (ImGui::IsMouseReleased(0) && is_dragging) {
-            excl_x1 = (std::min)(start_pos.x, mouse_pos.x);
-            excl_y1 = (std::min)(start_pos.y, mouse_pos.y);
-            excl_x2 = (std::max)(start_pos.x, mouse_pos.x);
-            excl_y2 = (std::max)(start_pos.y, mouse_pos.y);
+            excl_x1 = std::min(start_pos.x, mouse_pos.x);
+            excl_y1 = std::min(start_pos.y, mouse_pos.y);
+            excl_x2 = std::max(start_pos.x, mouse_pos.x);
+            excl_y2 = std::max(start_pos.y, mouse_pos.y);
             is_dragging = false;
             is_drawing_zone = false;
         }
