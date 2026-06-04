@@ -1,5 +1,6 @@
 #include "MouseController.h"
 #include "HardwareController.h"
+#include "HardwareBackend.h"  // Явное включение для HardwareConfig
 #include <iostream>
 
 // Singleton instance

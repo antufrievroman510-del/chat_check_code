@@ -1,14 +1,40 @@
 ```
-# CMake build artifacts
-src/build/
-
-# Compiler binaries
-*.bin
+# Compiled and build artifacts
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
 *.out
 
-# CMake cache and logs
-CMakeCache.txt
-CMakeFiles/
-CMakeOutput.log
-cmake.check_cache
+# Dependencies
+node_modules/
+venv/
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+target/
+.gradle/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build directories
+build/
+dist/
 ```
