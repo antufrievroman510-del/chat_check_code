@@ -33,7 +33,7 @@ private:
      * @param dx Смещение по X (если применимо)
      * @param dy Смещение по Y (если применимо)
      */
-    void SendMouseInput(DWORD flags, int dx = 0, int dy = 0) override;
+    void SendMouseInput(DWORD flags, int dx = 0, int dy = 0);
 
     bool m_initialized = false;
 };

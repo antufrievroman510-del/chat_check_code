@@ -2,6 +2,8 @@
 
 #include "WinHeaders.h"
 #include "HardwareBackend.h"
+#include "MakcuWrapper.h"
+#include "KMBoxNet.h"
 
 #include <string>
 #include <atomic>

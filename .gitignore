@@ -1,1 +1,14 @@
-Nothing should be ignored based on the provided file changes. The only modified file is 'src/AimMath.h', which is a source code file and should not be added to .gitignore.
+```
+# CMake build artifacts
+src/build/
+
+# Compiler binaries
+*.bin
+*.out
+
+# CMake cache and logs
+CMakeCache.txt
+CMakeFiles/
+CMakeOutput.log
+cmake.check_cache
+```
