@@ -9,12 +9,14 @@
 *.out
 
 # Dependencies
+node_modules/
 venv/
 .venv/
 __pycache__/
 .mypy_cache/
 .pytest_cache/
-node_modules/
+target/
+.gradle/
 
 # Logs and temp files
 *.log
@@ -29,19 +31,4 @@ node_modules/
 # Editors
 .vscode/
 .idea/
-
-# Build directories
-build/
-dist/
-target/
-.gradle/
-
-# System files
-.DS_Store
-Thumbs.db
-
-# Coverage
-coverage/
-htmlcov/
-.coverage
 ```

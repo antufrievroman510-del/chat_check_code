@@ -890,7 +890,7 @@ bool Overlay::DrawKeybinder(const char* label, int* vk_key, int id, const char* 
     ImGui::SameLine(offset);
     std::string btn_label;
     if (active_bind_id == id) {
-        btn_label = is_russian ? u8"[ Нажми ]" : "[ Press ]";
+        btn_label = is_russian ? "[ Нажми ]" : "[ Press ]";
         for (int i = 1; i < 256; i++) {
             if (GetAsyncKeyState(i) & 0x8000) { if (i == VK_ESCAPE) *vk_key = 0; else *vk_key = i; active_bind_id = -1; changed = true; break; }
         }
@@ -952,46 +952,46 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
     
     // Aimbot Core - Основные настройки
     if (BeginPanel("Aimbot Core", ImVec2(0, 320), acc_vec, true, &aim_enable, acc_u32)) cfg_changed = true;
-    if (DrawKeybinder("Main Bind:", &aim_key_main, 1, u8"Основная кнопка активации.")) cfg_changed = true;
-    if (DrawKeybinder("Second Bind:", &aim_key_sub, 2, u8"Вторая кнопка активации (опционально).")) cfg_changed = true;
-    if (DrawKeybinder("Toggle Key:", &aim_toggle_key, 3, u8"Включение/выключение аимбота.")) cfg_changed = true;
-    if (CustomCombo("Target Part:", "##tgt", &aim_target, tgts, 3, u8"Часть тела для прицеливания.")) cfg_changed = true;
-    if (DrawToggle("Keep Current Lock:", "##keep_lock", &aim_target_lock, acc_u32, u8"Не переключаться на другую цель автоматически.")) cfg_changed = true;
-    if (CustomSliderInt("Switch Delay:", "##sw_dly", &aim_switch_delay, 0, 1000, "%d ms", acc_vec, u8"Задержка перед переключением на другую цель.")) cfg_changed = true;
+    if (DrawKeybinder("Main Bind:", &aim_key_main, 1, "Основная кнопка активации.")) cfg_changed = true;
+    if (DrawKeybinder("Second Bind:", &aim_key_sub, 2, "Вторая кнопка активации (опционально).")) cfg_changed = true;
+    if (DrawKeybinder("Toggle Key:", &aim_toggle_key, 3, "Включение/выключение аимбота.")) cfg_changed = true;
+    if (CustomCombo("Target Part:", "##tgt", &aim_target, tgts, 3, "Часть тела для прицеливания.")) cfg_changed = true;
+    if (DrawToggle("Keep Current Lock:", "##keep_lock", &aim_target_lock, acc_u32, "Не переключаться на другую цель автоматически.")) cfg_changed = true;
+    if (CustomSliderInt("Switch Delay:", "##sw_dly", &aim_switch_delay, 0, 1000, "%d ms", acc_vec, "Задержка перед переключением на другую цель.")) cfg_changed = true;
     EndPanel();
 
     // FOV Settings - Радиус захвата
     if (BeginPanel("FOV Settings", ImVec2(0, 140), acc_vec)) cfg_changed = true;
-    if (CustomSliderFloat("Aim FOV:", "##f_a", &fov_aimbot, 10.0f, 500.0f, "%.0f px", acc_vec, u8"Радиус аимбота в пикселях.")) cfg_changed = true;
-    if (DrawToggle("Dynamic FOV:", "##dfov", &enable_dynamic_fov, acc_u32, u8"Адаптивный FOV.")) cfg_changed = true;
+    if (CustomSliderFloat("Aim FOV:", "##f_a", &fov_aimbot, 10.0f, 500.0f, "%.0f px", acc_vec, "Радиус аимбота в пикселях.")) cfg_changed = true;
+    if (DrawToggle("Dynamic FOV:", "##dfov", &enable_dynamic_fov, acc_u32, "Адаптивный FOV.")) cfg_changed = true;
     EndPanel();
 
     // Speed Control - Скорость наведения (ГЛАВНАЯ НАСТРОЙКА!)
     if (BeginPanel("Speed Control", ImVec2(0, 200), acc_vec)) cfg_changed = true;
     ImGui::TextColored(acc_vec, "Min Sensitivity:");
-    HelpMarker(u8"Минимальная скорость движения мыши. Чем выше значение, тем быстрее аимбот на близких дистанциях.");
+    HelpMarker("Минимальная скорость движения мыши. Чем выше значение, тем быстрее аимбот на близких дистанциях.");
     if (CustomSliderFloat("##min_sp", "##min_sp_lbl", &min_sensitivity, 0.01f, 5.0f, "%.3f", acc_vec)) cfg_changed = true;
     
     ImGui::Spacing();
     ImGui::TextColored(acc_vec, "Max Sensitivity:");
-    HelpMarker(u8"Максимальная скорость движения мыши. Потолок скорости на дальних дистанциях.");
+    HelpMarker("Максимальная скорость движения мыши. Потолок скорости на дальних дистанциях.");
     if (CustomSliderFloat("##max_sp", "##max_sp_lbl", &max_sensitivity, 0.1f, 20.0f, "%.3f", acc_vec)) cfg_changed = true;
     
     ImGui::Spacing();
     ImGui::TextColored(acc_vec, "Max Move Step:");
-    HelpMarker(u8"Максимальное смещение мыши за один кадр. Ограничивает резкость движений.");
+    HelpMarker("Максимальное смещение мыши за один кадр. Ограничивает резкость движений.");
     if (CustomSliderFloat("##max_move", "##max_move_lbl", &max_move_step, 10.0f, 500.0f, "%.1f px", acc_vec)) cfg_changed = true;
     
     ImGui::Spacing();
-    if (CustomSliderInt("Detection Resolution:", "##det_res", &detection_resolution, 160, 960, "%d px", acc_vec, u8"Разрешение детекции для аимбота.")) cfg_changed = true;
+    if (CustomSliderInt("Detection Resolution:", "##det_res", &detection_resolution, 160, 960, "%d px", acc_vec, "Разрешение детекции для аимбота.")) cfg_changed = true;
     EndPanel();
 
     // Pixelsmooth / Smoothing - Плавность
     if (BeginPanel("Pixelsmooth / Smoothing", ImVec2(0, 200), acc_vec, true, &pixelsmooth_enabled, acc_u32)) cfg_changed = true;
-    if (CustomSliderFloat("Smooth Factor:", "##smooth_f", &smooth_factor, 0.01f, 1.0f, "%.3f", acc_vec, u8"Фактор сглаживания. Меньше = плавнее, Больше = быстрее.")) cfg_changed = true;
-    if (CustomSliderFloat("Pixelsmooth Steps:", "##pix_val", &pixelsmooth_value, 1.0f, 32.0f, "%.0f frames", acc_vec, u8"Количество кадров для усреднения движения.")) cfg_changed = true;
+    if (CustomSliderFloat("Smooth Factor:", "##smooth_f", &smooth_factor, 0.01f, 1.0f, "%.3f", acc_vec, "Фактор сглаживания. Меньше = плавнее, Больше = быстрее.")) cfg_changed = true;
+    if (CustomSliderFloat("Pixelsmooth Steps:", "##pix_val", &pixelsmooth_value, 1.0f, 32.0f, "%.0f frames", acc_vec, "Количество кадров для усреднения движения.")) cfg_changed = true;
     ImGui::Separator();
-    ImGui::TextWrapped(u8"Эти настройки делают движение прицела более плавным и человечным. Меньший Smooth Factor = более плавное движение.");
+    ImGui::TextWrapped("Эти настройки делают движение прицела более плавным и человечным. Меньший Smooth Factor = более плавное движение.");
     EndPanel();
 
     ImGui::NextColumn();
@@ -1000,49 +1000,49 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
 
     // Humanizer - Человеческая рандомизация
     if (BeginPanel("Humanizer", ImVec2(0, 280), acc_vec, true, &humanizer_enable, acc_u32)) cfg_changed = true;
-    if (CustomSliderFloat("Reaction Delay:", "##hum_react", &hum_reaction_delay, 0.0f, 200.0f, "%.0f ms", acc_vec, u8"Искусственная задержка реакции.")) cfg_changed = true;
-    if (CustomSliderFloat("Tremor Scale:", "##hum_tremor", &hum_tremor_scale, 0.0f, 5.0f, "%.2f", acc_vec, u8"Размах дрожания рук.")) cfg_changed = true;
+    if (CustomSliderFloat("Reaction Delay:", "##hum_react", &hum_reaction_delay, 0.0f, 200.0f, "%.0f ms", acc_vec, "Искусственная задержка реакции.")) cfg_changed = true;
+    if (CustomSliderFloat("Tremor Scale:", "##hum_tremor", &hum_tremor_scale, 0.0f, 5.0f, "%.2f", acc_vec, "Размах дрожания рук.")) cfg_changed = true;
     
-    if (DrawToggle("Micro Movements:", "##hum_micro", &hum_micro_movements, acc_u32, u8"Микродвижения прицела.")) cfg_changed = true;
+    if (DrawToggle("Micro Movements:", "##hum_micro", &hum_micro_movements, acc_u32, "Микродвижения прицела.")) cfg_changed = true;
     if (hum_micro_movements) {
-        if (CustomSliderFloat("Micro Amplitude:", "##hum_micro_amp", &hum_micro_amplitude, 0.0f, 3.0f, "%.2f px", acc_vec, u8"Амплитуда микродвижений.")) cfg_changed = true;
+        if (CustomSliderFloat("Micro Amplitude:", "##hum_micro_amp", &hum_micro_amplitude, 0.0f, 3.0f, "%.2f px", acc_vec, "Амплитуда микродвижений.")) cfg_changed = true;
     }
     
-    if (CustomSliderFloat("Path Randomization:", "##hum_path_rand", &hum_path_randomization, 0.0f, 2.0f, "%.2f", acc_vec, u8"Рандомизация траектории.")) cfg_changed = true;
-    if (CustomSliderFloat("Reaction Jitter:", "##reac_jit", &hum_reaction_jitter, 0.0f, 5.0f, "%.1f px", acc_vec, u8"Отклонение при захвате цели.")) cfg_changed = true;
+    if (CustomSliderFloat("Path Randomization:", "##hum_path_rand", &hum_path_randomization, 0.0f, 2.0f, "%.2f", acc_vec, "Рандомизация траектории.")) cfg_changed = true;
+    if (CustomSliderFloat("Reaction Jitter:", "##reac_jit", &hum_reaction_jitter, 0.0f, 5.0f, "%.1f px", acc_vec, "Отклонение при захвате цели.")) cfg_changed = true;
     
-    if (DrawToggle("Overshoot:", "##hum_overshoot_en", &hum_overshoot_enabled, acc_u32, u8"Искусственный перелёт цели.")) cfg_changed = true;
+    if (DrawToggle("Overshoot:", "##hum_overshoot_en", &hum_overshoot_enabled, acc_u32, "Искусственный перелёт цели.")) cfg_changed = true;
     if (hum_overshoot_enabled) {
-        if (CustomSliderFloat("Overshoot Chance:", "##hum_overshoot_ch", &hum_overshoot_chance, 0.0f, 50.0f, "%.1f%%", acc_vec, u8"Шанс перелёта.")) cfg_changed = true;
-        if (CustomSliderFloat("Overshoot Amount:", "##hum_overshoot_amt", &hum_overshoot_amount, 1.0f, 3.0f, "%.2f x", acc_vec, u8"Множитель перелёта.")) cfg_changed = true;
-        if (CustomSliderFloat("Return Speed:", "##hum_return_sp", &hum_return_speed, 0.1f, 1.0f, "%.2f", acc_vec, u8"Скорость возврата после перелёта.")) cfg_changed = true;
+        if (CustomSliderFloat("Overshoot Chance:", "##hum_overshoot_ch", &hum_overshoot_chance, 0.0f, 50.0f, "%.1f%%", acc_vec, "Шанс перелёта.")) cfg_changed = true;
+        if (CustomSliderFloat("Overshoot Amount:", "##hum_overshoot_amt", &hum_overshoot_amount, 1.0f, 3.0f, "%.2f x", acc_vec, "Множитель перелёта.")) cfg_changed = true;
+        if (CustomSliderFloat("Return Speed:", "##hum_return_sp", &hum_return_speed, 0.1f, 1.0f, "%.2f", acc_vec, "Скорость возврата после перелёта.")) cfg_changed = true;
     }
     EndPanel();
 
     // Kalman Predictor - Предикция движения
     if (BeginPanel("Kalman Predictor", ImVec2(0, 220), acc_vec, true, &kalman_enable, acc_u32)) cfg_changed = true;
     if (kalman_enable) {
-        if (CustomSliderFloat("Process Noise (Q):", "##k_q", &kalman_q, 0.001f, 1.0f, "%.3f", acc_vec, u8"Шум процесса. Выше = агрессивнее предсказание.")) cfg_changed = true;
-        if (CustomSliderFloat("Measurement Noise (R):", "##k_r", &kalman_r, 0.01f, 1.0f, "%.2f", acc_vec, u8"Шум измерений. Выше = больше доверия к модели.")) cfg_changed = true;
-        if (DrawToggle("Compensate Detection Delay:", "##comp_delay", &kalman_compensate_detection_delay, acc_u32, u8"Учитывать задержку нейросети.")) cfg_changed = true;
-        if (CustomSliderFloat("Additional Prediction:", "##add_pred", &kalman_additional_prediction_ms, -50.0f, 120.0f, "%.0f ms", acc_vec, u8"Дополнительное упреждение в миллисекундах.")) cfg_changed = true;
-        if (CustomSliderFloat("Prediction Interval:", "##pred_int", &prediction_interval, 0.0f, 0.2f, "%.3f sec", acc_vec, u8"Базовое упреждение в секундах.")) cfg_changed = true;
+        if (CustomSliderFloat("Process Noise (Q):", "##k_q", &kalman_q, 0.001f, 1.0f, "%.3f", acc_vec, "Шум процесса. Выше = агрессивнее предсказание.")) cfg_changed = true;
+        if (CustomSliderFloat("Measurement Noise (R):", "##k_r", &kalman_r, 0.01f, 1.0f, "%.2f", acc_vec, "Шум измерений. Выше = больше доверия к модели.")) cfg_changed = true;
+        if (DrawToggle("Compensate Detection Delay:", "##comp_delay", &kalman_compensate_detection_delay, acc_u32, "Учитывать задержку нейросети.")) cfg_changed = true;
+        if (CustomSliderFloat("Additional Prediction:", "##add_pred", &kalman_additional_prediction_ms, -50.0f, 120.0f, "%.0f ms", acc_vec, "Дополнительное упреждение в миллисекундах.")) cfg_changed = true;
+        if (CustomSliderFloat("Prediction Interval:", "##pred_int", &prediction_interval, 0.0f, 0.2f, "%.3f sec", acc_vec, "Базовое упреждение в секундах.")) cfg_changed = true;
     }
     EndPanel();
 
     // Recoil Control (RCS) - Контроль отдачи
     if (BeginPanel("Recoil Control (RCS)", ImVec2(0, 150), acc_vec, true, &rcs_enable, acc_u32)) cfg_changed = true;
-    if (CustomSliderFloat("Pitch (Down):", "##rcs_p", &rcs_pitch, 0.0f, 10.0f, "%.1f px", acc_vec, u8"Вертикальная компенсация отдачи.")) cfg_changed = true;
-    if (CustomSliderFloat("Yaw (Left/Right):", "##rcs_y", &rcs_yaw, -5.0f, 5.0f, "%.1f px", acc_vec, u8"Горизонтальная компенсация отдачи.")) cfg_changed = true;
+    if (CustomSliderFloat("Pitch (Down):", "##rcs_p", &rcs_pitch, 0.0f, 10.0f, "%.1f px", acc_vec, "Вертикальная компенсация отдачи.")) cfg_changed = true;
+    if (CustomSliderFloat("Yaw (Left/Right):", "##rcs_y", &rcs_yaw, -5.0f, 5.0f, "%.1f px", acc_vec, "Горизонтальная компенсация отдачи.")) cfg_changed = true;
     EndPanel();
 
     ImGui::Columns(1);
     
     // Misc - Дополнительные настройки
     if (BeginPanel("Misc", ImVec2(0, 120), acc_vec)) cfg_changed = true;
-    if (DrawToggle("Disable Headshot:", "##no_head", &disable_headshot, acc_u32, u8"Запретить прицеливание в голову.")) cfg_changed = true;
-    if (DrawToggle("Lock X-Axis:", "##lock_x", &aim_lock_x, acc_u32, u8"Заблокировать горизонтальное перемещение.")) cfg_changed = true;
-    if (DrawToggle("Lock Y-Axis:", "##lock_y", &aim_lock_y, acc_u32, u8"Заблокировать вертикальное перемещение.")) cfg_changed = true;
+    if (DrawToggle("Disable Headshot:", "##no_head", &disable_headshot, acc_u32, "Запретить прицеливание в голову.")) cfg_changed = true;
+    if (DrawToggle("Lock X-Axis:", "##lock_x", &aim_lock_x, acc_u32, "Заблокировать горизонтальное перемещение.")) cfg_changed = true;
+    if (DrawToggle("Lock Y-Axis:", "##lock_y", &aim_lock_y, acc_u32, "Заблокировать вертикальное перемещение.")) cfg_changed = true;
     EndPanel();
 }
 
@@ -1054,24 +1054,24 @@ void Overlay::RenderVisualsTab(float content_w, float content_h, const ImVec4& a
     ImGui::SetColumnWidth(0, content_w * 0.5f);
 
     if (BeginPanel("HUD Display", ImVec2(0, 250), acc_vec)) cfg_changed = true;
-    if (DrawToggle("Draw ESP Boxes:", "##e", &draw_esp, acc_u32, u8"ESP рамки.")) cfg_changed = true;
-    if (DrawToggle("Draw AimFOV:", "##fa", &draw_fov, acc_u32, u8"Радиус аимбота.")) cfg_changed = true;
-    if (DrawToggle("Draw NeuralFOV:", "##fn", &draw_fov_neural, acc_u32, u8"Радиус нейросети.")) cfg_changed = true;
-    if (DrawToggle("Draw Crosshair:", "##crs", &draw_crosshair, acc_u32, u8"Кастомное перекрестие.")) cfg_changed = true;
-    if (DrawToggle("Watermark FPS:", "##wm", &draw_watermark, acc_u32, u8"Информация о FPS.")) cfg_changed = true;
+    if (DrawToggle("Draw ESP Boxes:", "##e", &draw_esp, acc_u32, "ESP рамки.")) cfg_changed = true;
+    if (DrawToggle("Draw AimFOV:", "##fa", &draw_fov, acc_u32, "Радиус аимбота.")) cfg_changed = true;
+    if (DrawToggle("Draw NeuralFOV:", "##fn", &draw_fov_neural, acc_u32, "Радиус нейросети.")) cfg_changed = true;
+    if (DrawToggle("Draw Crosshair:", "##crs", &draw_crosshair, acc_u32, "Кастомное перекрестие.")) cfg_changed = true;
+    if (DrawToggle("Watermark FPS:", "##wm", &draw_watermark, acc_u32, "Информация о FPS.")) cfg_changed = true;
     EndPanel();
 
     if (BeginPanel("ESP Customizer", ImVec2(0, content_h - 250 - 20), acc_vec)) cfg_changed = true;
     const char* e_styles[] = { "Full Box", "Corners Only" };
-    if (CustomCombo("Box Style", "##ebx", &esp_style, e_styles, 2, u8"Стиль рамок.")) cfg_changed = true;
-    if (CustomSliderFloat("Box Thickness", "##ethck", &esp_thickness, 1.0f, 5.0f, "%.1f px", acc_vec, u8"Толщина линий.")) cfg_changed = true;
+    if (CustomCombo("Box Style", "##ebx", &esp_style, e_styles, 2, "Стиль рамок.")) cfg_changed = true;
+    if (CustomSliderFloat("Box Thickness", "##ethck", &esp_thickness, 1.0f, 5.0f, "%.1f px", acc_vec, "Толщина линий.")) cfg_changed = true;
 
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
     ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "ESP Smoothing Filter:");
-    if (DrawToggle("Enable OneEuro Filter", "##esp_oe_en", &esp_oe_enable, acc_u32, u8"Сглаживание ESP.")) cfg_changed = true;
+    if (DrawToggle("Enable OneEuro Filter", "##esp_oe_en", &esp_oe_enable, acc_u32, "Сглаживание ESP.")) cfg_changed = true;
     if (esp_oe_enable) {
-        if (CustomSliderFloat("ESP MinCutoff", "##esp_oe_mc", &esp_oe_mincutoff, 0.1f, 5.0f, "%.2f", acc_vec, u8"Min cutoff.")) cfg_changed = true;
-        if (CustomSliderFloat("ESP Beta", "##esp_oe_b", &esp_oe_beta, 0.001f, 0.2f, "%.3f", acc_vec, u8"Beta.")) cfg_changed = true;
+        if (CustomSliderFloat("ESP MinCutoff", "##esp_oe_mc", &esp_oe_mincutoff, 0.1f, 5.0f, "%.2f", acc_vec, "Min cutoff.")) cfg_changed = true;
+        if (CustomSliderFloat("ESP Beta", "##esp_oe_b", &esp_oe_beta, 0.001f, 0.2f, "%.3f", acc_vec, "Beta.")) cfg_changed = true;
     }
 
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
@@ -1083,12 +1083,12 @@ void Overlay::RenderVisualsTab(float content_w, float content_h, const ImVec4& a
     ImGui::NextColumn();
 
     if (BeginPanel("Optimization", ImVec2(0, 120), acc_vec)) cfg_changed = true;
-    if (DrawToggle("Stealth Mode:", "##stl", &disable_all_visuals_when_hidden, acc_u32, u8"Скрывать графику при закрытом меню.")) cfg_changed = true;
+    if (DrawToggle("Stealth Mode:", "##stl", &disable_all_visuals_when_hidden, acc_u32, "Скрывать графику при закрытом меню.")) cfg_changed = true;
     EndPanel();
 
     if (BeginPanel("Information", ImVec2(0, content_h - 120 - 20), acc_vec)) cfg_changed = true;
     ImGui::TextColored(acc_vec, "[?] Visual Framework");
-    ImGui::TextWrapped(u8"Графический движок PWNZ работает поверх аппаратного оверлея DWM API.");
+    ImGui::TextWrapped("Графический движок PWNZ работает поверх аппаратного оверлея DWM API.");
     EndPanel();
 
     ImGui::Columns(1);
@@ -1104,51 +1104,51 @@ void Overlay::RenderNeuralTab(float content_w, float content_h, const ImVec4& ac
 
     if (BeginPanel("AI Engine", ImVec2(0, 310), acc_vec)) cfg_changed = true;
     const char* models[] = { "BogX-Nano.onnx", "BogX-Lite.onnx", "BogX-Pro.onnx", "BogX-Ultra.onnx" };
-    if (CustomCombo("Model:", "##mdl", &ai_model, models, 4, u8"Выбор модели нейросети.")) cfg_changed = true;
+    if (CustomCombo("Model:", "##mdl", &ai_model, models, 4, "Выбор модели нейросети.")) cfg_changed = true;
     ImGui::Spacing();
     if (ImGui::Button("Reload Model", ImVec2(150, 30))) apply_model_flag = true;
     ImGui::Spacing(); ImGui::Spacing();
 
-    if (DrawToggle("Auto Confidence:", "##aconf", &auto_confidence, acc_u32, u8"Автоматическая регулировка порогов.")) cfg_changed = true;
+    if (DrawToggle("Auto Confidence:", "##aconf", &auto_confidence, acc_u32, "Автоматическая регулировка порогов.")) cfg_changed = true;
 
-    if (CustomSliderFloat("Confidence Body:", "##cnf_body", &ai_confidence_body, 0.0f, 100.0f, "%.0f%%", acc_vec, u8"Порог тела.")) cfg_changed = true;
-    if (CustomSliderFloat("Confidence Head:", "##cnf_head", &ai_confidence_head, 0.0f, 100.0f, "%.0f%%", acc_vec, u8"Порог головы.")) cfg_changed = true;
-    if (CustomSliderFloat("Min Box Area Body:", "##min_area_body", &min_box_area_body, 30.0f, 500.0f, "%.0f px²", acc_vec, u8"Мин. площадь тела.")) cfg_changed = true;
-    if (CustomSliderFloat("Min Box Area Head:", "##min_area_head", &min_box_area_head, 10.0f, 200.0f, "%.0f px²", acc_vec, u8"Мин. площадь головы.")) cfg_changed = true;
-    if (CustomSliderFloat("Hit Chance:", "##htc", &hit_chance, 0.0f, 100.0f, "%.0f%%", acc_vec, u8"Вероятность срабатывания.")) cfg_changed = true;
+    if (CustomSliderFloat("Confidence Body:", "##cnf_body", &ai_confidence_body, 0.0f, 100.0f, "%.0f%%", acc_vec, "Порог тела.")) cfg_changed = true;
+    if (CustomSliderFloat("Confidence Head:", "##cnf_head", &ai_confidence_head, 0.0f, 100.0f, "%.0f%%", acc_vec, "Порог головы.")) cfg_changed = true;
+    if (CustomSliderFloat("Min Box Area Body:", "##min_area_body", &min_box_area_body, 30.0f, 500.0f, "%.0f px²", acc_vec, "Мин. площадь тела.")) cfg_changed = true;
+    if (CustomSliderFloat("Min Box Area Head:", "##min_area_head", &min_box_area_head, 10.0f, 200.0f, "%.0f px²", acc_vec, "Мин. площадь головы.")) cfg_changed = true;
+    if (CustomSliderFloat("Hit Chance:", "##htc", &hit_chance, 0.0f, 100.0f, "%.0f%%", acc_vec, "Вероятность срабатывания.")) cfg_changed = true;
     EndPanel();
 
     if (BeginPanel("Inference Optimization", ImVec2(0, content_h - 310 - 20), acc_vec)) cfg_changed = true;
-    if (CustomSliderFloat("NMS Threshold", "##nms", &neural_nms, 0.1f, 0.9f, "%.2f", acc_vec, u8"Порог NMS.")) cfg_changed = true;
-    if (CustomSliderInt("Max Targets", "##mxdet", &neural_max_det, 1, 20, "%d", acc_vec, u8"Макс. целей.")) cfg_changed = true;
+    if (CustomSliderFloat("NMS Threshold", "##nms", &neural_nms, 0.1f, 0.9f, "%.2f", acc_vec, "Порог NMS.")) cfg_changed = true;
+    if (CustomSliderInt("Max Targets", "##mxdet", &neural_max_det, 1, 20, "%d", acc_vec, "Макс. целей.")) cfg_changed = true;
     EndPanel();
 
     ImGui::NextColumn();
 
     if (BeginPanel("Target Offsets (X/Y)", ImVec2(0, 160), acc_vec)) cfg_changed = true;
     ImGui::Spacing();
-    ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), u8"Смещение точки прицела");
+    ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "Смещение точки прицела");
     ImGui::Spacing();
     ImGui::Text("Shift X (L/R):"); ImGui::SameLine(ImGui::GetColumnWidth() - 120.0f);
     ImGui::PushItemWidth(80.0f);
     if (ImGui::InputFloat("##offx", &aim_offset_x, 1.0f, 5.0f, "%.0f")) cfg_changed = true;
     ImGui::PopItemWidth();
-    HelpMarker(u8"Смещение по X.");
+    HelpMarker("Смещение по X.");
     ImGui::Spacing();
     ImGui::Text("Shift Y (U/D):"); ImGui::SameLine(ImGui::GetColumnWidth() - 120.0f);
     ImGui::PushItemWidth(80.0f);
     if (ImGui::InputFloat("##offy", &aim_offset_y, 1.0f, 5.0f, "%.0f")) cfg_changed = true;
     ImGui::PopItemWidth();
-    HelpMarker(u8"Смещение по Y.");
+    HelpMarker("Смещение по Y.");
     EndPanel();
 
-    const char* ez_title = is_russian ? u8"Слепая Зона (Игнор своего скина)###PnlEZ" : "Exclusion Zone###PnlEZ";
+    const char* ez_title = is_russian ? "Слепая Зона (Игнор своего скина)###PnlEZ" : "Exclusion Zone###PnlEZ";
     if (BeginPanel(ez_title, ImVec2(0, content_h - 160 - 20), acc_vec, true, &enable_exclusion_zone, acc_u32)) cfg_changed = true;
-    if (ImGui::Button(u8"Нарисовать Зону", ImVec2(ImGui::GetContentRegionAvail().x - 50.0f, 30))) {
+    if (ImGui::Button("Нарисовать Зону", ImVec2(ImGui::GetContentRegionAvail().x - 50.0f, 30))) {
         is_drawing_zone = true;
     }
-    ImGui::SameLine(); HelpMarker(u8"Выделить зону игнорирования.");
-    if (ImGui::Button(u8"Очистить Зону", ImVec2(ImGui::GetContentRegionAvail().x - 50.0f, 30))) {
+    ImGui::SameLine(); HelpMarker("Выделить зону игнорирования.");
+    if (ImGui::Button("Очистить Зону", ImVec2(ImGui::GetContentRegionAvail().x - 50.0f, 30))) {
         excl_x1 = excl_y1 = excl_x2 = excl_y2 = 0;
         cfg_changed = true;
     }
@@ -1158,16 +1158,16 @@ void Overlay::RenderNeuralTab(float content_w, float content_h, const ImVec4& ac
 
     if (BeginPanel("FOV Settings", ImVec2(0, 160), acc_vec)) cfg_changed = true;
     ImGui::Spacing();
-    if (CustomSliderFloat("Aim FOV:", "##f_a", &fov_aimbot, 10.0f, 500.0f, "%.0f px", acc_vec, u8"Радиус аимбота.")) cfg_changed = true;
-    if (DrawToggle("Dynamic FOV:", "##dfov", &enable_dynamic_fov, acc_u32, u8"Адаптивный FOV.")) cfg_changed = true;
+    if (CustomSliderFloat("Aim FOV:", "##f_a", &fov_aimbot, 10.0f, 500.0f, "%.0f px", acc_vec, "Радиус аимбота.")) cfg_changed = true;
+    if (DrawToggle("Dynamic FOV:", "##dfov", &enable_dynamic_fov, acc_u32, "Адаптивный FOV.")) cfg_changed = true;
     ImGui::Spacing();
-    if (CustomSliderFloat("Neural FOV:", "##f_n", &fov_scan, 10.0f, 500.0f, "%.0f px", acc_vec, u8"Радиус сканирования нейросети.")) cfg_changed = true;
+    if (CustomSliderFloat("Neural FOV:", "##f_n", &fov_scan, 10.0f, 500.0f, "%.0f px", acc_vec, "Радиус сканирования нейросети.")) cfg_changed = true;
     EndPanel();
 
     if (BeginPanel("Advanced Detection", ImVec2(0, 250), acc_vec)) cfg_changed = true;
-    if (CustomSliderInt("Memory Enemy:", "##mem_en", &memory_enemy_frames, 0, 30, "%d frm", acc_vec, u8"Количество кадров памяти.")) cfg_changed = true;
-    const char* hz_opts[] = { u8"Без лимита", "60 Hz", "75 Hz", "120 Hz", "144 Hz", "165 Hz", "240 Hz", "360 Hz" };
-    if (CustomCombo("Frame Rate:", "##hz", &refresh_rate_idx, hz_opts, 8, u8"Ограничитель кадров оверлея.")) cfg_changed = true;
+    if (CustomSliderInt("Memory Enemy:", "##mem_en", &memory_enemy_frames, 0, 30, "%d frm", acc_vec, "Количество кадров памяти.")) cfg_changed = true;
+    const char* hz_opts[] = { "Без лимита", "60 Hz", "75 Hz", "120 Hz", "144 Hz", "165 Hz", "240 Hz", "360 Hz" };
+    if (CustomCombo("Frame Rate:", "##hz", &refresh_rate_idx, hz_opts, 8, "Ограничитель кадров оверлея.")) cfg_changed = true;
     EndPanel();
 
     ImGui::Columns(1);
@@ -1183,10 +1183,10 @@ void Overlay::RenderPwnzAITab(float content_w, float content_h, const ImVec4& ac
     BeginPanel("PWNZ AI: Script Generator", ImVec2(0, content_h - 10), acc_vec);
     ImGui::TextColored(ImVec4(0.8f, 0.3f, 1.0f, 1.0f), "[ BOG-X Neural Engine ]");
     ImGui::Spacing();
-    ImGui::TextWrapped(u8"Генерация LUA-скриптов через ИИ.");
+    ImGui::TextWrapped("Генерация LUA-скриптов через ИИ.");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
-    ImGui::TextColored(acc_vec, u8"Промпт (Запрос к ИИ):");
+    ImGui::TextColored(acc_vec, "Промпт (Запрос к ИИ):");
     ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 10.0f);
     ImGui::InputTextMultiline("##prompt", ai_prompt_input, sizeof(ai_prompt_input), ImVec2(0, 70));
     ImGui::PopItemWidth();
@@ -1194,7 +1194,7 @@ void Overlay::RenderPwnzAITab(float content_w, float content_h, const ImVec4& ac
     ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.5f, 0.8f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.3f, 0.6f, 1.0f));
-    if (ImGui::Button(u8"⚡ СГЕНЕРИРОВАТЬ И ВНЕДРИТЬ", ImVec2(ImGui::GetContentRegionAvail().x - 10.0f, 40)) && !is_generating_script) {
+    if (ImGui::Button("⚡ СГЕНЕРИРОВАТЬ И ВНЕДРИТЬ", ImVec2(ImGui::GetContentRegionAvail().x - 10.0f, 40)) && !is_generating_script) {
         if (strlen(ai_prompt_input) > 2) {
             is_generating_script = true;
             script_gen_progress = 0.0f;
@@ -1217,7 +1217,7 @@ void Overlay::RenderPwnzAITab(float content_w, float content_h, const ImVec4& ac
 
     if (!generated_script_code.empty()) {
         ImGui::Spacing();
-        ImGui::TextColored(ImVec4(0.1f, 1.0f, 0.1f, 1.0f), u8"Код успешно загружен в память:");
+        ImGui::TextColored(ImVec4(0.1f, 1.0f, 0.1f, 1.0f), "Код успешно загружен в память:");
         ImGui::InputTextMultiline("##code", (char*)generated_script_code.c_str(), generated_script_code.size() + 1, ImVec2(-1, 150), ImGuiInputTextFlags_ReadOnly);
     }
     EndPanel();
@@ -1225,9 +1225,9 @@ void Overlay::RenderPwnzAITab(float content_w, float content_h, const ImVec4& ac
     ImGui::NextColumn();
 
     if (BeginPanel("AI Triggerbot", ImVec2(0, 220), acc_vec, true, &trigger_enable, acc_u32)) cfg_changed = true;
-    if (DrawKeybinder("Trigger Bind:", &this->trigger_key, 20, u8"Кнопка для триггера.")) cfg_changed = true;
+    if (DrawKeybinder("Trigger Bind:", &this->trigger_key, 20, "Кнопка для триггера.")) cfg_changed = true;
     ImGui::Spacing();
-    if (CustomSliderFloat("Click Delay:", "##trg_dly", &trigger_delay, 0.0f, 1.0f, "%.2f s", acc_vec, u8"Задержка выстрела.")) cfg_changed = true;
+    if (CustomSliderFloat("Click Delay:", "##trg_dly", &trigger_delay, 0.0f, 1.0f, "%.2f s", acc_vec, "Задержка выстрела.")) cfg_changed = true;
     ImGui::Spacing();
     ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "Target: Synced with Aim Target");
     EndPanel();
@@ -1243,13 +1243,13 @@ void Overlay::RenderProfileTab(float content_w, float content_h, const ImVec4& a
     ImGui::SetColumnWidth(0, content_w * 0.5f);
 
     BeginPanel("Security & License", ImVec2(0, 200), acc_vec);
-    ImGui::TextColored(acc_vec, u8"Пользователь:");
+    ImGui::TextColored(acc_vec, "Пользователь:");
     ImGui::SameLine(); ImGui::Text("%s", auth_username);
     ImGui::Spacing();
-    ImGui::Text(u8"HWID:");
+    ImGui::Text("HWID:");
     ImGui::TextColored(ImVec4(0.9f, 0.1f, 0.2f, 1.0f), hwid_str);
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-    ImGui::TextColored(acc_vec, u8"Информация о подписке:");
+    ImGui::TextColored(acc_vec, "Информация о подписке:");
     int y = 0, M = 0, d = 0, h = 0, m = 0, s = 0;
     double diff = -1.0;
     if (sscanf(user_expiry_date.c_str(), "%d-%d-%d %d:%d:%d", &y, &M, &d, &h, &m, &s) == 6) {
@@ -1262,25 +1262,25 @@ void Overlay::RenderProfileTab(float content_w, float content_h, const ImVec4& a
         int hours = ((int)diff / (60 * 60)) % 24;
         int mins = ((int)diff / 60) % 60;
         int secs = (int)diff % 60;
-        ImGui::Text(u8"Осталось:");
+        ImGui::Text("Осталось:");
         ImGui::SameLine();
-        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), u8"%d дн. %02d ч. %02d мин. %02d сек.", days, hours, mins, secs);
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "%d дн. %02d ч. %02d мин. %02d сек.", days, hours, mins, secs);
     }
     else {
-        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), u8"Подписка истекла!");
+        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Подписка истекла!");
     }
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-    ImGui::TextColored(ImVec4(0.1f, 1.0f, 0.1f, 1.0f), u8"[+] Статус: UNDETECTED");
+    ImGui::TextColored(ImVec4(0.1f, 1.0f, 0.1f, 1.0f), "[+] Статус: UNDETECTED");
     EndPanel();
 
     BeginPanel("Anti-Ban System (Cleaner)", ImVec2(0, 180), acc_vec);
     ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "[ Deep Clean ]");
-    if (ImGui::Button(u8"Очистить логи и кэш игры", ImVec2(-1, 35))) DeepCleanTraces();
-    HelpMarker(u8"Удаляет логи NetEase, сбрасывает DNS и ARP кэш, чистит Temp.");
+    if (ImGui::Button("Очистить логи и кэш игры", ImVec2(-1, 35))) DeepCleanTraces();
+    HelpMarker("Удаляет логи NetEase, сбрасывает DNS и ARP кэш, чистит Temp.");
     ImGui::Spacing();
     ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "[ Hardware Spoofer ]");
-    if (ImGui::Button(u8"Сменить MAC-адрес сети", ImVec2(-1, 35))) SpoofMAC();
-    HelpMarker(u8"Изменяет MAC-адрес напрямую в реестре.");
+    if (ImGui::Button("Сменить MAC-адрес сети", ImVec2(-1, 35))) SpoofMAC();
+    HelpMarker("Изменяет MAC-адрес напрямую в реестре.");
     EndPanel();
 
     BeginPanel("Trust Factor", ImVec2(0, content_h - 200 - 180 - 30), acc_vec);
@@ -1293,7 +1293,7 @@ void Overlay::RenderProfileTab(float content_w, float content_h, const ImVec4& a
     std::string trust_text = "LEGIT (Safe)";
     if (trust < 50.0f) { trust_col = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); trust_text = "RAGE (High Risk)"; }
     else if (trust < 80.0f) { trust_col = ImVec4(1.0f, 1.0f, 0.0f, 1.0f); trust_text = "SEMI-RAGE (Medium Risk)"; }
-    ImGui::Text(u8"Безопасность настроек:");
+    ImGui::Text("Безопасность настроек:");
     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, trust_col);
     ImGui::ProgressBar(trust / 100.0f, ImVec2(-1, 20), "");
     ImGui::PopStyleColor();
@@ -1307,26 +1307,26 @@ void Overlay::RenderProfileTab(float content_w, float content_h, const ImVec4& a
     ImGui::Spacing();
     ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "GPU:"); ImGui::TextWrapped(gpu_str);
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-    ImGui::TextColored(acc_vec, u8"Советник PWNZ:");
+    ImGui::TextColored(acc_vec, "Советник PWNZ:");
     std::string gpu_s(gpu_str);
     if (gpu_s.find("NVIDIA") != std::string::npos || gpu_s.find("RTX") != std::string::npos) {
-        ImGui::TextWrapped(u8"Обнаружена NVIDIA. TensorRT/CUDA активирован.");
+        ImGui::TextWrapped("Обнаружена NVIDIA. TensorRT/CUDA активирован.");
     }
     else {
-        ImGui::TextWrapped(u8"Используется DirectML.");
+        ImGui::TextWrapped("Используется DirectML.");
     }
     EndPanel();
 
     BeginPanel("Session AI Stats", ImVec2(0, 140), acc_vec);
-    ImGui::Text(u8"Выстрелов с Triggerbot: %d", 0);
-    ImGui::Text(u8"Время удержания: %.1f сек.", 0.0f);
-    ImGui::TextColored(ImVec4(0.8f, 0.3f, 1.0f, 1.0f), u8"Точность наводки: 88%%");
+    ImGui::Text("Выстрелов с Triggerbot: %d", 0);
+    ImGui::Text("Время удержания: %.1f сек.", 0.0f);
+    ImGui::TextColored(ImVec4(0.8f, 0.3f, 1.0f, 1.0f), "Точность наводки: 88%%");
     EndPanel();
 
     if (BeginPanel("Theme", ImVec2(0, content_h - 180 - 140 - 30), acc_vec)) cfg_changed = true;
-    ImGui::Text(u8"Акцентный цвет:");
+    ImGui::Text("Акцентный цвет:");
     if (ImGui::ColorEdit3("##accent", accent_color, ImGuiColorEditFlags_NoInputs)) cfg_changed = true;
-    if (ImGui::Button(u8"Сбросить")) { accent_color[0] = 0.0f; accent_color[1] = 0.8f; accent_color[2] = 1.0f; cfg_changed = true; }
+    if (ImGui::Button("Сбросить")) { accent_color[0] = 0.0f; accent_color[1] = 0.8f; accent_color[2] = 1.0f; cfg_changed = true; }
     EndPanel();
 
     ImGui::Columns(1);
@@ -1352,7 +1352,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     };
     
     if (CustomCombo("Mode:", "##hw_mode", &this->hardware_mode_idx, hw_modes, 3, 
-        is_russian ? u8"Выберите режим работы" : "Select hardware mode")) {
+        is_russian ? "Выберите режим работы" : "Select hardware mode")) {
         cfg_changed = true;
     }
     
@@ -1366,18 +1366,18 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     };
     
     if (CustomCombo("Mouse Input Method:", "##mouse_method", &this->mouse_input_method_idx, mouse_methods, 3,
-        is_russian ? u8"Метод эмуляции мыши" : "Mouse emulation method")) {
+        is_russian ? "Метод эмуляции мыши" : "Mouse emulation method")) {
         cfg_changed = true;
     }
     
-    HelpMarker(is_russian ? u8"SendInput - программный ввод (небезопасно)\nMakcu/KMbox - аппаратный ввод через 2PC (безопасно)" 
-                         : u8"SendInput - software input (unsafe)\nMakcu/KMbox - hardware input via 2PC (safe)");
+    HelpMarker(is_russian ? "SendInput - программный ввод (небезопасно)\nMakcu/KMbox - аппаратный ввод через 2PC (безопасно)" 
+                         : "SendInput - software input (unsafe)\nMakcu/KMbox - hardware input via 2PC (safe)");
     
     ImGui::Spacing();
     
     // Enable Hardware Toggle
     if (DrawToggle("Enable Hardware:", "##hw_en", &this->hw_enabled, acc_u32, 
-        is_russian ? u8"Включить аппаратный ввод" : "Enable hardware input")) {
+        is_russian ? "Включить аппаратный ввод" : "Enable hardware input")) {
         cfg_changed = true;
     }
     
@@ -1392,8 +1392,8 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         this->apply_hw_flag = true;
     }
     ImGui::PopStyleColor(2);
-    HelpMarker(is_russian ? u8"Применить настройки оборудования и переподключить метод ввода" 
-                         : u8"Apply hardware settings and reconnect input method");
+    HelpMarker(is_russian ? "Применить настройки оборудования и переподключить метод ввода" 
+                         : "Apply hardware settings and reconnect input method");
     
     // Bypass Options
     const char* bypass_modes[] = {
@@ -1404,19 +1404,19 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     };
     
     if (CustomCombo("Bypass Mode:", "##bypass", &this->bypass_mode_idx, bypass_modes, 4,
-        is_russian ? u8"Режим обхода античита" : "Anti-cheat bypass mode")) {
+        is_russian ? "Режим обхода античита" : "Anti-cheat bypass mode")) {
         cfg_changed = true;
     }
     
     if (this->bypass_mode_idx == 3) { // Random Delay
         ImGui::Spacing();
-        ImGui::Text(is_russian ? u8"Random Delay (ms):" : "Random Delay (ms):");
+        ImGui::Text(is_russian ? "Random Delay (ms):" : "Random Delay (ms):");
         ImGui::PushItemWidth(100);
         if (ImGui::SliderInt("##rd_min", &this->random_delay_min, 1, 50, "%d ms")) cfg_changed = true;
         ImGui::SameLine();
         if (ImGui::SliderInt("##rd_max", &this->random_delay_max, 10, 100, "%d ms")) cfg_changed = true;
         ImGui::PopItemWidth();
-        HelpMarker(is_russian ? u8"Мин/макс задержка для рандомизации" : "Min/Max delay for randomization");
+        HelpMarker(is_russian ? "Мин/макс задержка для рандомизации" : "Min/Max delay for randomization");
     }
     
     ImGui::Spacing();
@@ -1425,7 +1425,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     
     // OBS Bypass Toggle - используем obs_bypass для реального скрытия
     if (DrawToggle("OBS Bypass:", "##obs_bypass", &this->obs_bypass_enabled, acc_u32,
-        is_russian ? u8"Скрыть оверлей при записи/скриншотах" : "Hide overlay during recording/screenshots")) {
+        is_russian ? "Скрыть оверлей при записи/скриншотах" : "Hide overlay during recording/screenshots")) {
         cfg_changed = true;
         // Немедленно применяем изменение
         if (hwnd) {
@@ -1442,7 +1442,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         // Makcu UART Settings
         if (BeginPanel("Makcu (UART/COM) Settings", ImVec2(0, 320), acc_vec)) cfg_changed = true;
         
-        ImGui::Text(is_russian ? u8"COM Порт:" : "COM Port:");
+        ImGui::Text(is_russian ? "COM Порт:" : "COM Port:");
         ImGui::PushItemWidth(150);
         
         // COM-порт выпадающий список от COM1 до COM10
@@ -1465,14 +1465,14 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             cfg_changed = true;
         }
         ImGui::PopItemWidth();
-        HelpMarker(is_russian ? u8"Выберите COM порт из списка (COM1-COM10)" : "Select COM port from list (COM1-COM10)");
+        HelpMarker(is_russian ? "Выберите COM порт из списка (COM1-COM10)" : "Select COM port from list (COM1-COM10)");
         
         ImGui::Spacing();
         
         const char* baud_rates[] = { "9600", "19200", "38400", "57600", "115200", "4000000" };
         int baud_values[] = { 9600, 19200, 38400, 57600, 115200, 4000000 };
         
-        ImGui::Text(is_russian ? u8"Baud Rate:" : "Baud Rate:");
+        ImGui::Text(is_russian ? "Baud Rate:" : "Baud Rate:");
         ImGui::PushItemWidth(150);
         if (ImGui::Combo("##baud", &this->baud_rate_idx, baud_rates, IM_ARRAYSIZE(baud_rates))) cfg_changed = true;
         ImGui::PopItemWidth();
@@ -1533,21 +1533,21 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         
         // Отображение статуса подключения
         if (connected) {
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), is_russian ? u8"✓ Подключено" : "✓ Connected");
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), is_russian ? "✓ Подключено" : "✓ Connected");
             ImGui::SameLine();
             ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "(VID:PID 1A86:55D3)");
         } else {
-            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), is_russian ? u8"✗ Отключено" : "✗ Disconnected");
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), is_russian ? "✗ Отключено" : "✗ Disconnected");
         }
         
         // Дополнительная информация о статусе
         ImGui::Spacing();
         if (connected) {
             ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), 
-                is_russian ? u8"Устройство Macku готово к работе" : "Macku device ready");
+                is_russian ? "Устройство Macku готово к работе" : "Macku device ready");
         } else {
             ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), 
-                is_russian ? u8"Нажмите 'Apply/Connect' для подключения" : "Press 'Apply/Connect' to connect");
+                is_russian ? "Нажмите 'Apply/Connect' для подключения" : "Press 'Apply/Connect' to connect");
         }
         
         EndPanel();
@@ -1556,15 +1556,15 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         // KMbox Net Settings
         if (BeginPanel("KMbox Net (UDP) Settings", ImVec2(0, 280), acc_vec)) cfg_changed = true;
         
-        ImGui::Text(is_russian ? u8"IP Адрес:" : "IP Address:");
+        ImGui::Text(is_russian ? "IP Адрес:" : "IP Address:");
         ImGui::PushItemWidth(200);
         if (ImGui::InputText("##kmbox_ip", this->kmbox_ip_buf, sizeof(this->kmbox_ip_buf))) cfg_changed = true;
         ImGui::PopItemWidth();
-        HelpMarker(is_russian ? u8"Например: 192.168.1.100" : "Example: 192.168.1.100");
+        HelpMarker(is_russian ? "Например: 192.168.1.100" : "Example: 192.168.1.100");
         
         ImGui::Spacing();
         
-        ImGui::Text(is_russian ? u8"Порт:" : "Port:");
+        ImGui::Text(is_russian ? "Порт:" : "Port:");
         ImGui::PushItemWidth(100);
         kmbox_port_tmp = this->kmbox_port;
         if (ImGui::InputInt("##kmbox_port", &kmbox_port_tmp)) {
@@ -1605,14 +1605,14 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     } else {
         // Local Mouse Info - режим SendInput
         if (BeginPanel("Local Mouse (SendInput) [UNSAFE]", ImVec2(0, 280), acc_vec)) {
-            ImGui::TextColored(acc_vec, is_russian ? u8"Стандартный ввод Windows" : "Standard Windows Input");
+            ImGui::TextColored(acc_vec, is_russian ? "Стандартный ввод Windows" : "Standard Windows Input");
             ImGui::Spacing();
             ImGui::TextWrapped(is_russian ? 
-                u8"Используется API SendInput для эмуляции мыши.\nНе требует дополнительного оборудования." :
+                "Используется API SendInput для эмуляции мыши.\nНе требует дополнительного оборудования." :
                 "Uses SendInput API for mouse emulation.\nNo additional hardware required.");
             ImGui::Spacing();
             ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f),
-                is_russian ? u8"⚠ ОПАСНО: Может определяться античитами!" : "⚠ DANGEROUS: May be detected by anti-cheats!");
+                is_russian ? "⚠ ОПАСНО: Может определяться античитами!" : "⚠ DANGEROUS: May be detected by anti-cheats!");
         }
         // Закрываем панель всегда, даже если BeginPanel вернул false
         EndPanel();
@@ -1622,24 +1622,24 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     
     // Bottom Section - Quick Guide
     ImGui::Spacing();
-    if (BeginPanel(is_russian ? u8"📖 Быстрая инструкция" : "📖 Quick Guide", ImVec2(-1, 120), acc_vec)) {
+    if (BeginPanel(is_russian ? "📖 Быстрая инструкция" : "📖 Quick Guide", ImVec2(-1, 120), acc_vec)) {
         ImGui::Columns(3, nullptr, false);
         
-        ImGui::TextColored(acc_vec, is_russian ? u8"Makcu:" : "Makcu:");
+        ImGui::TextColored(acc_vec, is_russian ? "Makcu:" : "Makcu:");
         ImGui::TextWrapped(is_russian ? 
-            u8"1. Подключи плату\n2. Узнай COM-порт\n3. Введи порт и Baud\n4. Нажми Connect" :
+            "1. Подключи плату\n2. Узнай COM-порт\n3. Введи порт и Baud\n4. Нажми Connect" :
             "1. Connect board\n2. Find COM port\n3. Enter port & Baud\n4. Click Connect");
         
         ImGui::NextColumn();
-        ImGui::TextColored(acc_vec, is_russian ? u8"KMbox:" : "KMbox:");
+        ImGui::TextColored(acc_vec, is_russian ? "KMbox:" : "KMbox:");
         ImGui::TextWrapped(is_russian ? 
-            u8"1. Подключи к игровому ПК\n2. Настрой сеть\n3. Введи IP и порт\n4. Нажми Connect" :
+            "1. Подключи к игровому ПК\n2. Настрой сеть\n3. Введи IP и порт\n4. Нажми Connect" :
             "1. Connect to gaming PC\n2. Configure network\n3. Enter IP & port\n4. Click Connect");
         
         ImGui::NextColumn();
-        ImGui::TextColored(acc_vec, is_russian ? u8"Тест:" : "Test:");
+        ImGui::TextColored(acc_vec, is_russian ? "Тест:" : "Test:");
         ImGui::TextWrapped(is_russian ? 
-            u8"Перейди во вкладку 'Check HW'\nИспользуй тестовые кнопки\nДля проверки работы" :
+            "Перейди во вкладку 'Check HW'\nИспользуй тестовые кнопки\nДля проверки работы" :
             "Go to 'Check HW' tab\nUse test buttons\nto verify operation");
         
         ImGui::Columns(1);
@@ -1657,7 +1657,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         std::cout << "[OVERLAY] Hardware apply button pressed!" << std::endl;
     }
     HelpMarker(is_russian ? 
-        u8"Применить настройки hardware:\n- Режим ввода (SendInput/Makcu/KMbox)\n- COM-порт или IP/порт\n- Bypass режим\n\nПосле нажатия аимбот перезапустит hardware модуль." :
+        "Применить настройки hardware:\n- Режим ввода (SendInput/Makcu/KMbox)\n- COM-порт или IP/порт\n- Bypass режим\n\nПосле нажатия аимбот перезапустит hardware модуль." :
         "Apply hardware settings:\n- Input mode (SendInput/Makcu/KMbox)\n- COM port or IP/port\n- Bypass mode\n\nAimbot will restart hardware module after pressing.");
 }
 
@@ -1669,28 +1669,28 @@ void Overlay::RenderSecurityTab(float content_w, float content_h, const ImVec4& 
     ImGui::SetColumnWidth(0, content_w * 0.5f);
 
     BeginPanel("Anti-Ban Guide", ImVec2(0, 460), acc_vec);
-    ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), u8"1. НЕ ВОДИ ЧЕРЕЗ СТЕНЫ");
-    ImGui::TextWrapped(u8"Нажимай аим только когда видишь цель.");
+    ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "1. НЕ ВОДИ ЧЕРЕЗ СТЕНЫ");
+    ImGui::TextWrapped("Нажимай аим только когда видишь цель.");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-    ImGui::TextColored(acc_vec, u8"2. КОНТРОЛИРУЙ FOV");
-    ImGui::TextWrapped(u8"Не ставьте Aim FOV больше 200px.");
+    ImGui::TextColored(acc_vec, "2. КОНТРОЛИРУЙ FOV");
+    ImGui::TextWrapped("Не ставьте Aim FOV больше 200px.");
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-    ImGui::TextColored(ImVec4(0.7f, 0.3f, 1.0f, 1.0f), u8"3. ИСПОЛЬЗУЙТЕ STEALTH MODE");
-    ImGui::TextWrapped(u8"Скрывайте меню при игре.");
+    ImGui::TextColored(ImVec4(0.7f, 0.3f, 1.0f, 1.0f), "3. ИСПОЛЬЗУЙТЕ STEALTH MODE");
+    ImGui::TextWrapped("Скрывайте меню при игре.");
     EndPanel();
 
     ImGui::NextColumn();
     BeginPanel("Mouse Protection", ImVec2(0, 460), acc_vec);
-    ImGui::TextColored(ImVec4(0.1f, 1.0f, 0.1f, 1.0f), u8"Уровни защиты мыши:");
+    ImGui::TextColored(ImVec4(0.1f, 1.0f, 0.1f, 1.0f), "Уровни защиты мыши:");
     ImGui::Spacing();
-    ImGui::TextColored(acc_vec, u8"1. Dynamic IAT Evasion");
-    ImGui::TextWrapped(u8"Обход таблиц импорта.");
+    ImGui::TextColored(acc_vec, "1. Dynamic IAT Evasion");
+    ImGui::TextWrapped("Обход таблиц импорта.");
     ImGui::Spacing();
-    ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.2f, 1.0f), u8"2. Biometric Humanizer");
-    ImGui::TextWrapped(u8"Имитация дрожания руки.");
+    ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.2f, 1.0f), "2. Biometric Humanizer");
+    ImGui::TextWrapped("Имитация дрожания руки.");
     ImGui::Spacing();
-    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), u8"3. Кривые Безье");
-    ImGui::TextWrapped(u8"Естественная траектория.");
+    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "3. Кривые Безье");
+    ImGui::TextWrapped("Естественная траектория.");
     EndPanel();
     ImGui::Columns(1);
 }
@@ -1741,17 +1741,17 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     // Left Column - Hardware Test Panel
     if (BeginPanel("Hardware Test Panel", ImVec2(0, 350), acc_vec)) cfg_changed = true;
     
-    ImGui::TextColored(acc_vec, is_russian ? u8"Тестирование движения:" : "Movement Test:");
+    ImGui::TextColored(acc_vec, is_russian ? "Тестирование движения:" : "Movement Test:");
     ImGui::Spacing();
     
-    ImGui::Text(is_russian ? u8"X:" : "X:");
+    ImGui::Text(is_russian ? "X:" : "X:");
     ImGui::SameLine();
     ImGui::PushItemWidth(100);
     if (ImGui::InputInt("##test_x", &this->test_move_x)) cfg_changed = true;
     ImGui::PopItemWidth();
     
     ImGui::SameLine();
-    ImGui::Text(is_russian ? u8"Y:" : "Y:");
+    ImGui::Text(is_russian ? "Y:" : "Y:");
     ImGui::SameLine();
     ImGui::PushItemWidth(100);
     if (ImGui::InputInt("##test_y", &this->test_move_y)) cfg_changed = true;
@@ -1763,7 +1763,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     
     // Test Move Button
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 0.8f));
-    if (ImGui::Button(is_russian ? u8"Test Move Mouse" : "Test Move Mouse", ImVec2(200, 40))) {
+    if (ImGui::Button(is_russian ? "Test Move Mouse" : "Test Move Mouse", ImVec2(200, 40))) {
         if (this->hw_enabled) {
             if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
                 hw.SendMackuMove(this->test_move_x, this->test_move_y);
@@ -1797,18 +1797,18 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
         }
     }
     ImGui::PopStyleColor();
-    HelpMarker(is_russian ? u8"Сдвинуть курсор на указанные значения" : "Move cursor by specified values");
+    HelpMarker(is_russian ? "Сдвинуть курсор на указанные значения" : "Move cursor by specified values");
     
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
     
-    ImGui::TextColored(acc_vec, is_russian ? u8"Тестирование кликов:" : "Click Test:");
+    ImGui::TextColored(acc_vec, is_russian ? "Тестирование кликов:" : "Click Test:");
     ImGui::Spacing();
     
     // Test Left Click
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.7f, 0.2f, 0.8f));
-    if (ImGui::Button(is_russian ? u8"Test Left Click" : "Test Left Click", ImVec2(200, 35))) {
+    if (ImGui::Button(is_russian ? "Test Left Click" : "Test Left Click", ImVec2(200, 35))) {
         if (this->hw_enabled) {
             if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
                 hw.SendMackuClick(0); // Left click (0=left для прошивки MAKCM)
@@ -1845,7 +1845,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     
     // Test Double Click
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.5f, 0.2f, 0.8f));
-    if (ImGui::Button(is_russian ? u8"Test Double Click" : "Test Double Click", ImVec2(200, 35))) {
+    if (ImGui::Button(is_russian ? "Test Double Click" : "Test Double Click", ImVec2(200, 35))) {
         if (this->hw_enabled) {
             if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
                 hw.SendMackuClick(0); // Left click
@@ -1895,7 +1895,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     // Right Column - Status & Info
     BeginPanel("Hardware Status", ImVec2(0, 200), acc_vec);
     
-    ImGui::TextColored(acc_vec, is_russian ? u8"Текущий режим:" : "Current Mode:");
+    ImGui::TextColored(acc_vec, is_russian ? "Текущий режим:" : "Current Mode:");
     ImGui::Spacing();
     
     const char* mode_names[] = {
@@ -1910,7 +1910,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     ImGui::Separator();
     ImGui::Spacing();
     
-    ImGui::TextColored(acc_vec, is_russian ? u8"Статус оборудования:" : "Hardware Status:");
+    ImGui::TextColored(acc_vec, is_russian ? "Статус оборудования:" : "Hardware Status:");
     ImGui::Spacing();
     
     bool macku_connected = hw.IsMackuConnected();
@@ -1918,7 +1918,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     
     if (macku_connected) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ Makcu: CONNECTED");
-        ImGui::Text(is_russian ? u8"Порт: %s" : "Port: %s", this->com_port_buf);
+        ImGui::Text(is_russian ? "Порт: %s" : "Port: %s", this->com_port_buf);
     } else {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "✗ Makcu: DISCONNECTED");
     }
@@ -1927,7 +1927,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     
     if (kmbox_connected) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ KMbox: CONNECTED");
-        ImGui::Text(is_russian ? u8"IP: %s:%d" : "IP: %s:%d", this->kmbox_ip_buf, this->kmbox_port);
+        ImGui::Text(is_russian ? "IP: %s:%d" : "IP: %s:%d", this->kmbox_ip_buf, this->kmbox_port);
     } else {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "✗ KMbox: DISCONNECTED");
     }
@@ -1938,20 +1938,20 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     
     if (this->hw_enabled) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
-            is_russian ? u8"✅ Hardware ENABLED" : "✅ Hardware ENABLED");
+            is_russian ? "✅ Hardware ENABLED" : "✅ Hardware ENABLED");
     } else {
         ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), 
-            is_russian ? u8"⚠ Hardware DISABLED" : "⚠ Hardware DISABLED");
+            is_russian ? "⚠ Hardware DISABLED" : "⚠ Hardware DISABLED");
     }
     
     EndPanel();
     
     ImGui::Spacing();
     
-    BeginPanel(is_russian ? u8"📋 Информация" : "📋 Information", ImVec2(0, content_h - 200 - 20), acc_vec);
+    BeginPanel(is_russian ? "📋 Информация" : "📋 Information", ImVec2(0, content_h - 200 - 20), acc_vec);
     
     ImGui::TextWrapped(is_russian ? 
-        u8"Для проверки работы:\n"
+        "Для проверки работы:\n"
         "1. Выбери режим в вкладке 'Hardware/2PC'\n"
         "2. Подключи устройство (Connect)\n"
         "3. Включи 'Enable Hardware'\n"
@@ -1969,9 +1969,9 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     ImGui::Spacing();
     
     ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), 
-        is_russian ? u8"⚠ Примечание:" : "⚠ Note:");
+        is_russian ? "⚠ Примечание:" : "⚠ Note:");
     ImGui::TextWrapped(is_russian ? 
-        u8"Если hardware не подключен, тесты будут использовать локальный ввод Windows (SendInput)." :
+        "Если hardware не подключен, тесты будут использовать локальный ввод Windows (SendInput)." :
         "If hardware is not connected, tests will use local Windows input (SendInput).");
     
     EndPanel();
@@ -1989,8 +1989,8 @@ void Overlay::RenderXTierTab(float content_w, float content_h, const ImVec4& acc
     if (DrawToggle("Smart Target Sequencing", "##tsp", &elite_tsp_enabled, acc_u32)) cfg_changed = true;
     if (DrawToggle("Ballistic Prediction", "##bal", &elite_ballistics_enabled, acc_u32)) cfg_changed = true;
     if (elite_ballistics_enabled) {
-        if (CustomSliderFloat(u8"Bullet Speed", "##ebs", &elite_bullet_speed, 100.0f, 1500.0f, "%.0f", acc_vec)) cfg_changed = true;
-        if (CustomSliderFloat(u8"Gravity", "##ebd", &elite_bullet_drop, 1.0f, 20.0f, "%.1f", acc_vec)) cfg_changed = true;
+        if (CustomSliderFloat("Bullet Speed", "##ebs", &elite_bullet_speed, 100.0f, 1500.0f, "%.0f", acc_vec)) cfg_changed = true;
+        if (CustomSliderFloat("Gravity", "##ebd", &elite_bullet_drop, 1.0f, 20.0f, "%.1f", acc_vec)) cfg_changed = true;
     }
     if (DrawToggle("Context-Aware AI", "##ctx", &elite_context_aware, acc_u32)) cfg_changed = true;
     if (DrawToggle("Smoke Vision", "##smk", &elite_smoke_vision, acc_u32)) cfg_changed = true;
@@ -2040,10 +2040,10 @@ void Overlay::RenderMetricsTab(float content_w, float content_h, const ImVec4& a
 // ============================================================
 void Overlay::RenderChatWindow() {
     ImGui::SetNextWindowSize(ImVec2(450, 500), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin(u8"PWNZ Ассистент", &show_ai_chat, ImGuiWindowFlags_NoCollapse)) {
+    if (ImGui::Begin("PWNZ Ассистент", &show_ai_chat, ImGuiWindowFlags_NoCollapse)) {
         ImGui::BeginChild("ChatScroll", ImVec2(0, ImGui::GetWindowHeight() - 70), true);
         for (const auto& msg : chat_history) {
-            ImGui::TextColored(msg.is_user ? ImVec4(0.0f, 0.8f, 1.0f, 1.0f) : ImVec4(accent_color[0], accent_color[1], accent_color[2], 1.0f), "%s:", msg.is_user ? "You" : u8"PWNZ AI");
+            ImGui::TextColored(msg.is_user ? ImVec4(0.0f, 0.8f, 1.0f, 1.0f) : ImVec4(accent_color[0], accent_color[1], accent_color[2], 1.0f), "%s:", msg.is_user ? "You" : "PWNZ AI");
             ImGui::TextWrapped("%s", msg.text.c_str());
             ImGui::Spacing();
         }
@@ -2071,27 +2071,27 @@ void Overlay::RenderHWTutorial() {
         ImGui::Columns(2, nullptr, false);
         ImGui::SetColumnWidth(0, 220);
         ImGui::BeginChild("hw_tut_list", ImVec2(0, 0), true);
-        ImGui::TextColored(ImVec4(accent_color[0], accent_color[1], accent_color[2], 1.0f), u8"МЕТОДЫ ОБХОДА:");
+        ImGui::TextColored(ImVec4(accent_color[0], accent_color[1], accent_color[2], 1.0f), "МЕТОДЫ ОБХОДА:");
         ImGui::Separator();
-        const char* hw_types[] = { u8"1. Win32 API", u8"2. Arduino", u8"3. KMBox", u8"4. Makcu", u8"5. LAN/UDP 2PC" };
+        const char* hw_types[] = { "1. Win32 API", "2. Arduino", "3. KMBox", "4. Makcu", "5. LAN/UDP 2PC" };
         for (int i = 0; i < 5; i++) if (ImGui::Selectable(hw_types[i], tutorial_hw_selected == i)) tutorial_hw_selected = i;
         ImGui::EndChild();
         ImGui::NextColumn();
         ImGui::BeginChild("hw_tut_content", ImVec2(0, 0), true);
         if (tutorial_hw_selected == 0) {
-            ImGui::TextColored(ImVec4(accent_color[0], accent_color[1], accent_color[2], 1.0f), u8"Standard API (1 ПК)");
+            ImGui::TextColored(ImVec4(accent_color[0], accent_color[1], accent_color[2], 1.0f), "Standard API (1 ПК)");
             ImGui::Separator();
-            ImGui::TextWrapped(u8"Используйте Stealth Mode и OBS Bypass.");
+            ImGui::TextWrapped("Используйте Stealth Mode и OBS Bypass.");
         }
         else if (tutorial_hw_selected >= 1 && tutorial_hw_selected <= 3) {
-            ImGui::TextColored(ImVec4(accent_color[0], accent_color[1], accent_color[2], 1.0f), u8"COM Платы");
+            ImGui::TextColored(ImVec4(accent_color[0], accent_color[1], accent_color[2], 1.0f), "COM Платы");
             ImGui::Separator();
-            ImGui::TextWrapped(u8"Подключите плату, узнайте COM-порт, укажите в чите (COM3 → 2).");
+            ImGui::TextWrapped("Подключите плату, узнайте COM-порт, укажите в чите (COM3 → 2).");
         }
         else if (tutorial_hw_selected == 4) {
-            ImGui::TextColored(ImVec4(accent_color[0], accent_color[1], accent_color[2], 1.0f), u8"LAN/UDP 2PC");
+            ImGui::TextColored(ImVec4(accent_color[0], accent_color[1], accent_color[2], 1.0f), "LAN/UDP 2PC");
             ImGui::Separator();
-            ImGui::TextWrapped(u8"Соедините ПК кабелем, задайте статические IP, используйте Sunshine/Moonlight.");
+            ImGui::TextWrapped("Соедините ПК кабелем, задайте статические IP, используйте Sunshine/Moonlight.");
         }
         ImGui::EndChild();
         ImGui::Columns(1);
@@ -2102,7 +2102,7 @@ void Overlay::RenderHWTutorial() {
 void Overlay::ProcessChatInput(std::string input) {
     if (input.empty()) return;
     chat_history.push_back({ input, true });
-    chat_history.push_back({ is_russian ? u8"Брат, я твой ИИ-ассистент PWNZ." : "I am your PWNZ Assistant.", false });
+    chat_history.push_back({ is_russian ? "Брат, я твой ИИ-ассистент PWNZ." : "I am your PWNZ Assistant.", false });
 }
 
 std::string Overlay::ToLower(std::string s) {
@@ -2242,7 +2242,7 @@ bool Overlay::Initialize() {
     // Initialize 2PC network module
     network_2pc = std::make_unique<Network2PC>();
     
-    chat_history.push_back({ is_russian ? u8"Привет! Я твой ИИ-Ассистент PWNZ." : "Hello! I am your PWNZ Assistant.", false });
+    chat_history.push_back({ is_russian ? "Привет! Я твой ИИ-Ассистент PWNZ." : "Hello! I am your PWNZ Assistant.", false });
     Aimbot temp_aim;
     LoadConfig(&temp_aim);
     return true;
@@ -2330,16 +2330,16 @@ void Overlay::RenderLoadingScreen(const ImVec4& acc_vec, ImU32 acc_u32) {
     ImGui::ProgressBar(load_progress, ImVec2(360, 20), "Neural PWNZ AIM Loading...");
     ImGui::PopStyleColor();
     const char* tips[] = {
-        u8"Совет: Не ставьте Aim FOV больше 200px.",
-        u8"Совет: Используйте 'Stealth Mode' для повышения FPS.",
-        u8"Совет: Deadzone 1-2px уберет микротряску.",
-        u8"Совет: Комбинируйте PixelSmooth 10+ и Pose-Adaptive Hitbox.",
-        u8"Совет: Sticky Aim помогает не срывать прицел.",
-        u8"Совет: Кнопка END экстренно выгружает чит.",
-        u8"Совет: Если подписка активна, вход автоматический.",
-        u8"Совет: Включите OBS Bypass перед записью экрана.",
-        u8"Совет: Не водите прицелом через стены.",
-        u8"Совет: Аппаратная мышь безопаснее программной."
+        "Совет: Не ставьте Aim FOV больше 200px.",
+        "Совет: Используйте 'Stealth Mode' для повышения FPS.",
+        "Совет: Deadzone 1-2px уберет микротряску.",
+        "Совет: Комбинируйте PixelSmooth 10+ и Pose-Adaptive Hitbox.",
+        "Совет: Sticky Aim помогает не срывать прицел.",
+        "Совет: Кнопка END экстренно выгружает чит.",
+        "Совет: Если подписка активна, вход автоматический.",
+        "Совет: Включите OBS Bypass перед записью экрана.",
+        "Совет: Не водите прицелом через стены.",
+        "Совет: Аппаратная мышь безопаснее программной."
     };
     ImGui::SetCursorPos(ImVec2((400 - ImGui::CalcTextSize(tips[current_tip_idx]).x) * 0.5f, 120));
     ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "%s", tips[current_tip_idx]);
@@ -2361,28 +2361,28 @@ void Overlay::RenderAuthWindow(const ImVec4& acc_vec, ImU32 acc_u32) {
     ImGui::PushStyleColor(ImGuiCol_Border, acc_vec);
     ImGui::Begin("PWNZ_AUTH", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
     ImGui::Spacing();
-    const char* title_txt = is_register_mode ? u8"PWNZ VISION | РЕГИСТРАЦИЯ" : u8"PWNZ VISION | АВТОРИЗАЦИЯ";
+    const char* title_txt = is_register_mode ? "PWNZ VISION | РЕГИСТРАЦИЯ" : "PWNZ VISION | АВТОРИЗАЦИЯ";
     ImGui::SetCursorPosX((400 - ImGui::CalcTextSize(title_txt).x) * 0.5f);
     ImGui::TextColored(acc_vec, title_txt);
     ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
-    ImGui::Text(u8"Логин:");
+    ImGui::Text("Логин:");
     ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
     ImGui::InputText("##login", auth_username, 64);
     ImGui::PopItemWidth(); ImGui::Spacing();
-    ImGui::Text(u8"Пароль:");
+    ImGui::Text("Пароль:");
     ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
     ImGui::InputText("##password", auth_password, 64, ImGuiInputTextFlags_Password);
     ImGui::PopItemWidth(); ImGui::Spacing(); ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(acc_vec.x * 0.6f, acc_vec.y * 0.6f, acc_vec.z * 0.6f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, acc_vec);
-    const char* btn_txt = is_register_mode ? u8"ЗАРЕГИСТРИРОВАТЬСЯ" : u8"ВОЙТИ В СИСТЕМУ";
+    const char* btn_txt = is_register_mode ? "ЗАРЕГИСТРИРОВАТЬСЯ" : "ВОЙТИ В СИСТЕМУ";
     if (ImGui::Button(btn_txt, ImVec2(ImGui::GetContentRegionAvail().x, 40))) {
-        auth_status_msg = u8"Связь с сервером...";
+        auth_status_msg = "Связь с сервером...";
         auth_status_col[0] = 1.0f; auth_status_col[1] = 1.0f; auth_status_col[2] = 0.0f;
         std::string result = SendAuthRequest(auth_username, auth_password, is_register_mode, user_expiry_date);
         if (result.find("SUCCESS") != std::string::npos) {
             if (is_register_mode) {
-                auth_status_msg = u8"Успешно! Теперь войдите.";
+                auth_status_msg = "Успешно! Теперь войдите.";
                 auth_status_col[0] = 0.1f; auth_status_col[1] = 1.0f; auth_status_col[2] = 0.1f;
                 is_register_mode = false;
             }
@@ -2397,7 +2397,7 @@ void Overlay::RenderAuthWindow(const ImVec4& acc_vec, ImU32 acc_u32) {
     }
     ImGui::PopStyleColor(2);
     ImGui::Spacing();
-    const char* switch_txt = is_register_mode ? u8"Уже есть аккаунт? Войти" : u8"Нет аккаунта? Создать";
+    const char* switch_txt = is_register_mode ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Создать";
     ImGui::SetCursorPosX((400 - ImGui::CalcTextSize(switch_txt).x) * 0.5f);
     if (ImGui::Selectable(switch_txt, false, 0, ImGui::CalcTextSize(switch_txt))) { is_register_mode = !is_register_mode; auth_status_msg = ""; }
     ImGui::Spacing();
@@ -2556,7 +2556,7 @@ void Overlay::RenderVisualsAndZone(const std::vector<Detection>& detections, Aim
             ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
         draw_list->AddRectFilled(ImVec2(0, 0), ImVec2(active_res_w, active_res_h), IM_COL32(0, 0, 0, 100));
-        const char* draw_text = is_russian ? u8"ЗАЖМИТЕ ЛЕВУЮ КНОПКУ МЫШИ ДЛЯ ВЫДЕЛЕНИЯ ЗОНЫ. [ESC] ДЛЯ ОТМЕНЫ." :
+        const char* draw_text = is_russian ? "ЗАЖМИТЕ ЛЕВУЮ КНОПКУ МЫШИ ДЛЯ ВЫДЕЛЕНИЯ ЗОНЫ. [ESC] ДЛЯ ОТМЕНЫ." :
             "HOLD LEFT CLICK TO DRAW ZONE. PRESS [ESC] TO CANCEL.";
         ImGui::SetCursorPos(ImVec2(active_res_w / 2.0f - ImGui::CalcTextSize(draw_text).x / 2.0f, 50.0f));
         ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), draw_text);
@@ -2569,10 +2569,10 @@ void Overlay::RenderVisualsAndZone(const std::vector<Detection>& detections, Aim
             draw_list->AddRect(start_pos, mouse_pos, IM_COL32(255, 0, 0, 255), 0, 0, 2.0f);
         }
         if (ImGui::IsMouseReleased(0) && is_dragging) {
-            excl_x1 = std::min(start_pos.x, mouse_pos.x);
-            excl_y1 = std::min(start_pos.y, mouse_pos.y);
-            excl_x2 = std::max(start_pos.x, mouse_pos.x);
-            excl_y2 = std::max(start_pos.y, mouse_pos.y);
+            excl_x1 = (std::min)(start_pos.x, mouse_pos.x);
+            excl_y1 = (std::min)(start_pos.y, mouse_pos.y);
+            excl_x2 = (std::max)(start_pos.x, mouse_pos.x);
+            excl_y2 = (std::max)(start_pos.y, mouse_pos.y);
             is_dragging = false;
             is_drawing_zone = false;
         }
@@ -2598,7 +2598,7 @@ void Overlay::RenderMenu(const std::vector<Detection>& detections, Aimbot* aim, 
     static float text_offset = 0.0f;
     text_offset -= ImGui::GetIO().DeltaTime * 20.0f;
     const char* banner_txt = is_russian ?
-        u8"   [ BOG-X ] PWNZ VISION PRO — Лучший софт, не уступающий конкурентам! Передовая и самая современная защита от банов.        *** [ INFO ] Пользователь, помни: старайся выставлять как можно более человечные настройки (Humanizer). От ручного бана патрулем не застрахован никто!        *** [ SECURE ] Наш чит защищает от любого античита с использованием аппаратного вывода: Hardware / 2PC DMA / Makcu / KMBox.        *** [ UPDATE ] Мы постоянно обновляем наш продукт и внедряем самые последние технологии обхода. Это у нас на особо важном контроле, чтобы даже 1PC пользователь чувствовал себя абсолютно безопасно!        *** [ AI ] Обучаемая нейросеть BogX, алгоритмы HCI Physics и биомеханика движений сделают твою наводку неотличимой от киберспортсмена.        *** [ SYSTEM ] Интеллектуальный анализ поведения цели и динамическое упреждение гарантируют максимальную точность.        *** " :
+        "   [ BOG-X ] PWNZ VISION PRO — Лучший софт, не уступающий конкурентам! Передовая и самая современная защита от банов.        *** [ INFO ] Пользователь, помни: старайся выставлять как можно более человечные настройки (Humanizer). От ручного бана патрулем не застрахован никто!        *** [ SECURE ] Наш чит защищает от любого античита с использованием аппаратного вывода: Hardware / 2PC DMA / Makcu / KMBox.        *** [ UPDATE ] Мы постоянно обновляем наш продукт и внедряем самые последние технологии обхода. Это у нас на особо важном контроле, чтобы даже 1PC пользователь чувствовал себя абсолютно безопасно!        *** [ AI ] Обучаемая нейросеть BogX, алгоритмы HCI Physics и биомеханика движений сделают твою наводку неотличимой от киберспортсмена.        *** [ SYSTEM ] Интеллектуальный анализ поведения цели и динамическое упреждение гарантируют максимальную точность.        *** " :
         "   [ BOG-X ] PWNZ VISION PRO — The best software on the market with advanced ban protection!        *** [ INFO ] Remember: use Humanizer settings to avoid manual bans!        *** [ SECURE ] Absolute security with Hardware bypass: Arduino, KMBox, Makcu & 2PC.        *** [ UPDATE ] We constantly update our product and implement the latest anti-cheat bypass technologies. Your safety is our top priority!        *** [ AI ] BogX neural network and HCI Physics will make your aim indistinguishable from a pro player.        *** ";
     float txt_w = ImGui::CalcTextSize(banner_txt).x;
     if (text_offset <= -txt_w) text_offset += txt_w;
@@ -2630,7 +2630,7 @@ void Overlay::RenderMenu(const std::vector<Detection>& detections, Aimbot* aim, 
     ImGui::Spacing();
 
     const char* tabs_en[] = { "Aimbot", "Visuals", "Neural", "PWNZ AI", "Profile", "Hardware\\2PC", "Security Guide", "Telemetry", "HW Check", "X-TIER", "Metrics" };
-    const char* tabs_ru[] = { u8"Аимбот", u8"Визуалы", u8"Нейросеть", u8"PWNZ AI", u8"Профиль", u8"Hardware\\2PC", u8"Безопасность", u8"Телеметрия", u8"Проверка HW", u8"X-TIER", u8"Метрики" };
+    const char* tabs_ru[] = { "Аимбот", "Визуалы", "Нейросеть", "PWNZ AI", "Профиль", "Hardware\\2PC", "Безопасность", "Телеметрия", "Проверка HW", "X-TIER", "Метрики" };
     for (int i = 0; i < 11; i++) {
         if (active_tab == i) { ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.12f, 0.10f, 0.18f, 1.0f)); ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); }
         else { ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f)); ImGui::PushStyleColor(ImGuiCol_Text, acc_vec); }
@@ -2642,7 +2642,7 @@ void Overlay::RenderMenu(const std::vector<Detection>& detections, Aimbot* aim, 
 
     ImGui::SetCursorPosY(ImGui::GetWindowHeight() - 50);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(accent_color[0] * 0.5f, accent_color[1] * 0.5f, accent_color[2] * 0.5f, 0.6f));
-    if (ImGui::Button(u8"[ AI ] PWNZ Assistant", ImVec2(150, 40))) show_ai_chat = !show_ai_chat;
+    if (ImGui::Button("[ AI ] PWNZ Assistant", ImVec2(150, 40))) show_ai_chat = !show_ai_chat;
     ImGui::PopStyleColor();
     ImGui::EndChild();
     ImGui::SameLine();
@@ -2665,23 +2665,23 @@ void Overlay::RenderMenu(const std::vector<Detection>& detections, Aimbot* aim, 
 
     ImGui::SetNextWindowSize(ImVec2(380, 200));
     if (ImGui::BeginPopup("PWNZ_Socials")) {
-        float text_w = ImGui::CalcTextSize(is_russian ? u8"Создано BOG-X" : "Created by BOG-X").x;
+        float text_w = ImGui::CalcTextSize(is_russian ? "Создано BOG-X" : "Created by BOG-X").x;
         ImGui::SetCursorPosX((380 - text_w) * 0.5f);
-        ImGui::TextColored(acc_vec, is_russian ? u8"Создано BOG-X" : "Created by BOG-X");
+        ImGui::TextColored(acc_vec, is_russian ? "Создано BOG-X" : "Created by BOG-X");
         ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
         ImGui::TextColored(ImVec4(0.0f, 0.8f, 1.0f, 1.0f), "[ TELEGRAM ] ");
         ImGui::SameLine();
-        if (ImGui::Selectable(is_russian ? u8"PWNZ VISION AI (Наш канал)" : "PWNZ VISION AI (Our Channel)"))
+        if (ImGui::Selectable(is_russian ? "PWNZ VISION AI (Наш канал)" : "PWNZ VISION AI (Our Channel)"))
             ShellExecuteA(NULL, "open", "https://t.me/pwnz_ai", NULL, NULL, SW_SHOWNORMAL);
         ImGui::Spacing();
         ImGui::TextColored(ImVec4(0.0f, 0.8f, 1.0f, 1.0f), "[ WEBSITE ]  ");
         ImGui::SameLine();
-        if (ImGui::Selectable(is_russian ? u8"Официальный сайт чита PWNZ" : "PWNZ Official Website"))
+        if (ImGui::Selectable(is_russian ? "Официальный сайт чита PWNZ" : "PWNZ Official Website"))
             ShellExecuteA(NULL, "open", "https://pwnzneuralcheat-ai.netlify.app/", NULL, NULL, SW_SHOWNORMAL);
         ImGui::Spacing();
         ImGui::TextColored(ImVec4(0.0f, 0.8f, 1.0f, 1.0f), "[ YOUTUBE ]  ");
         ImGui::SameLine();
-        if (ImGui::Selectable(is_russian ? u8"PWNZ NEURAL AIM (Видео)" : "PWNZ NEURAL AIM (Videos)"))
+        if (ImGui::Selectable(is_russian ? "PWNZ NEURAL AIM (Видео)" : "PWNZ NEURAL AIM (Videos)"))
             ShellExecuteA(NULL, "open", "https://www.youtube.com/@pwnzneural_ai", NULL, NULL, SW_SHOWNORMAL);
         ImGui::EndPopup();
     }

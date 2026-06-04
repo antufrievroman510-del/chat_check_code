@@ -24,10 +24,10 @@ struct DetectionExt {
 };
 
 inline float CalculateIoU(const Detection& a, const Detection& b) {
-    float x1 = std::max(a.box.x, b.box.x);
-    float y1 = std::max(a.box.y, b.box.y);
-    float x2 = std::min(a.box.x + a.box.w, b.box.x + b.box.w);
-    float y2 = std::min(a.box.y + a.box.h, b.box.y + b.box.h);
+    float x1 = (std::max)(a.box.x, b.box.x);
+    float y1 = (std::max)(a.box.y, b.box.y);
+    float x2 = (std::min)(a.box.x + a.box.w, b.box.x + b.box.w);
+    float y2 = (std::min)(a.box.y + a.box.h, b.box.y + b.box.h);
     if (x2 < x1 || y2 < y1) return 0.0f;
     float intersection = (x2 - x1) * (y2 - y1);
     return intersection / (a.box.w * a.box.h + b.box.w * b.box.h - intersection);
@@ -61,10 +61,10 @@ void NMS_Improved(std::vector<Detection>& detections, float nms_threshold, std::
         for (size_t j = i + 1; j < detections.size(); ++j) {
             if (suppress[j]) continue;
 
-            float x1 = std::max(detections[i].box.x, detections[j].box.x);
-            float y1 = std::max(detections[i].box.y, detections[j].box.y);
-            float x2 = std::min(detections[i].box.x + detections[i].box.w, detections[j].box.x + detections[j].box.w);
-            float y2 = std::min(detections[i].box.y + detections[i].box.h, detections[j].box.y + detections[j].box.h);
+            float x1 = (std::max)(detections[i].box.x, detections[j].box.x);
+            float y1 = (std::max)(detections[i].box.y, detections[j].box.y);
+            float x2 = (std::min)(detections[i].box.x + detections[i].box.w, detections[j].box.x + detections[j].box.w);
+            float y2 = (std::min)(detections[i].box.y + detections[i].box.h, detections[j].box.y + detections[j].box.h);
 
             if (x2 > x1 && y2 > y1) {
                 float intersection = (x2 - x1) * (y2 - y1);
@@ -255,8 +255,8 @@ std::vector<Detection> Detector::run_inference(std::span<const unsigned char> pi
                     const float oy_frac = oy - oy_int;
                     
                     // Ограничиваем координаты
-                    const int x0 = std::min(ox_int, w - 2);
-                    const int y0 = std::min(oy_int, h - 2);
+                    const int x0 = (std::min)(ox_int, w - 2);
+                    const int y0 = (std::min)(oy_int, h - 2);
                     const int x1 = x0 + 1;
                     const int y1 = y0 + 1;
                     
@@ -370,7 +370,7 @@ std::vector<Detection> Detector::run_inference(std::span<const unsigned char> pi
             return final_results;
         }
 
-        final_results.reserve(std::min(num_detections, 1024));
+        final_results.reserve((std::min)(num_detections, 1024));
 
         const float* p = data;
         for (int i = 0; i < num_detections; ++i) {

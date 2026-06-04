@@ -63,12 +63,12 @@ bool DXGICapture::GetHardwareROIFrame(std::span<std::byte> out_pixels, int roi_x
     std::lock_guard<std::mutex> lock(m_CaptureMutex);
     if (!m_DeskDupl || !m_StagingTex) return false;
 
-    roi_w = std::min(roi_w, m_ScreenWidth);
-    roi_h = std::min(roi_h, m_ScreenHeight);
-    int max_x = std::max(0, m_ScreenWidth - roi_w);
-    int max_y = std::max(0, m_ScreenHeight - roi_h);
-    roi_x = std::max(0, std::min(roi_x, max_x));
-    roi_y = std::max(0, std::min(roi_y, max_y));
+    roi_w = (std::min)(roi_w, m_ScreenWidth);
+    roi_h = (std::min)(roi_h, m_ScreenHeight);
+    int max_x = (std::max)(0, m_ScreenWidth - roi_w);
+    int max_y = (std::max)(0, m_ScreenHeight - roi_h);
+    roi_x = (std::max)(0, (std::min)(roi_x, max_x));
+    roi_y = (std::max)(0, (std::min)(roi_y, max_y));
 
     IDXGIResource* desktopRes = nullptr;
     DXGI_OUTDUPL_FRAME_INFO frameInfo{};

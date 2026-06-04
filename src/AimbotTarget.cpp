@@ -23,12 +23,12 @@ AimbotTarget::AimbotTarget(int x_, int y_, int w_, int h_, int cls, double px, d
 // ============================================================
 
 float MultiTargetTracker::iou(const RectF& a, const RectF& b) {
-    const float x1 = std::max(a.x, b.x);
-    const float y1 = std::max(a.y, b.y);
-    const float x2 = std::min(a.x + a.width, b.x + b.width);
-    const float y2 = std::min(a.y + a.height, b.y + b.height);
-    const float w = std::max(0.0f, x2 - x1);
-    const float h = std::max(0.0f, y2 - y1);
+    const float x1 = (std::max)(a.x, b.x);
+    const float y1 = (std::max)(a.y, b.y);
+    const float x2 = (std::min)(a.x + a.width, b.x + b.width);
+    const float y2 = (std::min)(a.y + a.height, b.y + b.height);
+    const float w = (std::max)(0.0f, x2 - x1);
+    const float h = (std::max)(0.0f, y2 - y1);
     const float inter = w * h;
     const float ua = a.width * a.height + b.width * b.height - inter;
     if (ua <= 1e-6f) return 0.0f;
@@ -68,7 +68,7 @@ int MultiTargetTracker::chooseBestTrack(int screenWidth, int screenHeight) const
         const double dx = t.pivotX - cx;
         const double dy = t.pivotY - cy;
         const double dist = std::hypot(dx, dy);
-        const double hitBonus = std::min(5, t.hits) * 4.0;
+        const double hitBonus = (std::min)(5, t.hits) * 4.0;
         const double missPenalty = t.missed * 50.0;
         const double score = dist + missPenalty - hitBonus;
         if (score < bestScore) {
