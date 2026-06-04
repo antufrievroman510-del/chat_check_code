@@ -153,6 +153,8 @@ bool MakcuWrapper::Initialize() {
 
     // Включаем мониторинг кнопок если требуется
     if (m_config.enable_monitoring) {
+        // Сначала включаем отправку данных о кнопках с устройства
+        // Это критически важно для 2PC режима - устройство должно отправлять байты при нажатии
         error = makcu_enable_button_monitoring(m_device, true);
         if (error != MAKCU_SUCCESS) {
             std::cout << "[MakcuWrapper] Warning: Could not enable button monitoring: " 
@@ -161,10 +163,30 @@ bool MakcuWrapper::Initialize() {
             std::cout << "[MakcuWrapper] Button monitoring enabled for 2PC sync" << std::endl;
         }
 
-        // Запускаем поток мониторинга
+        // Устанавливаем callback через C API для обработки событий кнопок
+        // Библиотека будет вызывать этот callback когда получит байты от устройства
+        auto c_callback = [](makcu_mouse_button_t button, bool pressed, void* user_data) {
+            if (!user_data) return;
+            auto* wrapper = static_cast<MakcuWrapper*>(user_data);
+            wrapper->UpdateGlobalButtonState(button, pressed);
+#ifdef _DEBUG
+            std::cout << "[MakcuWrapper] C Callback: button=" << static_cast<int>(button) 
+                      << " pressed=" << pressed << std::endl;
+#endif
+        };
+        
+        error = makcu_set_mouse_button_callback(m_device, c_callback, this);
+        if (error != MAKCU_SUCCESS) {
+            std::cout << "[MakcuWrapper] Warning: Could not set mouse button callback: " 
+                      << makcu_error_string(error) << std::endl;
+        } else {
+            std::cout << "[MakcuWrapper] Mouse button callback registered" << std::endl;
+        }
+
+        // Запускаем поток мониторинга (в event-driven режиме он просто ждёт)
         m_running.store(true);
         m_monitor_thread = std::make_unique<std::thread>(&MakcuWrapper::MonitorThreadFunc, this);
-        std::cout << "[MakcuWrapper] Monitor thread started (interval: " << m_config.polling_interval_ms << "ms)" << std::endl;
+        std::cout << "[MakcuWrapper] Monitor thread started (event-driven mode)" << std::endl;
     }
 
     // Включаем высокопроизводительный режим
@@ -313,77 +335,23 @@ void MakcuWrapper::SetButtonCallback(ButtonCallback callback) {
 }
 
 void MakcuWrapper::MonitorThreadFunc() {
-    std::cout << "[MakcuWrapper] Monitor thread running..." << std::endl;
+    std::cout << "[MakcuWrapper] Monitor thread running (event-driven mode)..." << std::endl;
 
-    // Предыдущее состояние кнопок для детектирования изменений
-    bool prev_left = false;
-    bool prev_right = false;
-    bool prev_middle = false;
-    bool prev_side1 = false;
-    bool prev_side2 = false;
-
+    // В режиме event-driven нам не нужно постоянно опрашивать устройство
+    // Библиотека сама будет вызывать callback при получении данных от Makcu
+    
+    // Просто ждём пока флаг m_running не станет false
     while (m_running.load()) {
         if (!m_device || !makcu_is_connected(m_device)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             continue;
         }
-
-        // Получаем маску кнопок через C API
-        uint8_t mask = 0;
-        makcu_error_t error = makcu_get_button_mask(m_device, &mask);
         
-        if (error == MAKCU_SUCCESS) {
-            // Биты маски: bit0=left, bit1=right, bit2=middle, bit3=side1, bit4=side2
-            bool left = (mask & 0x01) != 0;
-            bool right = (mask & 0x02) != 0;
-            bool middle = (mask & 0x04) != 0;
-            bool side1 = (mask & 0x08) != 0;
-            bool side2 = (mask & 0x10) != 0;
-
-            // Детектируем изменения и вызываем callback
-            if (left != prev_left) {
-                UpdateGlobalButtonState(MAKCU_MOUSE_LEFT, left);
-                if (m_button_callback) {
-                    m_button_callback(MAKCU_MOUSE_LEFT, left);
-                }
-                prev_left = left;
-            }
-            
-            if (right != prev_right) {
-                UpdateGlobalButtonState(MAKCU_MOUSE_RIGHT, right);
-                if (m_button_callback) {
-                    m_button_callback(MAKCU_MOUSE_RIGHT, right);
-                }
-                prev_right = right;
-            }
-            
-            if (middle != prev_middle) {
-                UpdateGlobalButtonState(MAKCU_MOUSE_MIDDLE, middle);
-                if (m_button_callback) {
-                    m_button_callback(MAKCU_MOUSE_MIDDLE, middle);
-                }
-                prev_middle = middle;
-            }
-            
-            if (side1 != prev_side1) {
-                UpdateGlobalButtonState(MAKCU_MOUSE_SIDE1, side1);
-                if (m_button_callback) {
-                    m_button_callback(MAKCU_MOUSE_SIDE1, side1);
-                }
-                prev_side1 = side1;
-            }
-            
-            if (side2 != prev_side2) {
-                UpdateGlobalButtonState(MAKCU_MOUSE_SIDE2, side2);
-                if (m_button_callback) {
-                    m_button_callback(MAKCU_MOUSE_SIDE2, side2);
-                }
-                prev_side2 = side2;
-            }
-        }
-
-        // Ждём следующий цикл опроса
-        std::this_thread::sleep_for(std::chrono::milliseconds(m_config.polling_interval_ms));
+        // В event-driven режиме библиотека сама обрабатывает входящие байты
+        // и вызывает установленный callback через internal mechanisms
+        // Нам нужно только ждать и периодически проверять подключение
+        
+        std::this_thread::sleep_for(std::chrono::milliseconds(m_config.polling_interval_ms * 10));
     }
 
     std::cout << "[MakcuWrapper] Monitor thread stopped" << std::endl;
