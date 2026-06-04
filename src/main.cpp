@@ -191,12 +191,12 @@ void GetModelSize(int model_idx, int& out_w, int& out_h) {
 }
 
 inline void DownscaleImage(const unsigned char* src, int src_w, int src_h, unsigned char* dst, int dst_w, int dst_h) {
-    float scale_x = (float)src_w / dst_w;
-    float scale_y = (float)src_h / dst_h;
+    float scale_x = static_cast<float>(src_w) / dst_w;
+    float scale_y = static_cast<float>(src_h) / dst_h;
     for (int y = 0; y < dst_h; ++y) {
-        int py = (std::min)(static_cast<int>(y * scale_y), src_h - 1);
+        int py = std::min(static_cast<int>(y * scale_y), src_h - 1);
         for (int x = 0; x < dst_w; ++x) {
-            int px = (std::min)(static_cast<int>(x * scale_x), src_w - 1);
+            int px = std::min(static_cast<int>(x * scale_x), src_w - 1);
             int src_idx = (py * src_w + px) * 4;
             int dst_idx = (y * dst_w + x) * 4;
             dst[dst_idx] = src[src_idx];
@@ -359,19 +359,23 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
 
         float current_zoom = 1.0f;
         g_current_zoom.store(current_zoom);
-        int capture_w = (std::min)(static_cast<int>(current_yolo_w * current_zoom), g_capture_w);
-        int capture_h = (std::min)(static_cast<int>(current_yolo_h * current_zoom), g_capture_h);
+        int capture_w = std::min(static_cast<int>(current_yolo_w * current_zoom), g_capture_w);
+        int capture_h = std::min(static_cast<int>(current_yolo_h * current_zoom), g_capture_h);
         int roi_screen_x = (g_capture_w / 2) - (capture_w / 2);
         int roi_screen_y = (g_capture_h / 2) - (capture_h / 2);
 
         auto cap_start = std::chrono::high_resolution_clock::now();
         bool frame_captured = false;
         if (current_zoom > 1.0f) {
-            frame_captured = cap->GetHardwareROIFrame(zoom_buffers[current_write], roi_screen_x, roi_screen_y, capture_w, capture_h);
+            std::span<std::byte> zoom_span{reinterpret_cast<std::byte*>(zoom_buffers[current_write]), 
+                                           static_cast<std::size_t>(capture_w) * capture_h * 4};
+            frame_captured = cap->GetHardwareROIFrame(zoom_span, roi_screen_x, roi_screen_y, capture_w, capture_h);
             if (frame_captured) DownscaleImage(zoom_buffers[current_write], capture_w, capture_h, capture_buffers[current_write], current_yolo_w, current_yolo_h);
         }
         else {
-            frame_captured = cap->GetHardwareROIFrame(capture_buffers[current_write], roi_screen_x, roi_screen_y, capture_w, capture_h);
+            std::span<std::byte> capture_span{reinterpret_cast<std::byte*>(capture_buffers[current_write]), 
+                                              static_cast<std::size_t>(capture_w) * capture_h * 4};
+            frame_captured = cap->GetHardwareROIFrame(capture_span, roi_screen_x, roi_screen_y, capture_w, capture_h);
         }
         auto cap_end = std::chrono::high_resolution_clock::now();
         g_last_capture_time = std::chrono::duration<float, std::milli>(cap_end - cap_start).count();
@@ -384,10 +388,12 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
                 float body_conf = local_cfg.ai_confidence_body / 100.0f;
                 float head_conf = local_cfg.ai_confidence_head / 100.0f;
                 if (overlay->auto_confidence && g_is_target_locked.load()) {
-                    body_conf = (std::max)(0.35f, body_conf - 0.05f);
-                    head_conf = (std::max)(0.25f, head_conf - 0.05f);
+                    body_conf = std::max(0.35f, body_conf - 0.05f);
+                    head_conf = std::max(0.25f, head_conf - 0.05f);
                 }
-                current_frame_raw = det->run_inference(capture_buffers[current_write], current_yolo_w, current_yolo_h,
+                std::span<const unsigned char> pixel_span{capture_buffers[current_write], 
+                                                          static_cast<std::size_t>(current_yolo_w) * current_yolo_h * 4};
+                current_frame_raw = det->run_inference(pixel_span, current_yolo_w, current_yolo_h,
                     body_conf, head_conf, local_cfg.neural_nms, local_cfg.neural_max_det,
                     local_cfg.elite_smoke_vision);
             }

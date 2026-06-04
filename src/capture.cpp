@@ -2,6 +2,8 @@
 #include <iostream>
 #include <algorithm>
 #include <intrin.h>
+#include <span>
+#include <cstring>
 
 DXGICapture::DXGICapture() {}
 DXGICapture::~DXGICapture() { Cleanup(); }
@@ -11,7 +13,7 @@ bool DXGICapture::Initialize() {
     m_ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
 
     IDXGIFactory1* factory = nullptr;
-    if (FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)&factory))) return false;
+    if (FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&factory)))) return false;
 
     IDXGIAdapter1* adapter = nullptr;
     IDXGIOutput* output = nullptr;
@@ -34,7 +36,7 @@ bool DXGICapture::Initialize() {
     }
 
     IDXGIOutput1* output1 = nullptr;
-    output->QueryInterface(__uuidof(IDXGIOutput1), (void**)&output1);
+    output->QueryInterface(__uuidof(IDXGIOutput1), reinterpret_cast<void**>(&output1));
     output->Release(); adapter->Release();
 
     HRESULT hr = output1->DuplicateOutput(m_Device, &m_DeskDupl);
@@ -42,7 +44,7 @@ bool DXGICapture::Initialize() {
 
     if (FAILED(hr)) return false;
 
-    D3D11_TEXTURE2D_DESC desc = {};
+    D3D11_TEXTURE2D_DESC desc{};
     desc.Width = m_ScreenWidth;
     desc.Height = m_ScreenHeight;
     desc.MipLevels = 1;
@@ -57,30 +59,30 @@ bool DXGICapture::Initialize() {
     return true;
 }
 
-bool DXGICapture::GetHardwareROIFrame(unsigned char* out_pixels, int roi_x, int roi_y, int roi_w, int roi_h) {
+bool DXGICapture::GetHardwareROIFrame(std::span<std::byte> out_pixels, int roi_x, int roi_y, int roi_w, int roi_h) {
     std::lock_guard<std::mutex> lock(m_CaptureMutex);
     if (!m_DeskDupl || !m_StagingTex) return false;
 
-    roi_w = (std::min)(roi_w, m_ScreenWidth);
-    roi_h = (std::min)(roi_h, m_ScreenHeight);
-    int max_x = (std::max)(0, m_ScreenWidth - roi_w);
-    int max_y = (std::max)(0, m_ScreenHeight - roi_h);
-    roi_x = (std::max)(0, (std::min)(roi_x, max_x));
-    roi_y = (std::max)(0, (std::min)(roi_y, max_y));
+    roi_w = std::min(roi_w, m_ScreenWidth);
+    roi_h = std::min(roi_h, m_ScreenHeight);
+    int max_x = std::max(0, m_ScreenWidth - roi_w);
+    int max_y = std::max(0, m_ScreenHeight - roi_h);
+    roi_x = std::max(0, std::min(roi_x, max_x));
+    roi_y = std::max(0, std::min(roi_y, max_y));
 
     IDXGIResource* desktopRes = nullptr;
-    DXGI_OUTDUPL_FRAME_INFO frameInfo;
+    DXGI_OUTDUPL_FRAME_INFO frameInfo{};
     HRESULT hr = m_DeskDupl->AcquireNextFrame(0, &frameInfo, &desktopRes);
     if (hr == DXGI_ERROR_WAIT_TIMEOUT) return false;
     if (FAILED(hr)) { ResetDuplicator(); return false; }
 
     ID3D11Texture2D* gpuTex = nullptr;
-    desktopRes->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&gpuTex);
+    desktopRes->QueryInterface(__uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&gpuTex));
     desktopRes->Release();
 
     if (!gpuTex) { m_DeskDupl->ReleaseFrame(); return false; }
 
-    D3D11_BOX sourceRegion;
+    D3D11_BOX sourceRegion{};
     sourceRegion.left = roi_x;
     sourceRegion.right = roi_x + roi_w;
     sourceRegion.top = roi_y;
@@ -91,17 +93,25 @@ bool DXGICapture::GetHardwareROIFrame(unsigned char* out_pixels, int roi_x, int 
     m_Context->CopySubresourceRegion(m_StagingTex, 0, 0, 0, 0, gpuTex, 0, &sourceRegion);
     gpuTex->Release();
 
-    D3D11_MAPPED_SUBRESOURCE mapped;
+    D3D11_MAPPED_SUBRESOURCE mapped{};
     if (SUCCEEDED(m_Context->Map(m_StagingTex, 0, D3D11_MAP_READ, 0, &mapped))) {
-        unsigned char* src = (unsigned char*)mapped.pData;
-        int pitch = mapped.RowPitch;
+        auto* src = static_cast<unsigned char*>(mapped.pData);
+        const int pitch = mapped.RowPitch;
         const int dst_pitch = roi_w * 4;
 
-        // Замена SSE на простой memcpy – стабильность и корректность детекций
+        // Проверка границ span для безопасности
+        const std::size_t required_size = static_cast<std::size_t>(roi_h) * dst_pitch;
+        if (out_pixels.size_bytes() < required_size) {
+            m_Context->Unmap(m_StagingTex, 0);
+            m_DeskDupl->ReleaseFrame();
+            return false;
+        }
+
+        // Копирование с использованием std::memcpy и span для безопасности
         for (int y = 0; y < roi_h; ++y) {
             const unsigned char* src_row = src + y * pitch;
-            unsigned char* dst_row = out_pixels + y * dst_pitch;
-            memcpy(dst_row, src_row, dst_pitch);
+            auto* dst_row = out_pixels.data() + y * dst_pitch;
+            std::memcpy(dst_row, src_row, dst_pitch);
         }
 
         m_Context->Unmap(m_StagingTex, 0);
