@@ -1,18 +1,26 @@
 ```
-# Compiled and build artifacts
+# Compiled files
 *.o
 *.obj
+*.exe
+*.dll
+*.so
+*.a
 *.out
+
+# Build directories
 build/
 dist/
+target/
 
 # Dependencies
+node_modules/
 venv/
 .venv/
 __pycache__/
 .mypy_cache/
 .pytest_cache/
-node_modules/
+.gradle/
 
 # Editors
 .vscode/
@@ -34,7 +42,7 @@ coverage/
 htmlcov/
 .coverage
 
-# System
+# System files
 .DS_Store
 Thumbs.db
 ```

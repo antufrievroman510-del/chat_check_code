@@ -293,6 +293,12 @@ void Aimbot::CloseHardware() {
     // Сначала останавливаем поток опроса кнопок
     StopButtonMonitor();
     
+    // Закрываем соединение Makcu если используется
+    if (m_makcuInstance) {
+        m_makcuInstance->Shutdown();
+        m_makcuInstance.reset();
+    }
+    
     // Закрываем соединение через интерфейс
     if (m_mouseInput) {
         m_mouseInput->Shutdown();
