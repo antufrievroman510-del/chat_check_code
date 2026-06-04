@@ -115,8 +115,8 @@ std::expected<void, std::string> MakcuWrapper::Initialize() {
             OnButtonEvent(button, pressed);
         });
 
-        // Подключаемся к устройству
-        if (!m_device->connect(port, true)) {
+        // Подключаемся к устройству (используем signature из референса: connect(port) без второго аргумента)
+        if (!m_device->connect(port)) {
             std::string error_msg = "Failed to connect to Makcu on " + port;
             std::cerr << "[MakcuWrapper] ERROR: " << error_msg << std::endl;
             m_device.reset();
