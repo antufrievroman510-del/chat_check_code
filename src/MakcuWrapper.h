@@ -1,7 +1,7 @@
 #pragma once
 
 // ============================================
-// MakcuWrapper - Обертка для работы с Makcu через C API
+// MakcuWrapper - Обертка для работы с Makcu через C API + UDP
 // Совместимо с C++17 для проекта PWNZ AI
 // ============================================
 
@@ -10,6 +10,7 @@
 #include <thread>
 #include <memory>
 #include <functional>
+#include "UdpListener.h"
 
 // Подключаем C API библиотеки makcu-cpp
 extern "C" {
@@ -39,6 +40,10 @@ struct MakcuConfig {
     uint16_t pid = 0x55D3;              // PID устройства
     bool enable_monitoring = true;      // Включить мониторинг кнопок
     int polling_interval_ms = 1;        // Интервал опроса (мс)
+    
+    // UDP настройки для 2PC режима
+    bool enable_udp_listener = false;   // Включить прослушивание UDP (альтернатива COM-порту)
+    int udp_port = 9999;                // Порт для прослушивания
 };
 
 /**
@@ -46,7 +51,7 @@ struct MakcuConfig {
  * 
  * Реализует:
  * - Автопоиск устройства по VID:PID
- * - Мониторинг состояния кнопок в отдельном потоке
+ * - Мониторинг состояния кнопок в отдельном потоке (COM или UDP)
  * - Управление движением мыши и кликами
  * - Обработку ошибок подключения
  */
@@ -150,15 +155,21 @@ public:
 private:
     MakcuConfig m_config;
     makcu_device_t* m_device;
+    std::unique_ptr<UdpMouseListener> m_udp_listener;
     std::atomic<bool> m_initialized;
     std::atomic<bool> m_running;
     std::unique_ptr<std::thread> m_monitor_thread;
     ButtonCallback m_button_callback;
 
     /**
-     * @brief Поток мониторинга состояния кнопок
+     * @brief Поток мониторинга состояния кнопок (COM-порт)
      */
     void MonitorThreadFunc();
+
+    /**
+     * @brief Поток мониторинга состояния кнопок (UDP)
+     */
+    void UdpMonitorThreadFunc();
 
     /**
      * @brief Обновление глобальных переменных состояния кнопок
