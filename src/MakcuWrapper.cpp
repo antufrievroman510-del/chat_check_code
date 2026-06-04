@@ -155,12 +155,28 @@ bool MakcuWrapper::Initialize() {
     if (m_config.enable_monitoring) {
         // Сначала включаем отправку данных о кнопках с устройства
         // Это критически важно для 2PC режима - устройство должно отправлять байты при нажатии
-        error = makcu_enable_button_monitoring(m_device, true);
+        makcu_error_t error = makcu_enable_button_monitoring(m_device, true);
         if (error != MAKCU_SUCCESS) {
-            std::cout << "[MakcuWrapper] Warning: Could not enable button monitoring: " 
+            std::cerr << "[MakcuWrapper] ERROR: Could not enable button monitoring: " 
                       << makcu_error_string(error) << std::endl;
         } else {
-            std::cout << "[MakcuWrapper] Button monitoring enabled for 2PC sync" << std::endl;
+            std::cout << "[MakcuWrapper] Button monitoring ENABLED for 2PC sync" << std::endl;
+        }
+
+        // Проверяем, включился ли мониторинг
+        bool monitoring_enabled = false;
+        error = makcu_is_button_monitoring_enabled(m_device, &monitoring_enabled);
+        if (error == MAKCU_SUCCESS && monitoring_enabled) {
+            std::cout << "[MakcuWrapper] ✓ Confirmed: button monitoring is ACTIVE" << std::endl;
+        } else {
+            std::cerr << "[MakcuWrapper] WARNING: button monitoring status check failed or disabled" << std::endl;
+        }
+
+        // Получаем текущую маску кнопок для начального состояния
+        uint8_t initial_mask = 0;
+        error = makcu_get_button_mask(m_device, &initial_mask);
+        if (error == MAKCU_SUCCESS) {
+            std::cout << "[MakcuWrapper] Initial button mask: 0x" << std::hex << (int)initial_mask << std::dec << std::endl;
         }
 
         // Устанавливаем callback через C API для обработки событий кнопок
@@ -168,25 +184,29 @@ bool MakcuWrapper::Initialize() {
         auto c_callback = [](makcu_mouse_button_t button, bool pressed, void* user_data) {
             if (!user_data) return;
             auto* wrapper = static_cast<MakcuWrapper*>(user_data);
+            
+            // Логирование ВСЕХ событий для отладки 2PC
+            std::cout << "[MakcuWrapper] CALLBACK: Button " << static_cast<int>(button) 
+                      << " " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
+            
             wrapper->UpdateGlobalButtonState(button, pressed);
-#ifdef _DEBUG
-            std::cout << "[MakcuWrapper] C Callback: button=" << static_cast<int>(button) 
-                      << " pressed=" << pressed << std::endl;
-#endif
         };
         
         error = makcu_set_mouse_button_callback(m_device, c_callback, this);
         if (error != MAKCU_SUCCESS) {
-            std::cout << "[MakcuWrapper] Warning: Could not set mouse button callback: " 
+            std::cerr << "[MakcuWrapper] ERROR: Could not set mouse button callback: " 
                       << makcu_error_string(error) << std::endl;
         } else {
-            std::cout << "[MakcuWrapper] Mouse button callback registered" << std::endl;
+            std::cout << "[MakcuWrapper] ✓ Mouse button callback REGISTERED" << std::endl;
         }
 
-        // Запускаем поток мониторинга (в event-driven режиме он просто ждёт)
+        // Запускаем поток мониторинга (POLLING MODE с makcu_get_button_mask)
         m_running.store(true);
         m_monitor_thread = std::make_unique<std::thread>(&MakcuWrapper::MonitorThreadFunc, this);
-        std::cout << "[MakcuWrapper] Monitor thread started (event-driven mode)" << std::endl;
+        std::cout << "[MakcuWrapper] ✓ Monitor thread STARTED (polling with get_button_mask)" << std::endl;
+        std::cout << "[MakcuWrapper] ==============================================" << std::endl;
+        std::cout << "[MakcuWrapper] 2PC MODE READY - Waiting for button presses..." << std::endl;
+        std::cout << "[MakcuWrapper] ==============================================" << std::endl;
     }
 
     // Включаем высокопроизводительный режим
@@ -338,22 +358,13 @@ void MakcuWrapper::MonitorThreadFunc() {
     std::cout << "[MakcuWrapper] Monitor thread running (POLLING MODE for 2PC)..." << std::endl;
     std::cout << "[MakcuWrapper] Polling interval: " << m_config.polling_interval_ms << "ms" << std::endl;
 
-    // Для 2PC режима: опрашиваем устройство на предмет изменений кнопок
-    // Устройство Makcu на ПК№1 отправляет байты при нажатии кнопок
-    // Мы читаем эти байты через последовательный порт
+    // Для 2PC режима: опрашиваем устройство через makcu_get_button_mask
+    // Это читает последние полученные байты от устройства Makcu на ПК№1
     
-    // Состояния кнопок для детектирования изменений (изначально все отпущены)
-    struct ButtonState {
-        bool left = false;
-        bool right = false;
-        bool middle = false;
-        bool side1 = false;
-        bool side2 = false;
-    };
-    
-    ButtonState prev_state;
+    uint8_t prev_mask = 0;
     int poll_count = 0;
     int error_count = 0;
+    int success_count = 0;
     
     while (m_running.load()) {
         if (!m_device || !makcu_is_connected(m_device)) {
@@ -363,99 +374,99 @@ void MakcuWrapper::MonitorThreadFunc() {
         
         poll_count++;
         
-        // === СПОСОБ 1: Используем makcu_catch_mouse_* функции ===
-        // Эти функции должны читать последние полученные байты от устройства
-        uint8_t left_result = 0, right_result = 0, middle_result = 0;
-        uint8_t side1_result = 0, side2_result = 0;
+        // === СПОСОБ 1: Используем makcu_get_button_mask ===
+        // Эта функция возвращает маску всех кнопок одним вызовом
+        uint8_t button_mask = 0;
+        makcu_error_t err = makcu_get_button_mask(m_device, &button_mask);
         
-        makcu_error_t err_l = makcu_catch_mouse_left(m_device, &left_result);
-        makcu_error_t err_r = makcu_catch_mouse_right(m_device, &right_result);
-        makcu_error_t err_m = makcu_catch_mouse_middle(m_device, &middle_result);
-        makcu_error_t err_s1 = makcu_catch_mouse_side1(m_device, &side1_result);
-        makcu_error_t err_s2 = makcu_catch_mouse_side2(m_device, &side2_result);
-        
-        // Логгируем ошибки только периодически
-        if (err_l != MAKCU_SUCCESS || err_r != MAKCU_SUCCESS || err_m != MAKCU_SUCCESS ||
-            err_s1 != MAKCU_SUCCESS || err_s2 != MAKCU_SUCCESS) {
+        if (err != MAKCU_SUCCESS) {
             error_count++;
             if (error_count % 100 == 1) {
-                std::cout << "[MakcuWrapper] catch_mouse errors: L=" << err_l 
-                          << " R=" << err_r << " M=" << err_m 
-                          << " S1=" << err_s1 << " S2=" << err_s2 << std::endl;
+                std::cout << "[MakcuWrapper] get_button_mask error: " << makcu_error_string(err) 
+                          << " (error_count=" << error_count << ")" << std::endl;
             }
+            // При ошибке продолжаем опрос, возможно временная проблема
+            std::this_thread::sleep_for(std::chrono::milliseconds(m_config.polling_interval_ms));
+            continue;
         }
         
-        // Интерпретируем результаты
-        // Обычно: 0 = отпущена, 1 = нажата (но может зависеть от прошивки)
-        bool curr_left = (left_result != 0);
-        bool curr_right = (right_result != 0);
-        bool curr_middle = (middle_result != 0);
-        bool curr_side1 = (side1_result != 0);
-        bool curr_side2 = (side2_result != 0);
+        success_count++;
         
-        // Детектируем изменения состояний
-        bool changed = false;
+        // Интерпретируем маску кнопок
+        // Биты: 0=ЛКМ, 1=ПКМ, 2=СКМ, 3=Side1, 4=Side2
+        bool curr_left   = (button_mask & 0x01) != 0;
+        bool curr_right  = (button_mask & 0x02) != 0;
+        bool curr_middle = (button_mask & 0x04) != 0;
+        bool curr_side1  = (button_mask & 0x08) != 0;
+        bool curr_side2  = (button_mask & 0x10) != 0;
         
-        if (curr_left != prev_state.left) {
+        // Детектируем изменения состояний (фронты сигналов)
+        bool left_changed   = ((button_mask & 0x01) != (prev_mask & 0x01));
+        bool right_changed  = ((button_mask & 0x02) != (prev_mask & 0x02));
+        bool middle_changed = ((button_mask & 0x04) != (prev_mask & 0x04));
+        bool side1_changed  = ((button_mask & 0x08) != (prev_mask & 0x08));
+        bool side2_changed  = ((button_mask & 0x10) != (prev_mask & 0x10));
+        
+        // Обработка изменений ЛКМ
+        if (left_changed) {
 #ifdef _DEBUG
             std::cout << "[MakcuWrapper] LEFT button " << (curr_left ? "PRESSED" : "RELEASED") 
-                      << " (result=" << (int)left_result << ")" << std::endl;
+                      << " (mask=0x" << std::hex << (int)button_mask << std::dec << ")" << std::endl;
 #endif
             UpdateGlobalButtonState(MAKCU_MOUSE_LEFT, curr_left);
             if (m_button_callback) m_button_callback(MAKCU_MOUSE_LEFT, curr_left);
-            prev_state.left = curr_left;
-            changed = true;
         }
         
-        if (curr_right != prev_state.right) {
+        // Обработка изменений ПКМ
+        if (right_changed) {
 #ifdef _DEBUG
             std::cout << "[MakcuWrapper] RIGHT button " << (curr_right ? "PRESSED" : "RELEASED")
-                      << " (result=" << (int)right_result << ")" << std::endl;
+                      << " (mask=0x" << std::hex << (int)button_mask << std::dec << ")" << std::endl;
 #endif
             UpdateGlobalButtonState(MAKCU_MOUSE_RIGHT, curr_right);
             if (m_button_callback) m_button_callback(MAKCU_MOUSE_RIGHT, curr_right);
-            prev_state.right = curr_right;
-            changed = true;
         }
         
-        if (curr_middle != prev_state.middle) {
+        // Обработка изменений СКМ
+        if (middle_changed) {
 #ifdef _DEBUG
             std::cout << "[MakcuWrapper] MIDDLE button " << (curr_middle ? "PRESSED" : "RELEASED")
-                      << " (result=" << (int)middle_result << ")" << std::endl;
+                      << " (mask=0x" << std::hex << (int)button_mask << std::dec << ")" << std::endl;
 #endif
             UpdateGlobalButtonState(MAKCU_MOUSE_MIDDLE, curr_middle);
             if (m_button_callback) m_button_callback(MAKCU_MOUSE_MIDDLE, curr_middle);
-            prev_state.middle = curr_middle;
-            changed = true;
         }
         
-        if (curr_side1 != prev_state.side1) {
+        // Обработка изменений Side1
+        if (side1_changed) {
 #ifdef _DEBUG
             std::cout << "[MakcuWrapper] SIDE1 button " << (curr_side1 ? "PRESSED" : "RELEASED")
-                      << " (result=" << (int)side1_result << ")" << std::endl;
+                      << " (mask=0x" << std::hex << (int)button_mask << std::dec << ")" << std::endl;
 #endif
             UpdateGlobalButtonState(MAKCU_MOUSE_SIDE1, curr_side1);
             if (m_button_callback) m_button_callback(MAKCU_MOUSE_SIDE1, curr_side1);
-            prev_state.side1 = curr_side1;
-            changed = true;
         }
         
-        if (curr_side2 != prev_state.side2) {
+        // Обработка изменений Side2
+        if (side2_changed) {
 #ifdef _DEBUG
             std::cout << "[MakcuWrapper] SIDE2 button " << (curr_side2 ? "PRESSED" : "RELEASED")
-                      << " (result=" << (int)side2_result << ")" << std::endl;
+                      << " (mask=0x" << std::hex << (int)button_mask << std::dec << ")" << std::endl;
 #endif
             UpdateGlobalButtonState(MAKCU_MOUSE_SIDE2, curr_side2);
             if (m_button_callback) m_button_callback(MAKCU_MOUSE_SIDE2, curr_side2);
-            prev_state.side2 = curr_side2;
-            changed = true;
         }
         
-        // Периодический статус
-        if (poll_count % 500 == 1) {
+        // Сохраняем предыдущее состояние
+        prev_mask = button_mask;
+        
+        // Периодический статус (каждые 500 успешных опросов ~ каждые 0.5 сек при 1ms интервале)
+        if (success_count % 500 == 1) {
             std::cout << "[MakcuWrapper] Monitor alive. Buttons: L=" << curr_left 
                       << " R=" << curr_right << " M=" << curr_middle
-                      << " S1=" << curr_side1 << " S2=" << curr_side2 << std::endl;
+                      << " S1=" << curr_side1 << " S2=" << curr_side2
+                      << " (mask=0x" << std::hex << (int)button_mask << std::dec 
+                      << ", success=" << success_count << ", errors=" << error_count << ")" << std::endl;
         }
         
         // Опрос с минимальной задержкой для sub-millisecond реакции
@@ -463,7 +474,7 @@ void MakcuWrapper::MonitorThreadFunc() {
     }
 
     std::cout << "[MakcuWrapper] Monitor thread stopped. Total polls: " << poll_count 
-              << ", Errors: " << error_count << std::endl;
+              << ", Success: " << success_count << ", Errors: " << error_count << std::endl;
 }
 
 void MakcuWrapper::UpdateGlobalButtonState(makcu_mouse_button_t button, bool pressed) {

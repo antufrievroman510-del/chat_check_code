@@ -1,1 +1,1 @@
-Nothing should be ignored based on the provided file changes. The only modified file is a source code file (.cpp), which should not be ignored.
+Nothing should be ignored based on the provided file changes. The only modified file is a source code file (`src/MakcuWrapper.cpp`), which should not be added to .gitignore.
