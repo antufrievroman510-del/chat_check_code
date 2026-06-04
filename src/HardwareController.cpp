@@ -9,7 +9,7 @@
 #endif
 
 // Внутренние экземпляры контроллеров
-static MakcuWrapper g_makcu;
+static pwnz_ai::MakcuWrapper g_makcu;
 static KMBoxNet g_kmbox;
 
 HardwareController& HardwareController::Instance() {
