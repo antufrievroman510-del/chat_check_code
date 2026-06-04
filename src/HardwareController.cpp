@@ -1,5 +1,5 @@
 #include "HardwareController.h"
-#include "MakcuUART.h"
+#include "MakcuWrapper.h"
 #include "KMBoxNet.h"
 #include <iostream>
 
@@ -9,7 +9,7 @@
 #endif
 
 // Внутренние экземпляры контроллеров
-static MakcuUART g_makcu;
+static MakcuWrapper g_makcu;
 static KMBoxNet g_kmbox;
 
 HardwareController& HardwareController::Instance() {
@@ -66,12 +66,11 @@ bool HardwareController::Initialize(const ::HardwareConfig& config) {
 
         case HardwareMode::MackuUART:
             {
-                // Подключение через MakcuUART класс
-                if (g_makcu.Connect(config.com_port, config.baud_rate)) {
+                // Подключение через MakcuWrapper класс (автопоиск по VID:PID)
+                if (g_makcu.Connect()) {
                     connected_ = true;
-                    std::cout << "[HW] Mode: Macku UART on " << config.com_port << std::endl;
-                    // Запускаем мониторинг кнопок для аппаратного режима
-                    g_makcu.StartMonitoring();
+                    std::cout << "[HW] Mode: Macku UART (VID:PID 1A86:55D3)" << std::endl;
+                    // Мониторинг кнопок запускается автоматически внутри Initialize()
                 } else {
                     connected_ = false;
                     std::cerr << "[HW] Macku connection failed" << std::endl;
@@ -100,10 +99,7 @@ bool HardwareController::Initialize(const ::HardwareConfig& config) {
 void HardwareController::Shutdown() {
     EnterCriticalSection(&cs_);
     
-    // Останавливаем мониторинг перед отключением
-    g_makcu.StopMonitoring();
-    
-    // Отключение всех устройств
+    // Отключение всех устройств (мониторинг останавливается автоматически в Shutdown())
     g_makcu.Disconnect();
     g_kmbox.Disconnect();
 
@@ -190,8 +186,8 @@ void HardwareController::MoveRazer(int dx, int dy) {
 }
 
 void HardwareController::MoveMakcu(int dx, int dy) {
-    // Отправка движения через MakcuUART класс
-    g_makcu.MoveMouse(dx, dy);
+    // Отправка движения через MakcuWrapper класс
+    g_makcu.Move(dx, dy);
 }
 
 void HardwareController::MoveKMBox(int dx, int dy) {

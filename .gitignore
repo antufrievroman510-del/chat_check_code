@@ -1,5 +1,5 @@
 ```
-# Build artifacts
+# Compiled and build artifacts
 *.o
 *.obj
 *.a
@@ -7,17 +7,20 @@
 *.dll
 *.exe
 *.out
-
-# CMake build directory (common pattern)
 build/
+dist/
+target/
 
 # Dependencies
+node_modules/
 venv/
 .venv/
 __pycache__/
-*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.gradle/
 
-# Logs and temporary files
+# Logs and temp files
 *.log
 *.tmp
 *.swp
@@ -31,14 +34,7 @@ __pycache__/
 .vscode/
 .idea/
 
-# Coverage reports
-coverage/
-htmlcov/
-*.coverage
-
-# MyPy cache
-.mypy_cache/
-
-# Pytest cache
-.pytest_cache/
+# System files
+.DS_Store
+Thumbs.db
 ```
