@@ -153,57 +153,73 @@ bool MakcuWrapper::Initialize() {
 
     // Включаем мониторинг кнопок если требуется
     if (m_config.enable_monitoring) {
-        // Сначала включаем отправку данных о кнопках с устройства
-        // Это критически важно для 2PC режима - устройство должно отправлять байты при нажатии
-        makcu_error_t error = makcu_enable_button_monitoring(m_device, true);
-        if (error != MAKCU_SUCCESS) {
-            std::cerr << "[MakcuWrapper] ERROR: Could not enable button monitoring: " 
-                      << makcu_error_string(error) << std::endl;
-        } else {
-            std::cout << "[MakcuWrapper] Button monitoring ENABLED for 2PC sync" << std::endl;
-        }
-
-        // Проверяем, включился ли мониторинг
-        bool monitoring_enabled = false;
-        error = makcu_is_button_monitoring_enabled(m_device, &monitoring_enabled);
-        if (error == MAKCU_SUCCESS && monitoring_enabled) {
-            std::cout << "[MakcuWrapper] ✓ Confirmed: button monitoring is ACTIVE" << std::endl;
-        } else {
-            std::cerr << "[MakcuWrapper] WARNING: button monitoring status check failed or disabled" << std::endl;
-        }
-
-        // Получаем текущую маску кнопок для начального состояния
-        uint8_t initial_mask = 0;
-        error = makcu_get_button_mask(m_device, &initial_mask);
-        if (error == MAKCU_SUCCESS) {
-            std::cout << "[MakcuWrapper] Initial button mask: 0x" << std::hex << (int)initial_mask << std::dec << std::endl;
-        }
-
-        // Устанавливаем callback через C API для обработки событий кнопок
-        // Библиотека будет вызывать этот callback когда получит байты от устройства
-        auto c_callback = [](makcu_mouse_button_t button, bool pressed, void* user_data) {
-            if (!user_data) return;
-            auto* wrapper = static_cast<MakcuWrapper*>(user_data);
+        // Проверяем, включен ли режим UDP
+        if (m_config.enable_udp_listener) {
+            std::cout << "[MakcuWrapper] Using UDP LISTENER mode for 2PC sync" << std::endl;
             
-            // Логирование ВСЕХ событий для отладки 2PC
-            std::cout << "[MakcuWrapper] CALLBACK: Button " << static_cast<int>(button) 
-                      << " " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
+            // Создаем и запускаем UDP слушатель
+            m_udp_listener = std::make_unique<UdpMouseListener>();
+            m_udp_listener->Start(m_config.udp_port);
             
-            wrapper->UpdateGlobalButtonState(button, pressed);
-        };
+            // Запускаем поток мониторинга UDP
+            m_running.store(true);
+            m_monitor_thread = std::make_unique<std::thread>(&MakcuWrapper::UdpMonitorThreadFunc, this);
+            std::cout << "[MakcuWrapper] ✓ UDP Monitor thread STARTED on port " << m_config.udp_port << std::endl;
+        } else {
+            // COM-порт режим
+            // Сначала включаем отправку данных о кнопках с устройства
+            // Это критически важно для 2PC режима - устройство должно отправлять байты при нажатии
+            makcu_error_t error = makcu_enable_button_monitoring(m_device, true);
+            if (error != MAKCU_SUCCESS) {
+                std::cerr << "[MakcuWrapper] ERROR: Could not enable button monitoring: " 
+                          << makcu_error_string(error) << std::endl;
+            } else {
+                std::cout << "[MakcuWrapper] Button monitoring ENABLED for 2PC sync" << std::endl;
+            }
+
+            // Проверяем, включился ли мониторинг
+            bool monitoring_enabled = false;
+            error = makcu_is_button_monitoring_enabled(m_device, &monitoring_enabled);
+            if (error == MAKCU_SUCCESS && monitoring_enabled) {
+                std::cout << "[MakcuWrapper] ✓ Confirmed: button monitoring is ACTIVE" << std::endl;
+            } else {
+                std::cerr << "[MakcuWrapper] WARNING: button monitoring status check failed or disabled" << std::endl;
+            }
+
+            // Получаем текущую маску кнопок для начального состояния
+            uint8_t initial_mask = 0;
+            error = makcu_get_button_mask(m_device, &initial_mask);
+            if (error == MAKCU_SUCCESS) {
+                std::cout << "[MakcuWrapper] Initial button mask: 0x" << std::hex << (int)initial_mask << std::dec << std::endl;
+            }
+
+            // Устанавливаем callback через C API для обработки событий кнопок
+            // Библиотека будет вызывать этот callback когда получит байты от устройства
+            auto c_callback = [](makcu_mouse_button_t button, bool pressed, void* user_data) {
+                if (!user_data) return;
+                auto* wrapper = static_cast<MakcuWrapper*>(user_data);
+                
+                // Логирование ВСЕХ событий для отладки 2PC
+                std::cout << "[MakcuWrapper] CALLBACK: Button " << static_cast<int>(button) 
+                          << " " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
+                
+                wrapper->UpdateGlobalButtonState(button, pressed);
+            };
+            
+            error = makcu_set_mouse_button_callback(m_device, c_callback, this);
+            if (error != MAKCU_SUCCESS) {
+                std::cerr << "[MakcuWrapper] ERROR: Could not set mouse button callback: " 
+                          << makcu_error_string(error) << std::endl;
+            } else {
+                std::cout << "[MakcuWrapper] ✓ Mouse button callback REGISTERED" << std::endl;
+            }
+
+            // Запускаем поток мониторинга (POLLING MODE с makcu_get_button_mask)
+            m_running.store(true);
+            m_monitor_thread = std::make_unique<std::thread>(&MakcuWrapper::MonitorThreadFunc, this);
+            std::cout << "[MakcuWrapper] ✓ Monitor thread STARTED (polling with get_button_mask)" << std::endl;
+        }
         
-        error = makcu_set_mouse_button_callback(m_device, c_callback, this);
-        if (error != MAKCU_SUCCESS) {
-            std::cerr << "[MakcuWrapper] ERROR: Could not set mouse button callback: " 
-                      << makcu_error_string(error) << std::endl;
-        } else {
-            std::cout << "[MakcuWrapper] ✓ Mouse button callback REGISTERED" << std::endl;
-        }
-
-        // Запускаем поток мониторинга (POLLING MODE с makcu_get_button_mask)
-        m_running.store(true);
-        m_monitor_thread = std::make_unique<std::thread>(&MakcuWrapper::MonitorThreadFunc, this);
-        std::cout << "[MakcuWrapper] ✓ Monitor thread STARTED (polling with get_button_mask)" << std::endl;
         std::cout << "[MakcuWrapper] ==============================================" << std::endl;
         std::cout << "[MakcuWrapper] 2PC MODE READY - Waiting for button presses..." << std::endl;
         std::cout << "[MakcuWrapper] ==============================================" << std::endl;
@@ -232,6 +248,12 @@ void MakcuWrapper::Shutdown() {
     if (m_monitor_thread && m_monitor_thread->joinable()) {
         m_monitor_thread->join();
         m_monitor_thread.reset();
+    }
+
+    // Останавливаем UDP слушатель если был запущен
+    if (m_udp_listener) {
+        m_udp_listener->Stop();
+        m_udp_listener.reset();
     }
 
     if (m_device) {
@@ -523,6 +545,85 @@ makcu_mouse_button_t MakcuWrapper::IntToButton(int button) {
         case 4: return MAKCU_MOUSE_SIDE2;
         default: return MAKCU_MOUSE_LEFT;
     }
+}
+
+// ============================================
+// UDP мониторинг для 2PC режима
+// ============================================
+void MakcuWrapper::UdpMonitorThreadFunc() {
+    std::cout << "[MakcuWrapper] UDP Monitor thread running..." << std::endl;
+    
+    // Предыдущие состояния для детектирования изменений
+    bool prev_aim = false;
+    bool prev_shoot = false;
+    bool prev_zoom = false;
+    bool prev_side1 = false;
+    bool prev_side2 = false;
+    
+    int check_count = 0;
+    
+    while (m_running.load()) {
+        if (!m_udp_listener) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
+        
+        check_count++;
+        
+        // Получаем текущие состояния кнопок от UDP слушателя
+        bool curr_aim = m_udp_listener->IsAimKeyPressed();      // ПКМ
+        bool curr_shoot = m_udp_listener->IsShootKeyPressed();  // ЛКМ
+        bool curr_zoom = m_udp_listener->IsZoomKeyPressed();    // СКМ
+        bool curr_side1 = m_udp_listener->IsSide1Pressed();     // Side1
+        bool curr_side2 = m_udp_listener->IsSide2Pressed();     // Side2
+        
+        // Детектируем изменения и обновляем глобальные переменные
+        if (curr_aim != prev_aim) {
+            std::cout << "[UDP Monitor] ПКМ (aim): " << (curr_aim ? "НАЖАТА" : "ОТПУЩЕНА") << std::endl;
+            g_makcu_aiming.store(curr_aim);
+            if (m_button_callback) m_button_callback(MAKCU_MOUSE_RIGHT, curr_aim);
+            prev_aim = curr_aim;
+        }
+        
+        if (curr_shoot != prev_shoot) {
+            std::cout << "[UDP Monitor] ЛКМ (shoot): " << (curr_shoot ? "НАЖАТА" : "ОТПУЩЕНА") << std::endl;
+            g_makcu_shooting.store(curr_shoot);
+            if (m_button_callback) m_button_callback(MAKCU_MOUSE_LEFT, curr_shoot);
+            prev_shoot = curr_shoot;
+        }
+        
+        if (curr_zoom != prev_zoom) {
+            std::cout << "[UDP Monitor] СКМ (zoom): " << (curr_zoom ? "НАЖАТА" : "ОТПУЩЕНА") << std::endl;
+            g_makcu_zooming.store(curr_zoom);
+            if (m_button_callback) m_button_callback(MAKCU_MOUSE_MIDDLE, curr_zoom);
+            prev_zoom = curr_zoom;
+        }
+        
+        if (curr_side1 != prev_side1) {
+            std::cout << "[UDP Monitor] Side1: " << (curr_side1 ? "НАЖАТА" : "ОТПУЩЕНА") << std::endl;
+            g_makcu_side1.store(curr_side1);
+            if (m_button_callback) m_button_callback(MAKCU_MOUSE_SIDE1, curr_side1);
+            prev_side1 = curr_side1;
+        }
+        
+        if (curr_side2 != prev_side2) {
+            std::cout << "[UDP Monitor] Side2: " << (curr_side2 ? "НАЖАТА" : "ОТПУЩЕНА") << std::endl;
+            g_makcu_side2.store(curr_side2);
+            if (m_button_callback) m_button_callback(MAKCU_MOUSE_SIDE2, curr_side2);
+            prev_side2 = curr_side2;
+        }
+        
+        // Периодический статус
+        if (check_count % 500 == 1) {
+            std::cout << "[UDP Monitor] Alive. Aim=" << curr_aim << " Shoot=" << curr_shoot 
+                      << " Zoom=" << curr_zoom << " S1=" << curr_side1 << " S2=" << curr_side2 << std::endl;
+        }
+        
+        // Опрос с минимальной задержкой
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    
+    std::cout << "[UDP Monitor] Thread stopped after " << check_count << " checks" << std::endl;
 }
 
 } // namespace pwnz_ai
