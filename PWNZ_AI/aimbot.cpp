@@ -1,4 +1,4 @@
-﻿#include "aimbot.h"
+#include "aimbot.h"
 #include <cmath>
 #include <algorithm>
 #include <iostream>
