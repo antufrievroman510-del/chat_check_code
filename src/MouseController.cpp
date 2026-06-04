@@ -1,7 +1,9 @@
 #include "MouseController.h"
-#include "HardwareController.h"
-#include "HardwareBackend.h"  // Явное включение для HardwareConfig
 #include <iostream>
+
+// Явное включение для полного определения типов
+#include "HardwareBackend.h"
+#include "HardwareController.h"
 
 // Singleton instance
 static MouseController* g_Instance = nullptr;
@@ -27,8 +29,8 @@ void MouseController::Initialize(MouseMethod method) {
     isInitialized = true;
 
     // Инициализация HardwareController для режимов Makcu/KMBox
-    ::HardwareConfig hwConfig;
-    hwConfig.mode = static_cast<HardwareMode>(0); // LocalMouse
+    HardwareConfig hwConfig;
+    hwConfig.mode = HardwareMode::LocalMouse;
     
     switch (method) {
         case MouseMethod::Makcu_UART:
@@ -224,8 +226,8 @@ void MouseController::SetMethod(MouseMethod method) {
     currentMethod = method;
     
     // Переинициализация HardwareController если сменился режим
-    ::HardwareConfig hwConfig;
-    hwConfig.mode = static_cast<HardwareMode>(0); // LocalMouse
+    HardwareConfig hwConfig;
+    hwConfig.mode = HardwareMode::LocalMouse;
     
     switch (method) {
         case MouseMethod::Makcu_UART:
@@ -245,6 +247,6 @@ void MouseController::SetMethod(MouseMethod method) {
     }
 }
 
-void MouseController::UpdateHardwareConfig(const ::HardwareConfig& config) {
+void MouseController::UpdateHardwareConfig(const HardwareConfig& config) {
     HardwareController::Instance().UpdateConfig(config);
 }

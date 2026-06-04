@@ -45,7 +45,7 @@ private:
     void MoveMakcu(int dx, int dy);
     void MoveKMBox(int dx, int dy);
 
-    ::HardwareConfig current_config_;
+    HardwareConfig current_config_;
     HardwareMode current_mode_ = HardwareMode::LocalMouse;
     std::atomic<bool> connected_{false};
     

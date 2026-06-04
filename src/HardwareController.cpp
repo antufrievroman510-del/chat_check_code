@@ -1,8 +1,10 @@
 #include "HardwareController.h"
-#include "HardwareBackend.h"  // Явное включение для HardwareConfig и HardwareMode
+#include <iostream>
+
+// Явное включение для полного определения типов
+#include "HardwareBackend.h"
 #include "MakcuWrapper.h"
 #include "KMBoxNet.h"
-#include <iostream>
 
 // Заглушки для HIDAPI (будут реализованы при наличии библиотеки)
 #ifdef HAS_HIDAPI
@@ -18,11 +20,11 @@ HardwareController& HardwareController::Instance() {
     return instance;
 }
 
-bool HardwareController::Initialize(const ::HardwareConfig& config) {
+bool HardwareController::Initialize(const HardwareConfig& config) {
     EnterCriticalSection(&cs_);
     
     current_config_ = config;
-    current_mode_ = static_cast<HardwareMode>(config.mode);
+    current_mode_ = config.mode;
     
     bool success = true;
 
@@ -196,9 +198,9 @@ void HardwareController::MoveKMBox(int dx, int dy) {
     g_kmbox.MoveMouse(dx, dy);
 }
 
-void HardwareController::UpdateConfig(const ::HardwareConfig& config) {
+void HardwareController::UpdateConfig(const HardwareConfig& config) {
     // Если режим изменился - переинициализация
-    if (static_cast<HardwareMode>(config.mode) != current_mode_) {
+    if (config.mode != current_mode_) {
         Shutdown();
         Initialize(config);
     } else {
