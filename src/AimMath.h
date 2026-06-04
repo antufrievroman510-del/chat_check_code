@@ -1,4 +1,8 @@
 #pragma once
+
+#ifndef AIMMATH_H
+#define AIMMATH_H
+
 #include "WinHeaders.h"
 #include <cmath>
 #include <random>
