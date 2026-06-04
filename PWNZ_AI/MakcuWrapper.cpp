@@ -140,18 +140,28 @@ std::expected<void, std::string> MakcuWrapper::Initialize() {
             std::cout << "[MakcuWrapper] Successfully connected! (version query failed)" << std::endl;
         }
 
-        // Включаем мониторинг кнопок если требуется
+        // Включаем мониторинг кнопок если требуется - КРИТИЧНО для 2PC!
         if (m_config.enable_monitoring) {
-            if (m_device->enableButtonMonitoring(true)) {
+            std::cout << "[MakcuWrapper] Enabling button monitoring for 2PC sync..." << std::endl;
+            bool monitor_result = m_device->enableButtonMonitoring(true);
+            if (monitor_result) {
                 std::cout << "[MakcuWrapper] Button monitoring ENABLED for 2PC sync" << std::endl;
                 
-                if (m_device->isButtonMonitoringEnabled()) {
-                    std::cout << "[MakcuWrapper] Confirmed: button monitoring is ACTIVE" << std::endl;
-                } else {
-                    std::cerr << "[MakcuWrapper] WARNING: button monitoring status check failed or disabled" << std::endl;
+                // Проверяем несколько раз чтобы убедиться что мониторинг активен
+                for (int i = 0; i < 3; i++) {
+                    if (m_device->isButtonMonitoringEnabled()) {
+                        std::cout << "[MakcuWrapper] Confirmed: button monitoring is ACTIVE (check " << (i+1) << "/3)" << std::endl;
+                        break;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                }
+                
+                // Финальная проверка
+                if (!m_device->isButtonMonitoringEnabled()) {
+                    std::cerr << "[MakcuWrapper] CRITICAL: button monitoring status check failed after multiple attempts!" << std::endl;
                 }
             } else {
-                std::cerr << "[MakcuWrapper] WARNING: Could not enable button monitoring" << std::endl;
+                std::cerr << "[MakcuWrapper] CRITICAL: Could not enable button monitoring - 2PC will NOT work!" << std::endl;
             }
         }
 
@@ -389,11 +399,9 @@ bool MakcuWrapper::TryReconnect() {
 }
 
 void MakcuWrapper::OnButtonEvent(makcu::MouseButton button, bool pressed) {
-    // Логирование всех событий для отладки 2PC
-#ifdef _DEBUG
+    // Логирование ВСЕХ событий для отладки 2PC - даже в релизе
     std::cout << "[MakcuWrapper] CALLBACK: Button " << static_cast<int>(button) 
               << " " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
-#endif
     
     // Обновляем глобальные переменные
     UpdateGlobalButtonState(button, pressed);
