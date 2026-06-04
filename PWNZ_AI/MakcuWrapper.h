@@ -3,16 +3,14 @@
 // ============================================
 // MakcuWrapper - Обертка для работы с Makcu через C++ API
 // Совместимо с C++23 для проекта PWNZ AI
+// Архитектура как в референсе /source_logic/source_logic/mouse/Makcu.h
 // ============================================
 
 #include <string>
 #include <atomic>
 #include <memory>
 #include <functional>
-#include <expected>
 #include <mutex>
-#include <optional>
-#include <vector>
 
 // Подключаем C++ API библиотеки makcu-cpp
 #include <makcu.h>
@@ -23,44 +21,16 @@
 namespace pwnz_ai {
 
 /**
- * @brief Глобальные переменные для синхронизации с 2PC режимом
- * 
- * Эти переменные обновляются в реальном времени при получении событий от Makcu
- * и используются логикой аимбота для активации функций.
- */
-extern std::atomic<bool> g_makcu_aiming;    // Mouse5 (Side2) - прицеливание
-extern std::atomic<bool> g_makcu_shooting;  // ЛКМ - стрельба
-extern std::atomic<bool> g_makcu_zooming;   // ПКМ - зум
-extern std::atomic<bool> g_makcu_side1;     // Боковая кнопка 1 (Mouse4)
-extern std::atomic<bool> g_makcu_side2;     // Боковая кнопка 2 (используется для aiming)
-
-/**
- * @brief Конфигурация для подключения Makcu
- */
-struct MakcuConfig {
-    std::string com_port = "";          // Если пусто, будет автопоиск
-    uint16_t vid = 0x1A86;              // VID устройства (CH341 chipset)
-    uint16_t pid = 0x55D3;              // PID устройства
-    int baud_rate = 115200;             // Скорость соединения
-    bool enable_monitoring = true;      // Включить мониторинг кнопок
-    int polling_interval_ms = 1;        // Интервал опроса в мс (для совместимости)
-};
-
-/**
  * @brief Основной класс для работы с устройством Makcu
  * 
- * Реализует:
- * - Автопоиск устройства по VID:PID
- * - Мониторинг состояния кнопок через callback (без polling)
- * - Управление движением мыши и кликами
- * - Обработку ошибок подключения через std::expected
- * - Горячее переподключение
+ * Архитектура как в референсе:
+ * - Состояние кнопок хранится внутри класса (не глобальные переменные)
+ * - Callback обновляет внутреннее состояние
+ * - Методы aimingActive(), shootingActive(), zoomingActive() возвращают состояние
  */
 class MakcuWrapper : public IMouseInput {
 public:
-    using ButtonCallback = std::function<void(makcu::MouseButton button, bool pressed)>;
-
-    explicit MakcuWrapper(const MakcuConfig& config = MakcuConfig{});
+    explicit MakcuWrapper(const std::string& port = "", unsigned int baud_rate = 115200);
     ~MakcuWrapper() override;
 
     // Запрет копирования
@@ -73,29 +43,23 @@ public:
     void Click(int button) override;
     void Press(int button) override;
     void Release(int button) override;
-    void Shutdown() override { ShutdownInternal(); }
+    void Shutdown() override { Disconnect(); }
+    
+    // Методы для получения состояния кнопок (как в референсе)
+    bool aimingActive() const { return m_aiming_active.load(); }
+    bool shootingActive() const { return m_shooting_active.load(); }
+    bool zoomingActive() const { return m_zooming_active.load(); }
 
     /**
      * @brief Инициализация подключения к устройству
-     * @return std::expected<void, std::string> - результат или ошибка
-     */
-    std::expected<void, std::string> Initialize();
-
-    /**
-     * @brief Завершение работы и отключение
-     */
-    void ShutdownInternal();
-
-    /**
-     * @brief Удобная обертка для Initialize()
      * @return true если успешно подключено
      */
     bool Connect();
 
     /**
-     * @brief Удобная обертка для ShutdownInternal()
+     * @brief Завершение работы и отключение
      */
-    void Disconnect() { ShutdownInternal(); }
+    void Disconnect();
 
     /**
      * @brief Проверка статуса подключения
@@ -109,59 +73,32 @@ public:
 
     /**
      * @brief Плавное движение мыши
-     * @param dx Смещение по X
-     * @param dy Смещение по Y
-     * @param segments Количество сегментов для плавности
      */
     void MoveSmooth(int dx, int dy, uint32_t segments = 10);
 
     /**
-     * @brief Установить callback для событий кнопок
-     */
-    void SetButtonCallback(ButtonCallback callback);
-
-    /**
      * @brief Статический метод для поиска первого устройства Makcu по VID:PID
-     * @param vid Vendor ID
-     * @param pid Product ID
-     * @return std::optional<std::string> - COM-порт или nullopt
      */
-    static std::optional<std::string> FindDeviceByVidPid(uint16_t vid, uint16_t pid);
-
-    /**
-     * @brief Найти все устройства Makcu в системе
-     * @return Вектор с информацией о найденных устройствах
-     */
-    static std::vector<std::string> FindAllDevices();
+    static std::optional<std::string> FindDeviceByVidPid(uint16_t vid = 0x1A86, uint16_t pid = 0x55D3);
 
     /**
      * @brief Попытка переподключения при потере устройства
-     * @return true если успешно переподключено
      */
     bool TryReconnect();
 
 private:
-    MakcuConfig m_config;
     std::unique_ptr<makcu::Device> m_device;
-    std::atomic<bool> m_initialized;
-    std::atomic<bool> m_connected;
-    ButtonCallback m_button_callback;
+    std::atomic<bool> m_is_open{false};
+    std::atomic<bool> m_aiming_active{false};   // Mouse5 (Side2)
+    std::atomic<bool> m_shooting_active{false}; // LMB
+    std::atomic<bool> m_zooming_active{false};  // RMB
     mutable std::mutex m_mutex;
+    mutable std::mutex m_write_mutex;
 
     /**
-     * @brief Обработка событий кнопок из callback
+     * @brief Обработка событий кнопок из callback (как в референсе)
      */
-    void OnButtonEvent(makcu::MouseButton button, bool pressed);
-
-    /**
-     * @brief Конвертация номера кнопки в тип C++ API
-     */
-    static makcu::MouseButton IntToButton(int button);
-
-    /**
-     * @brief Обновление глобальных переменных состояния кнопок
-     */
-    void UpdateGlobalButtonState(makcu::MouseButton button, bool pressed);
+    void onButtonCallback(makcu::MouseButton button, bool pressed);
 };
 
 } // namespace pwnz_ai

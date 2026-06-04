@@ -22,11 +22,13 @@ set(IMGUI_DIR "C:/BOGX_DEV/Imgui" CACHE PATH "Path to ImGui")
 set(BYTE_TRACK_DIR "C:/BOGX_DEV/byte-track-eigen-main" CACHE PATH "Path to ByteTrack")
 set(EIGEN_DIR "C:/BOGX_DEV/eigen-master" CACHE PATH "Path to Eigen")
 set(HIDAPI_DIR "C:/BOGX_DEV/hid_api" CACHE PATH "Path to HIDAPI")
-set(MAKCU_DIR "${CMAKE_SOURCE_DIR}/../macku2pc" CACHE PATH "Path to Makcu C++ library source")
+
+# ИСПРАВЛЕНО: Используем папку macku2pc ВНУТРИ проекта PWNZ_AI
+set(MAKCU_DIR "${CMAKE_SOURCE_DIR}/macku2pc" CACHE PATH "Path to Makcu C++ library source")
 
 # Проверка существования директории makcu2pc
 if(NOT EXISTS "${MAKCU_DIR}")
-    message(FATAL_ERROR "Makcu library directory not found at ${MAKCU_DIR}. Please ensure macku2pc folder exists in parent directory.")
+    message(FATAL_ERROR "Makcu library directory not found at ${MAKCU_DIR}. Please ensure macku2pc folder exists in project root.")
 endif()
 
 include_directories("${CMAKE_SOURCE_DIR}")
@@ -35,14 +37,19 @@ include_directories("${IMGUI_DIR}")
 include_directories("${BYTE_TRACK_DIR}/include")
 include_directories("${EIGEN_DIR}")
 include_directories("${HIDAPI_DIR}/include")
+# Подключаем заголовки Makcu из внутренней папки
 include_directories("${MAKCU_DIR}/include")
 
-# [ДОБАВЛЕНО] Исходники Makcu2PC (компилируем библиотеку из исходников)
+# --- СОЗДАНИЕ ОТДЕЛЬНОЙ БИБЛИОТЕКИ MAKCU2PC ---
+# Собираем исходники Makcu в отдельную статическую библиотеку для изоляции
 set(MAKCU_SOURCES 
     "${MAKCU_DIR}/src/makcu.cpp"
     "${MAKCU_DIR}/src/makcu_c.cpp"
     "${MAKCU_DIR}/src/serialport.cpp"
 )
+
+add_library(Makcu2PC_Lib STATIC ${MAKCU_SOURCES})
+target_include_directories(Makcu2PC_Lib PUBLIC "${MAKCU_DIR}/include")
 
 # [ДОБАВЛЕНО] Исходники ByteTrack-Eigen (KalmanFilter, STrack, BYTETracker, lapjv и т.д.)
 file(GLOB BYTE_TRACK_SOURCES "${BYTE_TRACK_DIR}/src/*.cpp")
@@ -85,8 +92,10 @@ add_executable(PWNZ_AI WIN32
     "${IMGUI_DIR}/implot.cpp"
     "${IMGUI_DIR}/implot_items.cpp"
     ${BYTE_TRACK_SOURCES}
-    ${MAKCU_SOURCES}
 )
+
+# Подключаем нашу статическую библиотеку Makcu2PC к проекту
+target_link_libraries(PWNZ_AI PRIVATE Makcu2PC_Lib)
 
 target_link_libraries(PWNZ_AI PRIVATE
     d3d11.lib dxgi.lib d3dcompiler.lib dwmapi.lib setupapi.lib user32.lib gdi32.lib
