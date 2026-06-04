@@ -39,6 +39,13 @@ set(MAKCU_SOURCES
     "${MAKCU_DIR}/src/serialport.cpp"
 )
 
+# Заголовки Makcu для отображения в Visual Studio
+set(MAKCU_HEADERS
+    "${MAKCU_DIR}/include/makcu.h"
+    "${MAKCU_DIR}/include/makcu_c.h"
+    "${MAKCU_DIR}/include/serialport.h"
+)
+
 # [ДОБАВЛЕНО] Исходники ByteTrack-Eigen (KalmanFilter, STrack, BYTETracker, lapjv и т.д.)
 file(GLOB BYTE_TRACK_SOURCES "${BYTE_TRACK_DIR}/src/*.cpp")
 
@@ -81,6 +88,21 @@ add_executable(PWNZ_AI WIN32
     "${IMGUI_DIR}/implot_items.cpp"
     ${BYTE_TRACK_SOURCES}
     ${MAKCU_SOURCES}
+    ${MAKCU_HEADERS}
+)
+
+# Группировка файлов в Visual Studio
+source_group("Libraries\\Makcu" FILES ${MAKCU_SOURCES} ${MAKCU_HEADERS})
+source_group("Libraries\\ByteTrack" FILES ${BYTE_TRACK_SOURCES})
+source_group("Libraries\\ImGui" FILES
+    "${IMGUI_DIR}/imgui.cpp"
+    "${IMGUI_DIR}/imgui_draw.cpp"
+    "${IMGUI_DIR}/imgui_widgets.cpp"
+    "${IMGUI_DIR}/imgui_tables.cpp"
+    "${IMGUI_DIR}/imgui_impl_dx11.cpp"
+    "${IMGUI_DIR}/imgui_impl_win32.cpp"
+    "${IMGUI_DIR}/implot.cpp"
+    "${IMGUI_DIR}/implot_items.cpp"
 )
 
 target_link_libraries(PWNZ_AI PRIVATE
