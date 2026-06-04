@@ -39,8 +39,6 @@
 #include <unordered_map>
 #include <functional>
 
-#include "MakcuUART.h"  // [ДОБАВЛЕНО] Для использования MakcuUART вместо HardwareBackend
-
 #include <iphlpapi.h>
 #include <shlobj.h>
 #include <wincrypt.h>
@@ -53,6 +51,7 @@
 #include "VMProtectSDK.h"
 #include "head_smoother.h"
 #include "HardwareBackend.h"
+#include "MakcuWrapper.h"
 
 extern HeadSmoother g_head_smoother;
 #pragma comment(lib, "dwmapi.lib")
@@ -1486,12 +1485,11 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         ImGui::Separator();
         ImGui::Spacing();
 
-        // === КРИТИЧНО: Используем MakcuUART вместо HardwareBackend для 2PC-связки ===
-        // HardwareBackend просто открывает COM-порт, но не читает ответы btn:X
-        // Только MakcuUART имеет встроенный поток мониторинга кнопок (monitoringLoop)
-        static std::unique_ptr<MakcuUART> g_makcu_uart;
+        // === КРИТИЧНО: Используем MakcuWrapper для 2PC-связки ===
+        // MakcuWrapper имеет встроенный поток мониторинга кнопок через C API
+        static std::unique_ptr<MakcuWrapper> g_makcu_wrapper;
         
-        bool connected = (g_makcu_uart != nullptr && g_makcu_uart->IsConnected());
+        bool connected = (g_makcu_wrapper != nullptr && g_makcu_wrapper->IsConnected());
 
         // Кнопка "Принять" для подключения
         if (!connected) {
@@ -1501,15 +1499,15 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
                 std::cout << "[OVERLAY] Attempting to connect to " << this->com_port_buf 
                           << " at " << baud_values[baud_rate_idx] << " baud..." << std::endl;
                 
-                // Создаём объект MakcuUART если ещё не создан
-                if (!g_makcu_uart) {
-                    g_makcu_uart = std::make_unique<MakcuUART>();
+                // Создаём объект MakcuWrapper если ещё не создан
+                if (!g_makcu_wrapper) {
+                    g_makcu_wrapper = std::make_unique<MakcuWrapper>();
                 }
                 
-                // Подключаемся через MakcuUART (который автоматически запускает monitoringLoop)
-                bool result = g_makcu_uart->Connect(this->com_port_buf, baud_values[baud_rate_idx]);
+                // Подключаемся через MakcuWrapper (автопоиск по VID:PID 1A86:55D3)
+                bool result = g_makcu_wrapper->Connect();
                 if (result) {
-                    std::cout << "[OVERLAY] Successfully connected to " << this->com_port_buf << std::endl;
+                    std::cout << "[OVERLAY] Successfully connected to Makcu device (VID:PID 1A86:55D3)" << std::endl;
                     // === КРИТИЧНО: Запускаем поток опроса кнопок для 2PC-связки ===
                     // Устанавливаем флаг для main.cpp, который запустит StartButtonMonitor()
                     this->apply_hw_flag = true;
@@ -1518,17 +1516,17 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
                     this->mouse_input_method_idx = 1;  // Makcu input method
                     std::cout << "[OVERLAY] Set apply_hw_flag to trigger button monitor start" << std::endl;
                 } else {
-                    std::cerr << "[OVERLAY] Failed to connect to " << this->com_port_buf << std::endl;
-                    g_makcu_uart.reset();  // Очищаем при ошибке
+                    std::cerr << "[OVERLAY] Failed to connect to Makcu device" << std::endl;
+                    g_makcu_wrapper.reset();  // Очищаем при ошибке
                 }
             }
             ImGui::PopStyleColor();
         } else {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
             if (ImGui::Button("Disconnect", ImVec2(150, 35))) {
-                if (g_makcu_uart) {
-                    g_makcu_uart->Disconnect();
-                    g_makcu_uart.reset();
+                if (g_makcu_wrapper) {
+                    g_makcu_wrapper->Disconnect();
+                    g_makcu_wrapper.reset();
                 }
                 std::cout << "[OVERLAY] Disconnected from Makcu" << std::endl;
             }
@@ -1541,7 +1539,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         if (connected) {
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), is_russian ? u8"✓ Подключено" : "✓ Connected");
             ImGui::SameLine();
-            ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "(%s @ %d)", this->com_port_buf, baud_values[baud_rate_idx]);
+            ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "(VID:PID 1A86:55D3)");
         } else {
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), is_russian ? u8"✗ Отключено" : "✗ Disconnected");
         }

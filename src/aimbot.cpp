@@ -560,7 +560,7 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     bool key_pressed = false;
     
     // === КРИТИЧНО: Для аппаратного режима (Makcu) используем g_makcu_aiming/g_makcu_shooting И g_remote_aim_key ===
-    // Эти переменные обновляются из MakcuUART::ParseResponse при получении btn:X от устройства
+    // Эти переменные обновляются из MakcuWrapper::MonitorThreadFunc при получении событий от устройства
     if (hardware_type >= 1) {
         // В аппаратном режиме состояние кнопок определяется через обратную связь от устройства
         // Проверяем все три источника для максимальной надёжности
@@ -922,8 +922,8 @@ void Aimbot::ButtonMonitorThread() {
     const int poll_interval_ms = 5;
     
     while (!m_stopButtonMonitor.load() && hardware_type >= 1) {
-        // В аппаратном режиме состояние кнопок обновляется через MakcuUART::monitoringLoop
-        // который читает btn:X пакеты от устройства и обновляет g_makcu_aiming/g_makcu_shooting
+        // В аппаратном режиме состояние кнопок обновляется через MakcuWrapper::MonitorThreadFunc
+        // который читает события от устройства и обновляет g_makcu_aiming/g_makcu_shooting
         // Здесь мы только логируем изменения для отладки
         
         static bool prev_aiming = false;

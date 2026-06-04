@@ -73,6 +73,17 @@ public:
     void Shutdown();
 
     /**
+     * @brief Удобная обертка для Initialize()
+     * @return true если успешно подключено
+     */
+    bool Connect() { return Initialize(); }
+
+    /**
+     * @brief Удобная обертка для Shutdown()
+     */
+    void Disconnect() { Shutdown(); }
+
+    /**
      * @brief Проверка статуса подключения
      */
     bool IsConnected() const;
