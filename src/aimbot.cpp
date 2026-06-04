@@ -14,7 +14,7 @@
 #include "AimMath.h"
 #include "MouseController.h"
 #include "overlay.h"  // [ДОБАВЛЕНО] Для типа Overlay в SyncFromOverlay()
-#include "MakcuUART.h"  // Для доступа к классу MakcuUART и глобальным переменным g_makcu_*
+#include "MakcuWrapper.h"  // Для доступа к классу MakcuWrapper и глобальным переменным g_makcu_*
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -202,11 +202,26 @@ bool Aimbot::InitHardware() {
                 break;
             case 1: // Makcu (аппаратный ввод через COM-порт)
                 {
-                    // Используем com_port_buf из overlay для имени порта
-                    std::string com_port_name = "COM" + std::to_string(com_port);
-                    int baud_rate = 4000000; // 4 Мбит/с - рабочая скорость MAKCU Native API
-                    std::cout << "[Aimbot] Creating MakcuMouse on " << com_port_name << " at " << baud_rate << " baud (4 Mbit/s)" << std::endl;
-                    m_mouseInput = std::make_unique<pwnz_ai::MakcuMouse>(com_port_name, baud_rate);
+                    // Используем новый MakcuWrapper с автопоиском по VID:PID
+                    pwnz_ai::MakcuConfig config;
+                    config.vid = 0x1A86;  // CH341 chipset
+                    config.pid = 0x55D3;  // Makcu device
+                    config.enable_monitoring = true;
+                    config.polling_interval_ms = 1;  // 1ms polling для минимальной задержки
+                    
+                    std::cout << "[Aimbot] Creating MakcuWrapper with VID:PID " 
+                              << std::hex << config.vid << ":" << config.pid << std::dec << std::endl;
+                    
+                    auto makcuWrapper = std::make_unique<pwnz_ai::MakcuWrapper>(config);
+                    if (!makcuWrapper->Initialize()) {
+                        std::cerr << "[Aimbot] Failed to initialize MakcuWrapper!" << std::endl;
+                        // Fallback на SendInput
+                        m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
+                    } else {
+                        // Сохраняем указатель на MakcuWrapper
+                        // Для совместимости с IMouseInput интерфейсом используем его напрямую
+                        m_makcuInstance = std::move(makcuWrapper);
+                    }
                 }
                 break;
             case 2: // KMbox (аппаратный ввод через сеть)
@@ -297,6 +312,12 @@ void Aimbot::SendHardwareMove(int x, int y) {
     move_count++;
     std::cout << "[AIM DEBUG] SendHardwareMove: dx=" << x << " dy=" << y << " hw=" << hardware_type << std::endl;
     
+    // Для режима Makcu используем прямой вызов через m_makcuInstance
+    if (hardware_type == 1 && m_makcuInstance) {
+        m_makcuInstance->Move(x, y);
+        return;
+    }
+    
     // ИСПОЛЬЗУЕМ ТОЛЬКО полиморфный интерфейс для отправки движения
     if (m_mouseInput) {
         m_mouseInput->Move(x, y);
@@ -312,6 +333,12 @@ void Aimbot::SendHardwareMove(int x, int y) {
 }
 
 void Aimbot::SendHardwareClick() {
+    // Для режима Makcu используем прямой вызов через m_makcuInstance
+    if (hardware_type == 1 && m_makcuInstance) {
+        m_makcuInstance->Click(0); // 0 = левая кнопка мыши
+        return;
+    }
+    
     // ИСПОЛЬЗУЕМ ТОЛЬКО полиморфный интерфейс для клика
     if (m_mouseInput) {
         m_mouseInput->Click(0); // 0 = левая кнопка мыши
@@ -327,6 +354,12 @@ void Aimbot::SendHardwareClick() {
 }
 
 void Aimbot::SendHardwareClick(int button) {
+    // Для режима Makcu используем прямой вызов через m_makcuInstance
+    if (hardware_type == 1 && m_makcuInstance) {
+        m_makcuInstance->Click(button);
+        return;
+    }
+    
     // Клик указанной кнопкой через полиморфный интерфейс
     if (m_mouseInput) {
         m_mouseInput->Click(button);
@@ -342,6 +375,13 @@ void Aimbot::SendHardwareClick(int button) {
 }
 
 void Aimbot::SendHardwarePress(int button) {
+    // Для режима Makcu используем прямой вызов через m_makcuInstance
+    if (hardware_type == 1 && m_makcuInstance) {
+        std::cout << "[Aimbot] SendHardwarePress: button=" << button << " hw=" << hardware_type << std::endl;
+        m_makcuInstance->Press(button);
+        return;
+    }
+    
     // Отправка команды нажатия кнопки через полиморфный интерфейс
     if (m_mouseInput) {
         std::cout << "[Aimbot] SendHardwarePress: button=" << button << " hw=" << hardware_type << std::endl;
@@ -358,6 +398,13 @@ void Aimbot::SendHardwarePress(int button) {
 }
 
 void Aimbot::SendHardwareRelease(int button) {
+    // Для режима Makcu используем прямой вызов через m_makcuInstance
+    if (hardware_type == 1 && m_makcuInstance) {
+        std::cout << "[Aimbot] SendHardwareRelease: button=" << button << " hw=" << hardware_type << std::endl;
+        m_makcuInstance->Release(button);
+        return;
+    }
+    
     // Отправка команды отпускания кнопки через полиморфный интерфейс
     if (m_mouseInput) {
         std::cout << "[Aimbot] SendHardwareRelease: button=" << button << " hw=" << hardware_type << std::endl;
