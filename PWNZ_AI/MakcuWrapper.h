@@ -12,9 +12,13 @@
 #include <expected>
 #include <mutex>
 #include <optional>
+#include <vector>
 
 // Подключаем C++ API библиотеки makcu-cpp
 #include <makcu.h>
+
+// Подключаем интерфейс IMouseInput для полиморфизма
+#include "IMouseInput.h"
 
 namespace pwnz_ai {
 
@@ -39,6 +43,7 @@ struct MakcuConfig {
     uint16_t pid = 0x55D3;              // PID устройства
     int baud_rate = 115200;             // Скорость соединения
     bool enable_monitoring = true;      // Включить мониторинг кнопок
+    int polling_interval_ms = 1;        // Интервал опроса в мс (для совместимости)
 };
 
 /**
@@ -51,16 +56,24 @@ struct MakcuConfig {
  * - Обработку ошибок подключения через std::expected
  * - Горячее переподключение
  */
-class MakcuWrapper {
+class MakcuWrapper : public IMouseInput {
 public:
     using ButtonCallback = std::function<void(makcu::MouseButton button, bool pressed)>;
 
     explicit MakcuWrapper(const MakcuConfig& config = MakcuConfig{});
-    ~MakcuWrapper();
+    ~MakcuWrapper() override;
 
     // Запрет копирования
     MakcuWrapper(const MakcuWrapper&) = delete;
     MakcuWrapper& operator=(const MakcuWrapper&) = delete;
+
+    // Реализация интерфейса IMouseInput
+    bool Init() override { return Connect(); }
+    void Move(int dx, int dy) override;
+    void Click(int button) override;
+    void Press(int button) override;
+    void Release(int button) override;
+    void Shutdown() override { ShutdownInternal(); }
 
     /**
      * @brief Инициализация подключения к устройству
@@ -71,7 +84,7 @@ public:
     /**
      * @brief Завершение работы и отключение
      */
-    void Shutdown();
+    void ShutdownInternal();
 
     /**
      * @brief Удобная обертка для Initialize()
@@ -80,9 +93,9 @@ public:
     bool Connect();
 
     /**
-     * @brief Удобная обертка для Shutdown()
+     * @brief Удобная обертка для ShutdownInternal()
      */
-    void Disconnect() { Shutdown(); }
+    void Disconnect() { ShutdownInternal(); }
 
     /**
      * @brief Проверка статуса подключения
