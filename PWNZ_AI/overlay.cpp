@@ -55,6 +55,7 @@ extern std::atomic<bool> g_click_server_running;
 extern std::atomic<std::chrono::steady_clock::time_point> g_last_lmb_click;
 extern std::atomic<std::chrono::steady_clock::time_point> g_last_rmb_click;
 extern std::atomic<int> g_last_click_type;
+extern int g_current_aim_bind_vk; // Текущая привязка кнопки мыши из настроек аимбота
 
 extern HeadSmoother g_head_smoother;
 #pragma comment(lib, "dwmapi.lib")
@@ -1360,6 +1361,9 @@ void Overlay::RenderProfileTab(float content_w, float content_h, const ImVec4& a
 // RenderHardwareTab (вкладка Hardware/2PC)
 // ============================================================
 void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& acc_vec, ImU32 acc_u32, bool& cfg_changed) {
+    // Синхронизируем текущую привязку кнопки аимбота с глобальной переменной для UDP сервера
+    g_current_aim_bind_vk = this->aim_key_main;
+    
     ImGui::Columns(2, nullptr, false);
     ImGui::SetColumnWidth(0, content_w * 0.5f);
 
@@ -1717,7 +1721,8 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             "3. Введи IP читового ПК в настройках клиента\n"
             "4. Нажми 'Start' на клиенте\n"
             "5. Здесь нажми 'APPLY / ПРИНЯТЬ'\n\n"
-            "После этого нажимай ПКМ на игровом ПК - аимбот активируется!" :
+            "ВАЖНО: Эмулируется та кнопка, которая выбрана в настройках аимбота (вкладка Aimbot -> Key Bind)!\n"
+            "Нажимай ЛЮБУЮ кнопку мыши на игровом ПК - она будет эмулирована на читовом ПК." :
             "1. On this PC (cheat): copy IP from field above\n"
             "2. On gaming PC: run MouseClickSender.exe\n"
             "3. Enter cheat PC IP in client settings\n"
@@ -1733,8 +1738,10 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         ImGui::TextWrapped(is_russian ? 
             "• Сервер слушает порт 5556 (по умолчанию)\n"
             "• Брандмауэр должен разрешать UDP 5556\n"
-            "• ПКМ активирует аимбот (g_remote_aim_key)\n"
-            "• ЛКМ активирует стрельбу (SendInput)\n"
+            "• Эмулируется кнопка из настроек аимбота (ЛКМ/ПКМ/СКМ/X1/X2)\n"
+            "• При нажатии активируется аимбот (g_remote_aim_key)\n"
+            "• Индикатор показывает последний клик и статус аима\n"
+            "• Измени привязку в Aimbot -> Key Bind для смены кнопки\n"
             "• Индикатор показывает последний клик\n"
             "• Оба ПК должны быть в одной сети" :
             "• Server listens on port 5556 (default)\n"

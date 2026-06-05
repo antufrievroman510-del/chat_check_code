@@ -831,6 +831,9 @@ std::atomic<std::chrono::steady_clock::time_point> g_last_lmb_click{std::chrono:
 std::atomic<std::chrono::steady_clock::time_point> g_last_rmb_click{std::chrono::steady_clock::now()};
 std::atomic<int> g_last_click_type{0}; // 0=none, 1=LMB, 2=RMB
 
+// Текущая привязка кнопки мыши из настроек аимбота (обновляется из overlay)
+int g_current_aim_bind_vk = VK_RBUTTON; // По умолчанию ПКМ
+
 // Функция для получения локального IP адреса
 std::string GetLocalIPAddress() {
     WSADATA wsaData;
@@ -899,13 +902,14 @@ void Initialize2PCClicks(int port = 5556) {
         pwnz_ai::MouseController& mc = pwnz_ai::MouseController::GetInstance();
         
         if (pressed) {
-            mc.PressButton(VK_RBUTTON);
+            int aim_bind = g_current_aim_bind_vk;
+            mc.PressButton(aim_bind);
             g_remote_aim_key.store(true);
             g_last_rmb_click.store(std::chrono::steady_clock::now());
             g_last_click_type.store(2);
-            std::cout << "[CLICK] RMB PRESSED (from network) - AIMBOT ACTIVATED\n";
+            std::cout << "[CLICK] RMB PRESSED (from network) -> Emulating VK=" << aim_bind << " - AIMBOT ACTIVATED\n";
         } else {
-            mc.ReleaseButton(VK_RBUTTON);
+            mc.ReleaseButton(aim_bind);
             g_remote_aim_key.store(false);
             std::cout << "[CLICK] RMB RELEASED (from network) - AIMBOT DEACTIVATED\n";
         }
