@@ -1,5 +1,5 @@
 ```
-# Compiled and binary files
+# Compiled/Binary files
 *.o
 *.obj
 *.exe
@@ -13,15 +13,10 @@ node_modules/
 venv/
 .venv/
 __pycache__/
-.mypy_cache/
-.pytest_cache/
-target/
-.gradle/
-
-# Build artifacts
 dist/
 build/
-*.pyc
+target/
+.gradle/
 
 # Editor/IDE files
 .vscode/
@@ -30,18 +25,40 @@ build/
 *.swo
 *.tmp
 
-# Logs
-*.log
-
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# System files
+# System/Environment files
 .DS_Store
 Thumbs.db
 .env
 .env.local
 *.env.*
+
+# Logs and coverage
+*.log
+coverage/
+htmlcov/
+.coverage
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 ```

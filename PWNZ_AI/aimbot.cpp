@@ -15,6 +15,7 @@
 #include "MouseController.h"
 #include "overlay.h"  // [ДОБАВЛЕНО] Для типа Overlay в SyncFromOverlay()
 #include "MakcuInput.h"  // Для доступа к классу MakcuInput и g_makcu_* переменным
+#include "SendInputMouse.h"  // Для SendInputMouse
 
 // Глобальные переменные из main.cpp
 extern std::atomic<bool> g_remote_aim_key;
@@ -22,6 +23,13 @@ extern std::atomic<float> g_last_inference_time;
 extern std::atomic<bool> g_is_target_locked;
 extern std::atomic<float> g_locked_screen_x;
 extern std::atomic<float> g_locked_screen_y;
+
+// Глобальные переменные из MakcuInput.h (namespace pwnz_ai)
+namespace pwnz_ai {
+    extern std::atomic<bool>& aiming;    // RMB/SIDE2 - прицеливание (основная клавиша аима)
+    extern std::atomic<bool>& shooting;  // LMB - стрельба
+    extern std::atomic<bool>& zooming;   // RMB - зум/прицеливание
+}
 
 #pragma comment(lib, "ws2_32.lib")
 
