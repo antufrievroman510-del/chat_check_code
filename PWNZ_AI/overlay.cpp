@@ -36,7 +36,7 @@
 #include <functional>
 
 #include <iphlpapi.h>
-#include "MakcuWrapper.h"
+
 #include <shlobj.h>
 #include <wincrypt.h>
 #include <cstring>

@@ -2,6 +2,11 @@
 #include <iostream>
 #include <algorithm>
 
+// Объявление глобальных переменных из main.cpp
+extern std::atomic<bool> aiming;    // RMB/SIDE2 - прицеливание
+extern std::atomic<bool> shooting;  // LMB - стрельба
+extern std::atomic<bool> zooming;   // RMB - зум/прицеливание
+
 namespace pwnz_ai {
 
 MakcuInput::MakcuInput() {
