@@ -1551,12 +1551,12 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         EndPanel();
         
     } else if (this->hardware_mode_idx == 2) {
-        // KMbox Net Settings
-        if (BeginPanel("KMbox Net (UDP) Settings", ImVec2(0, 280), acc_vec)) cfg_changed = true;
+        // Makcu Net Settings (UDP)
+        if (BeginPanel("Makcu Net (UDP) Settings", ImVec2(0, 280), acc_vec)) cfg_changed = true;
         
         ImGui::Text(is_russian ? "IP Адрес:" : "IP Address:");
         ImGui::PushItemWidth(200);
-        if (ImGui::InputText("##kmbox_ip", this->kmbox_ip_buf, sizeof(this->kmbox_ip_buf))) cfg_changed = true;
+        if (ImGui::InputText("##makcu_ip", this->makcu_ip_buf, sizeof(this->makcu_ip_buf))) cfg_changed = true;
         ImGui::PopItemWidth();
         HelpMarker(is_russian ? "Например: 192.168.1.100" : "Example: 192.168.1.100");
         
@@ -1564,9 +1564,9 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         
         ImGui::Text(is_russian ? "Порт:" : "Port:");
         ImGui::PushItemWidth(100);
-        kmbox_port_tmp = this->kmbox_port;
-        if (ImGui::InputInt("##kmbox_port", &kmbox_port_tmp)) {
-            this->kmbox_port = kmbox_port_tmp;
+        int makcu_port_tmp = this->makcu_port;
+        if (ImGui::InputInt("##makcu_port", &makcu_port_tmp)) {
+            this->makcu_port = makcu_port_tmp;
             cfg_changed = true;
         }
         ImGui::PopItemWidth();
@@ -1919,22 +1919,12 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     
     // Check Makcu connection status via MouseController global instance
     bool macku_connected = false;  // Placeholder - would need proper status check
-    bool kmbox_connected = false;  // Placeholder - would need proper status check
     
     if (macku_connected) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ Makcu: CONNECTED");
         ImGui::Text(is_russian ? "Порт: %s" : "Port: %s", this->com_port_buf);
     } else {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "✗ Makcu: DISCONNECTED");
-    }
-    
-    ImGui::Spacing();
-    
-    if (kmbox_connected) {
-        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ KMbox: CONNECTED");
-        ImGui::Text(is_russian ? "IP: %s:%d" : "IP: %s:%d", this->kmbox_ip_buf, this->kmbox_port);
-    } else {
-        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "✗ KMbox: DISCONNECTED");
     }
     
     ImGui::Spacing();
