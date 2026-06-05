@@ -11,6 +11,8 @@
 #ifndef IMOUSE_INPUT_H
 #define IMOUSE_INPUT_H
 
+namespace pwnz_ai {
+
 // ============================================================
 // Abstract class IMouseInput
 // ============================================================
@@ -55,5 +57,7 @@ public:
      */
     virtual void Shutdown() = 0;
 };
+
+} // namespace pwnz_ai
 
 #endif // IMOUSE_INPUT_H
