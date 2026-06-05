@@ -36,6 +36,9 @@ public:
     // Нажатие кнопки мыши
     void PressButton(int buttonCode); // VK_LBUTTON, VK_RBUTTON и т.д.
     void ReleaseButton(int buttonCode);
+    
+    // Прокрутка колеса (delta > 0 вверх, delta < 0 вниз)
+    void ScrollWheel(int delta);
 
     // Смена метода ввода на лету
     void SetMethod(MouseMethod method);
