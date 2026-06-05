@@ -14,7 +14,8 @@
 #include "VMProtectSDK.h"
 #include "AimMath.h"
 #include "MouseController.h"
-#include "overlay.h"  // [ДОБАВЛЕНО] Для типа Overlay в SyncFromOverlay()
+// #include "overlay.h"  // НЕ включаем - вызывает цикл: aimbot.h -> overlay.h -> aimbot.h
+// Forward declaration уже есть в aimbot.h: class Overlay;
 #include "MakcuInput.h"  // Для доступа к классу MakcuInput и g_makcu_* переменным
 #include "SendInputMouse.h"  // Добавлено для std::make_unique<SendInputMouse>()
 
