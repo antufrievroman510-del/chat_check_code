@@ -1705,30 +1705,49 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     
     ImGui::Columns(1);
     
-    // Bottom Section - Quick Guide
+    // Bottom Section - Quick Guide for 2PC UDP
     ImGui::Spacing();
-    if (BeginPanel(is_russian ? "📖 Быстрая инструкция" : "📖 Quick Guide", ImVec2(-1, 120), acc_vec)) {
-        ImGui::Columns(3, nullptr, false);
+    if (BeginPanel(is_russian ? "📖 Быстрая инструкция по 2PC UDP" : "📖 Quick Guide for 2PC UDP", ImVec2(-1, 160), acc_vec)) {
+        ImGui::Columns(2, nullptr, false);
         
-        ImGui::TextColored(acc_vec, is_russian ? "Makcu:" : "Makcu:");
+        // Column 1: Setup Steps
+        ImGui::TextColored(acc_vec, is_russian ? "НАСТРОЙКА (5 шагов):" : "SETUP (5 steps):");
+        ImGui::Separator();
         ImGui::TextWrapped(is_russian ? 
-            "1. Подключи плату\n2. Узнай COM-порт\n3. Введи порт и Baud\n4. Нажми Connect" :
-            "1. Connect board\n2. Find COM port\n3. Enter port & Baud\n4. Click Connect");
+            "1. На этом ПК (читовом): скопируй IP выше\n"
+            "2. На игровом ПК: запусти MouseClickSender.exe\n"
+            "3. Введи IP читового ПК в настройках клиента\n"
+            "4. Нажми 'Start' на клиенте\n"
+            "5. Здесь нажми 'APPLY / ПРИНЯТЬ'" :
+            "1. On this PC (cheat): copy IP above\n"
+            "2. On gaming PC: run MouseClickSender.exe\n"
+            "3. Enter cheat PC IP in client settings\n"
+            "4. Click 'Start' on client\n"
+            "5. Here click 'APPLY / ПРИНЯТЬ'");
         
         ImGui::NextColumn();
-        ImVec4 disable_vec = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);  // Серый цвет для отключенных элементов
-        ImGui::TextColored(disable_vec, is_russian ? "(Удалено)" : "(Removed)");
-        ImGui::TextWrapped(is_russian ? 
-            "KMbox удалён из проекта" :
-            "KMbox removed from project");
         
-        ImGui::NextColumn();
-        ImGui::TextColored(acc_vec, is_russian ? "Тест:" : "Test:");
+        // Column 2: Important Notes
+        ImGui::TextColored(acc_vec, is_russian ? "ВАЖНО:" : "IMPORTANT:");
+        ImGui::Separator();
         ImGui::TextWrapped(is_russian ? 
-            "Перейди во вкладку 'Check HW'\nИспользуй тестовые кнопки\nДля проверки работы" :
-            "Go to 'Check HW' tab\nUse test buttons\nto verify operation");
+            "• Сервер слушает порт 5556 (по умолчанию)\n"
+            "• Брандмауэр должен разрешать UDP 5556\n"
+            "• ПКМ активирует аимбот\n"
+            "• ЛКМ активирует стрельбу\n"
+            "• Индикатор показывает последний клик" :
+            "• Server listens on port 5556 (default)\n"
+            "• Firewall must allow UDP 5556\n"
+            "• RMB activates aimbot\n"
+            "• LMB activates shooting\n"
+            "• Indicator shows last click");
         
         ImGui::Columns(1);
+        
+        ImGui::Spacing();
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), is_russian ? 
+            "✓ Статус: Сервер принимает клики → Аимбот активируется при ПКМ" :
+            "✓ Status: Server receives clicks → Aimbot activates on RMB");
     }
     EndPanel();
     
