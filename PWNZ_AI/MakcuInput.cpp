@@ -3,7 +3,7 @@
 #include <algorithm>
 
 // Глобальные переменные определены в main.cpp (namespace pwnz_ai)
-// Здесь мы только используем extern объявления из MakcuInput.h
+// Здесь мы только используем их через extern объявления из MakcuInput.h
 
 namespace pwnz_ai {
 
@@ -88,39 +88,38 @@ int MakcuInput::buttonToInt(MouseButton button) const {
 }
 
 void MakcuInput::Click(MouseButton button) {
-    int btn = buttonToInt(button);
-    if (btn < 0) return;
+    makcu::MouseButton btn = static_cast<makcu::MouseButton>(button);
     
     if (!m_device || !m_device->isConnected()) {
         std::cerr << "[MakcuInput] Cannot click: not connected" << std::endl;
         return;
     }
     
-    m_device->click(static_cast<makcu::MouseButton>(btn));
+    // Эмулируем клик как нажатие + отпускание
+    m_device->mouseDown(btn);
+    m_device->mouseUp(btn);
 }
 
 void MakcuInput::Press(MouseButton button) {
-    int btn = buttonToInt(button);
-    if (btn < 0) return;
+    makcu::MouseButton btn = static_cast<makcu::MouseButton>(button);
     
     if (!m_device || !m_device->isConnected()) {
         std::cerr << "[MakcuInput] Cannot press: not connected" << std::endl;
         return;
     }
     
-    m_device->mouseDown(static_cast<makcu::MouseButton>(btn));
+    m_device->mouseDown(btn);
 }
 
 void MakcuInput::Release(MouseButton button) {
-    int btn = buttonToInt(button);
-    if (btn < 0) return;
+    makcu::MouseButton btn = static_cast<makcu::MouseButton>(button);
     
     if (!m_device || !m_device->isConnected()) {
         std::cerr << "[MakcuInput] Cannot release: not connected" << std::endl;
         return;
     }
     
-    m_device->mouseUp(static_cast<makcu::MouseButton>(btn));
+    m_device->mouseUp(btn);
 }
 
 bool MakcuInput::IsButtonPressed(MouseButton button) const {
@@ -139,7 +138,7 @@ bool MakcuInput::IsConnected() const {
 }
 
 void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
-    // Обновляем атомарные флаги состояния кнопок (локальные)
+    // Обновляем атомарные флаги состояния кнопок (локальные и глобальные)
     switch (button) {
         case makcu::MouseButton::LEFT:
             m_btnLmb.store(pressed);
