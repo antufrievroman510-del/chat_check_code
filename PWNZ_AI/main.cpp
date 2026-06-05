@@ -71,8 +71,7 @@ namespace pwnz_ai {
     std::atomic<bool> g_makcu_shooting(false);    // LMB - стрельба
     std::atomic<bool> g_makcu_zooming(false);     // RMB - зум/прицеливание
     
-    // Переменные для обратной совместимости (aliased к новым переменным)
-    // Определения extern находятся в MakcuInput.h
+    // Глобальные переменные для 2PC-связки (определены в main.cpp)
     inline std::atomic<bool>& aiming = g_makcu_aiming;
     inline std::atomic<bool>& shooting = g_makcu_shooting;
     inline std::atomic<bool>& zooming = g_makcu_zooming;
@@ -681,7 +680,7 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
         // Для 2PC-режима (Makcu) также проверяем глобальные переменные aiming/shooting/zooming
         bool hardware_aim_active = false;
         if (aim->hardware_type == 1) {  // Makcu 2PC режим
-            hardware_aim_active = aiming.load() || shooting.load() || zooming.load();
+            hardware_aim_active = pwnz_ai::aiming.load() || pwnz_ai::shooting.load() || pwnz_ai::zooming.load();
         }
         bool currently_aiming = (IsAimKeyPressed(overlay) || g_remote_aim_key.load() || hardware_aim_active) && overlay->aim_enable;
         

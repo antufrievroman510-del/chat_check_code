@@ -224,11 +224,6 @@ void MouseController::SetMethod(MouseMethod method) {
     }
 }
 
-void MouseController::UpdateHardwareConfig(const void* config) {
-    // HardwareBackend удалён - эта функция больше не нужна
-    (void)config;
-}
-
 // Функции для инициализации устройств извне (вызываются из Aimbot)
 void InitMakcuDevice(const std::string& port) {
     g_makcuInstance = std::make_unique<pwnz_ai::MakcuInput>();

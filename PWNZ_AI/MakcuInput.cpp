@@ -2,17 +2,10 @@
 #include <iostream>
 #include <algorithm>
 
-// Объявление глобальных переменных из main.cpp
-namespace pwnz_ai {
-    extern std::atomic<bool> g_makcu_aiming;
-    extern std::atomic<bool> g_makcu_shooting;
-    extern std::atomic<bool> g_makcu_zooming;
-}
+// Глобальные переменные определены в main.cpp (namespace pwnz_ai)
+// Здесь мы только используем extern объявления из MakcuInput.h
 
 namespace pwnz_ai {
-
-// Глобальные переменные объявлены в MakcuInput.h как extern
-// Определения находятся в main.cpp
 
 MakcuInput::MakcuInput() {
     std::cout << "[MakcuInput] Constructor called" << std::endl;
@@ -186,13 +179,13 @@ void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
     switch (button) {
         case makcu::MouseButton::LEFT:
             m_btnLmb.store(pressed);
-            pwnz_ai::g_makcu_shooting.store(pressed);  // LMB = стрельба (как в source_logic/source_logic/mouse/Makcu.cpp)
+            pwnz_ai::shooting.store(pressed);  // LMB = стрельба (как в source_logic/source_logic/mouse/Makcu.cpp)
             std::cout << "[MakcuInput] LMB " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         case makcu::MouseButton::RIGHT:
             m_btnRmb.store(pressed);
-            pwnz_ai::g_makcu_zooming.store(pressed);   // RMB = зум/прицеливание (как в source_logic)
-            pwnz_ai::g_makcu_aiming.store(pressed);    // RMB = прицеливание (дублируем для совместимости)
+            pwnz_ai::zooming.store(pressed);   // RMB = зум/прицеливание (как в source_logic)
+            pwnz_ai::aiming.store(pressed);    // RMB = прицеливание (дублируем для совместимости)
             std::cout << "[MakcuInput] RMB " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         case makcu::MouseButton::MIDDLE:
@@ -204,7 +197,7 @@ void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
             std::cout << "[MakcuInput] SIDE1 " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         case makcu::MouseButton::SIDE2:
-            pwnz_ai::g_makcu_aiming.store(pressed);    // SIDE2 = прицеливание (как в source_logic/source_logic/mouse/Makcu.cpp)
+            pwnz_ai::aiming.store(pressed);    // SIDE2 = прицеливание (как в source_logic/source_logic/mouse/Makcu.cpp)
             std::cout << "[MakcuInput] SIDE2 " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         default:
