@@ -240,6 +240,7 @@ public:
     bool mouse_click_udp_enabled = false;
     char mouse_click_ip_buf[32] = "192.168.1.100";
     int mouse_click_port = 5556;
+    char auto_detected_ip_buf[32] = ""; // Auto-detected IP for display
     
     // Test values
     int test_move_x = 50;

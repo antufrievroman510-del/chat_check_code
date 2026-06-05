@@ -826,6 +826,51 @@ void RemoteActivationServer() {
 static pwnz_ai::MouseClickServer g_clickServer;
 static std::atomic<bool> g_click_server_running{false};
 
+// Глобальные переменные для отслеживания последних кликов (для GUI)
+std::atomic<std::chrono::steady_clock::time_point> g_last_lmb_click{std::chrono::steady_clock::now()};
+std::atomic<std::chrono::steady_clock::time_point> g_last_rmb_click{std::chrono::steady_clock::now()};
+std::atomic<int> g_last_click_type{0}; // 0=none, 1=LMB, 2=RMB
+
+// Функция для получения локального IP адреса
+std::string GetLocalIPAddress() {
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        return "127.0.0.1";
+    }
+
+    char hostname[256];
+    if (gethostname(hostname, sizeof(hostname)) != 0) {
+        WSACleanup();
+        return "127.0.0.1";
+    }
+
+    struct addrinfo hints = {}, *addrs;
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+
+    if (getaddrinfo(hostname, NULL, &hints, &addrs) != 0) {
+        WSACleanup();
+        return "127.0.0.1";
+    }
+
+    std::string ip = "127.0.0.1";
+    for (addrinfo* addr = addrs; addr != nullptr; addr = addr->ai_next) {
+        sockaddr_in* ipv4 = reinterpret_cast<sockaddr_in*>(addr->ai_addr);
+        char ip_str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &ipv4->sin_addr, ip_str, sizeof(ip_str));
+        
+        // Пропускаем localhost
+        if (strcmp(ip_str, "127.0.0.1") != 0) {
+            ip = ip_str;
+            break;
+        }
+    }
+
+    freeaddrinfo(addrs);
+    WSACleanup();
+    return ip;
+}
+
 void Initialize2PCClicks(int port = 5556) {
     if (g_click_server_running.load()) {
         std::cout << "[INIT] Click server already running, skipping...\n";
@@ -840,6 +885,8 @@ void Initialize2PCClicks(int port = 5556) {
         
         if (pressed) {
             mc.PressButton(VK_LBUTTON);
+            g_last_lmb_click.store(std::chrono::steady_clock::now());
+            g_last_click_type.store(1);
             std::cout << "[CLICK] LMB PRESSED (from network)\n";
         } else {
             mc.ReleaseButton(VK_LBUTTON);
@@ -847,16 +894,20 @@ void Initialize2PCClicks(int port = 5556) {
         }
     });
 
-    // Коллбэк для ПКМ (прицеливание)
+    // Коллбэк для ПКМ (прицеливание) - ВАЖНО: обновляем g_remote_aim_key
     g_clickServer.set_rmb_callback([](bool pressed) {
         pwnz_ai::MouseController& mc = pwnz_ai::MouseController::GetInstance();
         
         if (pressed) {
             mc.PressButton(VK_RBUTTON);
-            std::cout << "[CLICK] RMB PRESSED (from network)\n";
+            g_remote_aim_key.store(true);
+            g_last_rmb_click.store(std::chrono::steady_clock::now());
+            g_last_click_type.store(2);
+            std::cout << "[CLICK] RMB PRESSED (from network) - AIMBOT ACTIVATED\n";
         } else {
             mc.ReleaseButton(VK_RBUTTON);
-            std::cout << "[CLICK] RMB RELEASED (from network)\n";
+            g_remote_aim_key.store(false);
+            std::cout << "[CLICK] RMB RELEASED (from network) - AIMBOT DEACTIVATED\n";
         }
     });
 
@@ -921,6 +972,13 @@ void Shutdown2PCClicks() {
         g_click_server_running.store(false);
         std::cout << "[SHUTDOWN] Click server stopped\n";
     }
+}
+
+// Функция для перезапуска сервера (вызывается из GUI при нажатии Apply)
+void Restart2PCClicks(int port = 5556) {
+    Shutdown2PCClicks();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    Initialize2PCClicks(port);
 }
 
 // ==================== WINMAIN ====================
