@@ -2,15 +2,7 @@
 #include <iostream>
 #include <algorithm>
 
-// Объявление глобальной переменной из main.cpp
-extern std::atomic<bool> g_remote_aim_key;
-
 namespace pwnz_ai {
-
-// Определение глобальных атомарных переменных для состояния кнопок Makcu (2PC режим)
-std::atomic<bool> g_makcu_aiming{false};    // RMB - прицеливание (основная клавиша аима)
-std::atomic<bool> g_makcu_shooting{false};  // LMB - стрельба
-std::atomic<bool> g_makcu_zooming{false};   // RMB - зум/прицеливание (альтернативное название для совместимости)
 
 MakcuInput::MakcuInput() {
     std::cout << "[MakcuInput] Constructor called" << std::endl;
@@ -32,15 +24,24 @@ bool MakcuInput::Initialize(const std::string& port) {
     }
     std::cout << "[MakcuInput] Device object created" << std::endl;
 
-    // 2. Установка коллбэка ДО подключения (СТРОГО!)
+    // 2. Установка коллбэка ДО подключения (СТРОГО! как в source_logic/source_logic/mouse/Makcu.cpp)
     m_device->setMouseButtonCallback([this](makcu::MouseButton button, bool pressed) {
         this->onMouseButton(button, pressed);
     });
     std::cout << "[MakcuInput] Mouse button callback set" << std::endl;
 
-    // 3. Подключение к устройству
+    // 3. Включение мониторинга кнопок ПОСЛЕ установки коллбэка но ДО подключения
+    bool monitoringEnabled = m_device->enableButtonMonitoring(true);
+    if (!monitoringEnabled) {
+        std::cerr << "[MakcuInput] Warning: Failed to enable button monitoring before connect!" << std::endl;
+        // Продолжаем - мониторинг может включиться после подключения
+    } else {
+        std::cout << "[MakcuInput] Button monitoring enabled before connect" << std::endl;
+    }
+
+    // 4. Подключение к устройству
     std::cout << "[MakcuInput] Connecting to port: " << port << std::endl;
-    bool connected = m_device->connect(port, true); // highSpeed = true
+    bool connected = m_device->connect(port);  // highSpeed по умолчанию true
     
     if (!connected) {
         std::cerr << "[MakcuInput] Connection failed!" << std::endl;
@@ -51,15 +52,6 @@ bool MakcuInput::Initialize(const std::string& port) {
     std::cout << "[MakcuInput] SUCCESS: Connected to Makcu on " << port << std::endl;
     std::cout << "[MakcuInput] Device version: " << m_device->getVersion() << std::endl;
 
-    // 4. Включение мониторинга кнопок ПОСЛЕ подключения
-    bool monitoringEnabled = m_device->enableButtonMonitoring(true);
-    if (!monitoringEnabled) {
-        std::cerr << "[MakcuInput] Failed to enable button monitoring!" << std::endl;
-        // Не возвращаем false - устройство уже подключено и может двигать мышь
-    } else {
-        std::cout << "[MakcuInput] Button monitoring enabled" << std::endl;
-    }
-
     return true;
 }
 
@@ -67,7 +59,7 @@ void MakcuInput::Shutdown() {
     std::cout << "[MakcuInput] Shutdown called" << std::endl;
     
     if (m_device) {
-        // Отключаем мониторинг (игнорируем возврат, т.к. устройство может быть уже отключено)
+        // Отключаем мониторинг
         (void)m_device->enableButtonMonitoring(false);
         std::cout << "[MakcuInput] Button monitoring disabled" << std::endl;
         
@@ -184,13 +176,13 @@ void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
     switch (button) {
         case makcu::MouseButton::LEFT:
             m_btnLmb.store(pressed);
-            g_makcu_shooting.store(pressed);  // LMB = стрельба
+            shooting.store(pressed);  // LMB = стрельба (как в source_logic/source_logic/mouse/Makcu.cpp)
             std::cout << "[MakcuInput] LMB " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         case makcu::MouseButton::RIGHT:
             m_btnRmb.store(pressed);
-            g_makcu_aiming.store(pressed);    // RMB = прицеливание (основная клавиша аима)
-            g_makcu_zooming.store(pressed);   // RMB = зум (дублируем для совместимости)
+            zooming.store(pressed);   // RMB = зум/прицеливание (как в source_logic)
+            aiming.store(pressed);    // RMB = прицеливание (дублируем для совместимости)
             std::cout << "[MakcuInput] RMB " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         case makcu::MouseButton::MIDDLE:
@@ -203,7 +195,7 @@ void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
             break;
         case makcu::MouseButton::SIDE2:
             m_btnSide2.store(pressed);
-            g_makcu_aiming.store(pressed);    // SIDE2 = дополнительная кнопка прицеливания
+            aiming.store(pressed);    // SIDE2 = прицеливание (как в source_logic/source_logic/mouse/Makcu.cpp)
             std::cout << "[MakcuInput] SIDE2 " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         default:
@@ -211,11 +203,6 @@ void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
                       << " pressed=" << pressed << std::endl;
             break;
     }
-    
-    // КРИТИЧНО: Обновляем g_remote_aim_key напрямую в коллбэке для мгновенной реакции
-    // Аимбот активируется при нажатии ЛЮБОЙ кнопки прицеливания или стрельбы
-    bool any_aim_key = g_makcu_aiming.load() || g_makcu_zooming.load() || g_makcu_shooting.load();
-    g_remote_aim_key.store(any_aim_key);
 }
 
 } // namespace pwnz_ai

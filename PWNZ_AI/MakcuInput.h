@@ -8,13 +8,14 @@
 #include <functional>
 #include <string>
 
-namespace pwnz_ai {
-
 // Глобальные атомарные переменные для состояния кнопок Makcu (2PC режим)
 // Эти переменные обновляются в коллбэке и читаются из aimbot.cpp
-extern std::atomic<bool> g_makcu_aiming;    // RMB - прицеливание (основная клавиша аима)
-extern std::atomic<bool> g_makcu_shooting;  // LMB - стрельба
-extern std::atomic<bool> g_makcu_zooming;   // RMB - зум/прицеливание (альтернативное название для совместимости)
+// naming как в source_logic/source_logic/sunone_aimbot_2.h
+extern std::atomic<bool> aiming;    // RMB/SIDE2 - прицеливание (основная клавиша аима)
+extern std::atomic<bool> shooting;  // LMB - стрельба
+extern std::atomic<bool> zooming;   // RMB - зум/прицеливание
+
+namespace pwnz_ai {
 
 /**
  * @brief Класс для работы с Makcu (ESP32S3) в режиме 2PC
@@ -23,11 +24,11 @@ extern std::atomic<bool> g_makcu_zooming;   // RMB - зум/прицеливан
  * - ПК1 (Игровой): Физическая мышь подключена к MAKCU (правый разъём), устройство считывает нажатия кнопок
  * - ПК2 (Чит): Этот класс получает события от MAKCU через средний USB и эмулирует движения/клики
  * 
- * Порядок инициализации (СТРОГО):
+ * Порядок инициализации (СТРОГО как в source_logic/source_logic/mouse/Makcu.cpp):
  * 1. Создание объекта makcu::Device
  * 2. Установка коллбэка setMouseButtonCallback()
- * 3. Подключение connect(port)
- * 4. Включение мониторинга enableButtonMonitoring()
+ * 3. Включение мониторинга enableButtonMonitoring(true) - ДО подключения!
+ * 4. Подключение connect(port)
  */
 class MakcuInput {
 public:
