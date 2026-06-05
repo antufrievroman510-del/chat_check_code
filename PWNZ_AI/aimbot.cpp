@@ -16,7 +16,7 @@
 #include "MouseController.h"
 #include "overlay.h"  // [ДОБАВЛЕНО] Для типа Overlay в SyncFromOverlay()
 #include "MakcuInput.h"  // Для доступа к классу MakcuInput и g_makcu_* переменным
-#include "SendInputMouse.h"  // Для SendInputMouse
+// #include "SendInputMouse.h"  // Убрано - теперь включается через aimbot.h
 
 // Глобальные переменные из main.cpp
 extern std::atomic<bool> g_remote_aim_key;

@@ -18,6 +18,7 @@
 // Forward declarations для других классов
 namespace pwnz_ai {
     class MakcuInput;
+    class SendInputMouse;  // Forward declaration вместо include
 }
 
 #include "detector.h"
@@ -25,7 +26,7 @@ namespace pwnz_ai {
 #include "AimbotTarget.h"
 #include "AimMath.h"
 #include "MouseController.h"
-#include "SendInputMouse.h"
+// #include "SendInputMouse.h"  // Убрано - используем forward declaration
 #include "MakcuInput.h"
 
 // Forward declaration для Overlay
