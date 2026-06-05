@@ -5,9 +5,9 @@
 namespace pwnz_ai {
 
 // Определение глобальных атомарных переменных для состояния кнопок Makcu (2PC режим)
-std::atomic<bool> g_makcu_aiming{false};    // SIDE2 (Mouse5) - прицеливание
-std::atomic<bool> g_makcu_zooming{false};   // RMB - зум
+std::atomic<bool> g_makcu_aiming{false};    // RMB - прицеливание (основная клавиша аима)
 std::atomic<bool> g_makcu_shooting{false};  // LMB - стрельба
+std::atomic<bool> g_makcu_zooming{false};   // RMB - зум/прицеливание (альтернативное название для совместимости)
 
 MakcuInput::MakcuInput() {
     std::cout << "[MakcuInput] Constructor called" << std::endl;
@@ -18,9 +18,8 @@ MakcuInput::~MakcuInput() {
     Shutdown();
 }
 
-bool MakcuInput::Initialize(uint16_t vid, uint16_t pid) {
-    std::cout << "[MakcuInput] Initialize started with VID:PID " 
-              << std::hex << vid << ":" << pid << std::dec << std::endl;
+bool MakcuInput::Initialize(const std::string& port) {
+    std::cout << "[MakcuInput] Initialize started with port: " << port << std::endl;
 
     // 1. Создание объекта устройства
     m_device = std::make_unique<makcu::Device>();
@@ -36,47 +35,9 @@ bool MakcuInput::Initialize(uint16_t vid, uint16_t pid) {
     });
     std::cout << "[MakcuInput] Mouse button callback set" << std::endl;
 
-    // 3. Включение мониторинга кнопок ДО подключения
-    bool monitoringEnabled = m_device->enableButtonMonitoring(true);
-    if (!monitoringEnabled) {
-        std::cerr << "[MakcuInput] Failed to enable button monitoring!" << std::endl;
-        return false;
-    }
-    std::cout << "[MakcuInput] Button monitoring enabled" << std::endl;
-
-    // 4. Поиск и подключение к устройству
-    auto devices = makcu::Device::findDevices();
-    if (devices.empty()) {
-        std::cerr << "[MakcuInput] No Makcu devices found! Check USB connection." << std::endl;
-        return false;
-    }
-
-    std::cout << "[MakcuInput] Found " << devices.size() << " device(s):" << std::endl;
-    for (const auto& dev : devices) {
-        std::cout << "  - Port: " << dev.port 
-                  << ", VID:PID: " << std::hex << dev.vid << ":" << dev.pid << std::dec
-                  << ", Desc: " << dev.description << std::endl;
-    }
-
-    // Ищем устройство с нужным VID:PID
-    std::string targetPort;
-    for (const auto& dev : devices) {
-        if (dev.vid == vid && dev.pid == pid) {
-            targetPort = dev.port;
-            break;
-        }
-    }
-
-    if (targetPort.empty()) {
-        std::cerr << "[MakcuInput] Device with VID:PID " << std::hex << vid << ":" << pid 
-                  << std::dec << " not found!" << std::endl;
-        std::cerr << "[MakcuInput] Trying first available device..." << std::endl;
-        targetPort = devices[0].port;
-    }
-
-    // Подключение
-    std::cout << "[MakcuInput] Connecting to port: " << targetPort << std::endl;
-    bool connected = m_device->connect(targetPort, true); // highSpeed = true
+    // 3. Подключение к устройству
+    std::cout << "[MakcuInput] Connecting to port: " << port << std::endl;
+    bool connected = m_device->connect(port, true); // highSpeed = true
     
     if (!connected) {
         std::cerr << "[MakcuInput] Connection failed!" << std::endl;
@@ -84,8 +45,17 @@ bool MakcuInput::Initialize(uint16_t vid, uint16_t pid) {
         return false;
     }
 
-    std::cout << "[MakcuInput] SUCCESS: Connected to Makcu on " << targetPort << std::endl;
+    std::cout << "[MakcuInput] SUCCESS: Connected to Makcu on " << port << std::endl;
     std::cout << "[MakcuInput] Device version: " << m_device->getVersion() << std::endl;
+
+    // 4. Включение мониторинга кнопок ПОСЛЕ подключения
+    bool monitoringEnabled = m_device->enableButtonMonitoring(true);
+    if (!monitoringEnabled) {
+        std::cerr << "[MakcuInput] Failed to enable button monitoring!" << std::endl;
+        // Не возвращаем false - устройство уже подключено и может двигать мышь
+    } else {
+        std::cout << "[MakcuInput] Button monitoring enabled" << std::endl;
+    }
 
     return true;
 }
@@ -216,7 +186,8 @@ void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
             break;
         case makcu::MouseButton::RIGHT:
             m_btnRmb.store(pressed);
-            g_makcu_zooming.store(pressed);   // RMB = зум
+            g_makcu_aiming.store(pressed);    // RMB = прицеливание (основная клавиша аима)
+            g_makcu_zooming.store(pressed);   // RMB = зум (дублируем для совместимости)
             std::cout << "[MakcuInput] RMB " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         case makcu::MouseButton::MIDDLE:
@@ -229,7 +200,7 @@ void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
             break;
         case makcu::MouseButton::SIDE2:
             m_btnSide2.store(pressed);
-            g_makcu_aiming.store(pressed);    // SIDE2 = прицеливание
+            g_makcu_aiming.store(pressed);    // SIDE2 = дополнительная кнопка прицеливания
             std::cout << "[MakcuInput] SIDE2 " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         default:
