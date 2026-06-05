@@ -145,8 +145,6 @@ void Aimbot::SyncFromOverlay(Overlay& overlay) {
     // Копируем буфер COM-порта для использования в InitHardware()
     strncpy_s(com_port_buf, overlay.com_port_buf, sizeof(com_port_buf) - 1);
     bypass_mode = overlay.bypass_mode_idx;      // Добавляем синхронизацию bypass_mode
-    net_ip = overlay.kmbox_ip_buf;              // Синхронизация IP для KMbox
-    net_port = overlay.kmbox_port;              // Синхронизация порта для KMbox
     
     // Elite / Ballistics
     elite_ballistics_enabled = overlay.elite_ballistics_enabled;
@@ -205,7 +203,7 @@ bool Aimbot::InitHardware() {
         CloseHardware();
 
         // Создаём объект метода ввода в зависимости от hardware_type
-        // 0 = SendInput (программный), 1 = Makcu (UART/COM), 2 = KMbox (Network)
+        // 0 = SendInput (программный), 1 = Makcu (UART/COM)
         switch (hardware_type) {
             case 0: // SendInput (программный ввод)
                 m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
@@ -231,9 +229,6 @@ bool Aimbot::InitHardware() {
                         std::cout << "[Aimbot] MakcuInput initialized successfully on " << comPort << std::endl;
                     }
                 }
-                break;
-            case 2: // KMbox (аппаратный ввод через сеть)
-                m_mouseInput = std::make_unique<pwnz_ai::KMboxMouse>(net_ip, net_port);
                 break;
             default:
                 // Неизвестный тип, используем SendInput по умолчанию
@@ -840,7 +835,7 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     // В аппаратном режиме key_pressed определяется из aiming/shooting
     // которые обновляются при нажатии/отпускании кнопок на игровом ПК
     
-    // КРИТИЧНО: Проверяем hardware_type >= 1 (Makcu/KMbox), а не != 0
+    // КРИТИЧНО: Проверяем hardware_type >= 1 (Makcu), а не != 0
     if (hardware_type >= 1) {
         // Аппаратный режим: используем aiming/shooting напрямую
         

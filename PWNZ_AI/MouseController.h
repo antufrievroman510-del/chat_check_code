@@ -5,14 +5,11 @@
 // Forward declarations
 namespace pwnz_ai {
     class MakcuInput;
-    class KMBoxNet;
 }
 
 // Функции для инициализации устройств из Aimbot
 void InitMakcuDevice(const std::string& port);
-void InitKMBoxDevice(const std::string& ip, int port);
 void ShutdownMakcuDevice();
-void ShutdownKMBoxDevice();
 
 // Перечисление методов ввода для Mouse Bypass
 enum class MouseMethod {
@@ -20,8 +17,7 @@ enum class MouseMethod {
     GHub_Spoof,    // Эмуляция через Logitech G Hub (скрытый ввод)
     Razer_Spoof,   // Эмуляция через Razer Synapse (скрытый ввод)
     Driver,        // Прямой драйвер (требует подписанного драйвера)
-    Makcu_UART,    // Плата Makcu через COM-порт
-    KMBox_Net      // Плата KMbox через сеть
+    Makcu_UART     // Плата Makcu через COM-порт
 };
 
 class MouseController {
@@ -54,7 +50,6 @@ private:
     void MoveRazerSpoof(int dx, int dy);
     void MoveDriver(int dx, int dy);
     void MoveMakcu(int dx, int dy);
-    void MoveKMBox(int dx, int dy);
 
     MouseMethod currentMethod = MouseMethod::Standard;
     bool isInitialized = false;

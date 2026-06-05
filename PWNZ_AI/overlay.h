@@ -221,10 +221,8 @@ public:
     // Hardware 2PC Settings
     char com_port_buf[32] = "COM3";
     int baud_rate_idx = 4; // 115200
-    char kmbox_ip_buf[32] = "192.168.1.100";
-    int kmbox_port = 8888;
-    int hardware_mode_idx = 0; // 0=Local (SendInput), 1=Makcu (2PC), 2=KMbox (2PC)
-    int mouse_input_method_idx = 0; // 0=SendInput, 1=Makcu, 2=KMbox
+    int hardware_mode_idx = 0; // 0=Local (SendInput), 1=Makcu (2PC)
+    int mouse_input_method_idx = 0; // 0=SendInput, 1=Makcu
     int bypass_mode_idx = 0;   // 0=None, 1=GHub, 2=Razer, 3=Random
     int random_delay_min = 10;
     int random_delay_max = 30;
@@ -234,9 +232,6 @@ public:
     // Test values
     int test_move_x = 50;
     int test_move_y = 50;
-    
-    // Internal buffer for ImGui InputInt (temporary fix)
-    int kmbox_port_tmp = 8888;
 
     // ---- Основные методы ----
     bool Initialize();
