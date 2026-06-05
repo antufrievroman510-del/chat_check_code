@@ -65,9 +65,17 @@ int g_capture_w = 1920;
 int g_capture_h = 1080;
 
 // Глобальные переменные для активации аимбота (как в source_logic/source_logic/sunone_aimbot_2.h)
-std::atomic<bool> aiming(false);      // RMB/SIDE2 - прицеливание (основная клавиша аима)
-std::atomic<bool> shooting(false);    // LMB - стрельба
-std::atomic<bool> zooming(false);     // RMB - зум/прицеливание
+// Объявлены в namespace pwnz_ai для совместимости с кодом aimbot.cpp
+namespace pwnz_ai {
+    std::atomic<bool> g_makcu_aiming(false);      // SIDE2 (Mouse5) - прицеливание (основная клавиша аима)
+    std::atomic<bool> g_makcu_shooting(false);    // LMB - стрельба
+    std::atomic<bool> g_makcu_zooming(false);     // RMB - зум/прицеливание
+}
+
+// Legacy переменные для обратной совместимости (aliased к новым переменным)
+std::atomic<bool>& aiming = pwnz_ai::g_makcu_aiming;
+std::atomic<bool>& shooting = pwnz_ai::g_makcu_shooting;
+std::atomic<bool>& zooming = pwnz_ai::g_makcu_zooming;
 
 // Legacy переменная для обратной совместимости с текущим кодом
 std::atomic<bool> g_remote_aim_key(false);

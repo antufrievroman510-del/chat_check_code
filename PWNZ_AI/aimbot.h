@@ -83,6 +83,7 @@ public:
     int hardware_type = 0;
     int bypass_mode = 0;
     int com_port = 3;
+    char com_port_buf[32] = "COM5";  // Буфер COM-порта для инициализации Makcu
     std::string net_ip = "192.168.1.100";
     int net_port = 3333;
     bool m_hw_enabled = false;  // Флаг включения аппаратного ввода (синхронизируется с overlay.hw_enabled)
