@@ -17,7 +17,7 @@
 #include "MakcuInput.h"  // Для доступа к классу MakcuInput и g_makcu_* переменным
 
 // Объявление глобальных переменных из main.cpp (namespace pwnz_ai)
-extern namespace pwnz_ai {
+namespace pwnz_ai {
     extern std::atomic<bool> g_makcu_aiming;
     extern std::atomic<bool> g_makcu_shooting;
     extern std::atomic<bool> g_makcu_zooming;
@@ -27,6 +27,7 @@ extern namespace pwnz_ai {
     extern std::atomic<bool>& zooming;
 }
 
+// Используем using для удобного доступа
 using pwnz_ai::aiming;
 using pwnz_ai::shooting;
 using pwnz_ai::zooming;

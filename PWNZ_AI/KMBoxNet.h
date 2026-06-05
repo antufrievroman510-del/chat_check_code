@@ -7,6 +7,8 @@
 #include <vector>
 #include <cstdint>
 
+namespace pwnz_ai {
+
 // Контроллер для работы с платой KMbox Net через TCP/IP сеть
 // Протокол: Бинарный пакет с checksum
 class KMBoxNet {
@@ -60,6 +62,8 @@ private:
     bool SendData(const unsigned char* data, size_t length);
 };
 
+} // namespace pwnz_ai
+
 // Команды протокола KMbox
 namespace KMBoxCmd {
     constexpr uint8_t MOVE_REL = 0x01;      // Относительное движение
@@ -74,3 +78,5 @@ namespace KMBoxButton {
     constexpr uint8_t RIGHT = 0x02;
     constexpr uint8_t MIDDLE = 0x04;
 }
+
+#endif // KMBOXNET_H

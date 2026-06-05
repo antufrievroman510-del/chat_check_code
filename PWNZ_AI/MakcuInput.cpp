@@ -3,9 +3,21 @@
 #include <algorithm>
 
 // Объявление глобальных переменных из main.cpp
-extern std::atomic<bool> aiming;    // RMB/SIDE2 - прицеливание
-extern std::atomic<bool> shooting;  // LMB - стрельба
-extern std::atomic<bool> zooming;   // RMB - зум/прицеливание
+// Эти переменные определены в namespace pwnz_ai в main.cpp
+namespace pwnz_ai {
+    extern std::atomic<bool> g_makcu_aiming;
+    extern std::atomic<bool> g_makcu_shooting;
+    extern std::atomic<bool> g_makcu_zooming;
+    // Legacy алиасы для совместимости
+    extern std::atomic<bool>& aiming;
+    extern std::atomic<bool>& shooting;
+    extern std::atomic<bool>& zooming;
+}
+
+// Используем using для удобного доступа
+using pwnz_ai::aiming;
+using pwnz_ai::shooting;
+using pwnz_ai::zooming;
 
 namespace pwnz_ai {
 
