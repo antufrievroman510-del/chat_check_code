@@ -34,11 +34,10 @@ private:
     std::function<void(bool)> on_rmb_pressed = nullptr;
     std::function<void(bool)> on_mmb_pressed = nullptr;
 
+    // Формат пакета должен совпадать с MouseSender.cpp на ПК1
     struct ClickPacket {
-        bool lmb_pressed;
-        bool rmb_pressed;
-        bool mmb_pressed;
-        uint8_t reserved;
+        uint8_t button;  // 0 = ЛКМ, 1 = ПКМ
+        uint8_t pressed; // 1 = нажато, 0 = отпущено
     };
 
     void receive_loop() {
@@ -62,32 +61,18 @@ private:
                 continue;
             }
 
-            // Обработка полученного пакета
-            if (on_lmb_pressed && pkt.lmb_pressed) {
-                on_lmb_pressed(true);
-            }
-            if (on_rmb_pressed && pkt.rmb_pressed) {
-                on_rmb_pressed(true);
-            }
-            if (on_mmb_pressed && pkt.mmb_pressed) {
-                on_mmb_pressed(true);
-            }
-
-            // Эмуляция отпускания кнопки через небольшую задержку
-            // Это нужно т.к. мы получаем только факт нажатия, а не состояние
-            if (result == sizeof(pkt)) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                
-                if (on_lmb_pressed && pkt.lmb_pressed) {
-                    on_lmb_pressed(false);
+            // Обработка полученного пакета в зависимости от кнопки
+            if (pkt.button == 0) { // ЛКМ
+                if (on_lmb_pressed) {
+                    on_lmb_pressed(pkt.pressed ? true : false);
                 }
-                if (on_rmb_pressed && pkt.rmb_pressed) {
-                    on_rmb_pressed(false);
-                }
-                if (on_mmb_pressed && pkt.mmb_pressed) {
-                    on_mmb_pressed(false);
+            } else if (pkt.button == 1) { // ПКМ
+                if (on_rmb_pressed) {
+                    on_rmb_pressed(pkt.pressed ? true : false);
                 }
             }
+            
+            // MMB можно добавить при необходимости
         }
     }
 
