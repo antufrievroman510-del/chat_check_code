@@ -14,9 +14,12 @@
 #include "VMProtectSDK.h"
 #include "AimMath.h"
 #include "MouseController.h"
-#include "overlay.h"  // Включаем для доступа к полям Overlay в SyncFromOverlay
+// #include "overlay.h"  // Убрано - вызывает циклическую зависимость! Overlay использует forward declaration
 #include "MakcuInput.h"  // Для доступа к классу MakcuInput и g_makcu_* переменным
 #include "SendInputMouse.h"  // Добавлено для std::make_unique<SendInputMouse>()
+
+// Forward declaration вместо include overlay.h (чтобы избежать цикла)
+class Overlay;
 
 // Глобальные переменные из main.cpp
 extern std::atomic<bool> g_remote_aim_key;
