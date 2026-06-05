@@ -50,6 +50,14 @@
 #include "MakcuInput.h"
 #include "MouseController.h"
 
+// Forward declarations from main.cpp for 2PC click server
+extern std::string GetLocalIPAddress();
+extern void Restart2PCClicks(int port);
+extern std::atomic<bool> g_click_server_running;
+extern std::atomic<std::chrono::steady_clock::time_point> g_last_lmb_click;
+extern std::atomic<std::chrono::steady_clock::time_point> g_last_rmb_click;
+extern std::atomic<int> g_last_click_type;
+
 extern HeadSmoother g_head_smoother;
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "winmm.lib")
@@ -1599,27 +1607,32 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     ImGui::Spacing();
     
     // === 2PC Mouse Click UDP Settings ===
-    if (BeginPanel("2PC Mouse Click UDP", ImVec2(0, 220), acc_vec)) cfg_changed = true;
+    if (BeginPanel("2PC Mouse Click UDP", ImVec2(0, 320), acc_vec)) cfg_changed = true;
     
     ImGui::TextColored(acc_vec, is_russian ? "Передача нажатий мыши по сети" : "Mouse Click Transfer over Network");
     ImGui::Spacing();
     
     // Чекбокс включения
-    if (DrawToggle("Enable UDP Transfer:", "##udp_click_en", &this->mouse_click_udp_enabled, acc_u32,
-        is_russian ? "Отправлять нажатия на второй ПК" : "Send clicks to second PC")) {
+    if (DrawToggle("Enable UDP Receiver:", "##udp_click_en", &this->mouse_click_udp_enabled, acc_u32,
+        is_russian ? "Принимать нажатия с игрового ПК" : "Receive clicks from gaming PC")) {
         cfg_changed = true;
     }
     
     ImGui::Spacing();
     
-    // Настройка IP
-    ImGui::Text(is_russian ? "Target PC IP (Чит):" : "Target PC IP (Cheat PC):");
+    // Автоматически определённый IP (для отображения пользователю)
+    ImGui::TextColored(acc_vec, is_russian ? "Этот ПК IP (для клиента):" : "This PC IP (for client):");
     ImGui::PushItemWidth(200);
-    if (ImGui::InputText("##udp_ip", this->mouse_click_ip_buf, sizeof(this->mouse_click_ip_buf))) {
-        cfg_changed = true;
+    if (strlen(this->auto_detected_ip_buf) == 0) {
+        // Определяем IP при первом рендере
+        std::string local_ip = GetLocalIPAddress();
+        strncpy_s(this->auto_detected_ip_buf, sizeof(this->auto_detected_ip_buf), local_ip.c_str(), _TRUNCATE);
     }
+    ImGui::InputText("##auto_ip", this->auto_detected_ip_buf, sizeof(this->auto_detected_ip_buf), ImGuiInputTextFlags_ReadOnly);
     ImGui::PopItemWidth();
-    HelpMarker(is_russian ? "IP адрес второго ПК с читом (например, 192.168.1.55)" : "IP address of the second PC with cheat (e.g., 192.168.1.55)");
+    HelpMarker(is_russian ? 
+        "Введите этот IP в клиентскую утилиту на игровом ПК" : 
+        "Enter this IP in the client utility on the gaming PC");
     
     ImGui::Spacing();
     
@@ -1638,23 +1651,55 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     HelpMarker(is_russian ? "Порт для получения нажатий (по умолчанию 5556)" : "Port for receiving clicks (default 5556)");
     
     ImGui::Spacing();
+    
+    // Кнопка Apply / Принять
+    ImGui::SameLine();
+    if (ImGui::Button("APPLY / ПРИНЯТЬ", ImVec2(180, 30))) {
+        // Перезапускаем сервер с новым портом
+        Restart2PCClicks(this->mouse_click_port);
+        std::cout << "[GUI] 2PC Click server restarted on port " << this->mouse_click_port << std::endl;
+    }
+    HelpMarker(is_russian ? 
+        "Сохранить настройки и перезапустить UDP сервер" : 
+        "Save settings and restart UDP server");
+    
+    ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
     
-    // Информация о режиме
-    if (this->mouse_click_udp_enabled) {
+    // Статус сервера
+    if (g_click_server_running.load()) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
-            is_russian ? "✓ Режим активен" : "✓ Mode Active");
-        ImGui::TextWrapped(is_russian ? 
-            "Все нажатия мыши (ЛКМ, ПКМ, СКМ, Колесо, X1/X2) будут передаваться на указанный ПК." :
-            "All mouse clicks (LMB, RMB, MMB, Wheel, X1/X2) will be sent to specified PC.");
+            is_russian ? "✓ Сервер запущен" : "✓ Server Running");
     } else {
         ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), 
-            is_russian ? "⚠ Режим отключен" : "⚠ Mode Disabled");
-        ImGui::TextWrapped(is_russian ? 
-            "Нажмите 'Enable UDP Transfer' для активации передачи." :
-            "Press 'Enable UDP Transfer' to activate click transfer.");
+            is_russian ? "⚠ Сервер остановлен" : "⚠ Server Stopped");
     }
+    
+    // Индикатор последнего клика
+    auto now = std::chrono::steady_clock::now();
+    auto last_lmb = g_last_lmb_click.load();
+    auto last_rmb = g_last_rmb_click.load();
+    int click_type = g_last_click_type.load();
+    
+    float lmb_secs = std::chrono::duration<float>(now - last_lmb).count();
+    float rmb_secs = std::chrono::duration<float>(now - last_rmb).count();
+    
+    ImGui::Spacing();
+    if (click_type == 1 && lmb_secs < 3.0f) {
+        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 
+            is_russian ? "◉ ЛКМ (%.1f сек назад)" : "◉ LMB (%.1f sec ago)", lmb_secs);
+    } else if (click_type == 2 && rmb_secs < 3.0f) {
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
+            is_russian ? "◉ ПКМ (%.1f сек назад) - АИМ АКТИВЕН" : "◉ RMB (%.1f sec ago) - AIM ACTIVE", rmb_secs);
+    } else {
+        ImGui::TextDisabled(is_russian ? "Ожидание кликов..." : "Waiting for clicks...");
+    }
+    
+    ImGui::Spacing();
+    ImGui::TextWrapped(is_russian ? 
+        "Все нажатия мыши (ЛКМ, ПКМ, СКМ, Колесо, X1/X2) будут приниматься от клиентской утилиты." :
+        "All mouse clicks (LMB, RMB, MMB, Wheel, X1/X2) will be received from client utility.");
     
     EndPanel();
     
