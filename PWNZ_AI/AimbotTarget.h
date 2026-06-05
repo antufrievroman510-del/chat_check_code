@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cfloat>
 
-// Наши собственные структуры вместо OpenCV
+// ГЌГ ГёГЁ Г±Г®ГЎГ±ГІГўГҐГ­Г­Г»ГҐ Г±ГІГ°ГіГЄГІГіГ°Г» ГўГ¬ГҐГ±ГІГ® OpenCV
 struct RectF {
     float x, y, width, height;
     RectF() : x(0), y(0), width(0), height(0) {}
