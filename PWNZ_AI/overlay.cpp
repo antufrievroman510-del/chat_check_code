@@ -1551,53 +1551,12 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         EndPanel();
         
     } else if (this->hardware_mode_idx == 2) {
-        // Makcu Net Settings (UDP)
-        if (BeginPanel("Makcu Net (UDP) Settings", ImVec2(0, 280), acc_vec)) cfg_changed = true;
+        // KMbox удалён - показываем сообщение
+        if (BeginPanel(is_russian ? "KMbox (удалено)" : "KMbox (removed)", ImVec2(0, 150), disable_vec)) cfg_changed = true;
         
-        ImGui::Text(is_russian ? "IP Адрес:" : "IP Address:");
-        ImGui::PushItemWidth(200);
-        if (ImGui::InputText("##makcu_ip", this->makcu_ip_buf, sizeof(this->makcu_ip_buf))) cfg_changed = true;
-        ImGui::PopItemWidth();
-        HelpMarker(is_russian ? "Например: 192.168.1.100" : "Example: 192.168.1.100");
-        
-        ImGui::Spacing();
-        
-        ImGui::Text(is_russian ? "Порт:" : "Port:");
-        ImGui::PushItemWidth(100);
-        int makcu_port_tmp = this->makcu_port;
-        if (ImGui::InputInt("##makcu_port", &makcu_port_tmp)) {
-            this->makcu_port = makcu_port_tmp;
-            cfg_changed = true;
-        }
-        ImGui::PopItemWidth();
-        
-        ImGui::Spacing();
-        ImGui::Separator();
-        ImGui::Spacing();
-        
-        // Makcu connection status using global instance from MouseController
-        bool makcuConnected = false;  // Placeholder - will be implemented with proper singleton
-        if (!makcuConnected) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
-            if (ImGui::Button("Connect MAKCU", ImVec2(150, 35))) {
-                std::string port(this->com_port_buf);
-                InitMakcuDevice(port);
-            }
-            ImGui::PopStyleColor();
-        } else {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
-            if (ImGui::Button("Disconnect MAKCU", ImVec2(150, 35))) {
-                ShutdownMakcuDevice();
-            }
-            ImGui::PopStyleColor();
-        }
-        
-        ImGui::SameLine();
-        if (makcuConnected) {
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "CONNECTED");
-        } else {
-            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "DISCONNECTED");
-        }
+        ImGui::TextColored(disable_vec, is_russian ? 
+            "Режим KMbox был удалён из проекта.\nИспользуйте режим Makcu (UART/COM) вместо него." :
+            "KMbox mode has been removed from the project.\nUse Makcu (UART/COM) mode instead.");
         
         EndPanel();
     } else {
@@ -1629,10 +1588,10 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             "1. Connect board\n2. Find COM port\n3. Enter port & Baud\n4. Click Connect");
         
         ImGui::NextColumn();
-        ImGui::TextColored(acc_vec, is_russian ? "KMbox:" : "KMbox:");
+        ImGui::TextColored(disable_vec, is_russian ? "(Удалено)" : "(Removed)");
         ImGui::TextWrapped(is_russian ? 
-            "1. Подключи к игровому ПК\n2. Настрой сеть\n3. Введи IP и порт\n4. Нажми Connect" :
-            "1. Connect to gaming PC\n2. Configure network\n3. Enter IP & port\n4. Click Connect");
+            "KMbox удалён из проекта" :
+            "KMbox removed from project");
         
         ImGui::NextColumn();
         ImGui::TextColored(acc_vec, is_russian ? "Тест:" : "Test:");
@@ -1766,9 +1725,6 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
                 auto& mc = MouseController::GetInstance();
                 mc.MoveMouse(this->test_move_x, this->test_move_y);
                 std::cout << "[OVERLAY] Sent Makcu move: (" << this->test_move_x << ", " << this->test_move_y << ")" << std::endl;
-            } else if (this->hardware_mode_idx == 2) {
-                // KMbox mode - not fully implemented yet
-                std::cout << "[OVERLAY] KMbox move not fully implemented" << std::endl;
             } else if (this->hardware_mode_idx == 0) {
                 // Local mouse - use SendInput
                 #ifdef _WIN32
@@ -1815,9 +1771,6 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
                 Sleep(50);
                 mc.ReleaseButton(VK_LBUTTON);
                 std::cout << "[OVERLAY] Sent Makcu left click" << std::endl;
-            } else if (this->hardware_mode_idx == 2) {
-                // KMbox mode - not fully implemented
-                std::cout << "[OVERLAY] KMbox click not fully implemented" << std::endl;
             } else {
                 #ifdef _WIN32
                 INPUT inputs[2] = {};
@@ -1858,9 +1811,6 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
                 mc.PressButton(VK_LBUTTON);
                 mc.ReleaseButton(VK_LBUTTON);
                 std::cout << "[OVERLAY] Sent Makcu double click" << std::endl;
-            } else if (this->hardware_mode_idx == 2) {
-                // KMbox mode - not fully implemented
-                std::cout << "[OVERLAY] KMbox double click not fully implemented" << std::endl;
             } else {
                 #ifdef _WIN32
                 INPUT inputs[4] = {};
@@ -1905,7 +1855,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     const char* mode_names[] = {
         "Local Mouse (SendInput) [UNSAFE]",
         "Makcu (UART/COM)",
-        "KMbox Net (UDP)"
+        "KMbox (REMOVED)"
     };
     
     ImGui::Text("%s", mode_names[this->hardware_mode_idx]);
