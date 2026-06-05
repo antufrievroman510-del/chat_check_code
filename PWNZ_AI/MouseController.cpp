@@ -1,6 +1,5 @@
 #include "MouseController.h"
 #include "MakcuInput.h"
-#include "KMBoxNet.h"
 #include <iostream>
 
 namespace pwnz_ai {
@@ -10,8 +9,6 @@ static MouseController* g_Instance = nullptr;
 
 // Глобальный экземпляр MakcuInput для режима Makcu_UART
 static std::unique_ptr<MakcuInput> g_makcuInstance;
-// Глобальный экземпляр KMBoxNet для режима KMBox_Net
-static std::unique_ptr<KMBoxNet> g_kmboxInstance;
 
 MouseController& MouseController::GetInstance() {
     if (!g_Instance) {
@@ -38,7 +35,7 @@ void MouseController::Initialize(MouseMethod method) {
                   method == MouseMethod::GHub_Spoof ? "GHub Spoof" :
                   method == MouseMethod::Razer_Spoof ? "Razer Spoof" :
                   method == MouseMethod::Driver ? "Driver" :
-                  method == MouseMethod::Makcu_UART ? "Makcu UART" : "KMBox Net")
+                  "Makcu UART")
               << std::endl;
 }
 
@@ -75,9 +72,6 @@ void MouseController::MoveMouse(float deltaX, float deltaY) {
             break;
         case MouseMethod::Makcu_UART:
             MoveMakcu(dx, dy);
-            break;
-        case MouseMethod::KMBox_Net:
-            MoveKMBox(dx, dy);
             break;
     }
 }
@@ -151,15 +145,6 @@ void MouseController::MoveMakcu(int dx, int dy) {
 }
 
 /**
- * @brief Движение через плату KMbox (Network)
- */
-void MouseController::MoveKMBox(int dx, int dy) {
-    if (g_kmboxInstance && g_kmboxInstance->IsConnected()) {
-        g_kmboxInstance->MoveMouse(dx, dy);
-    }
-}
-
-/**
  * @brief Нажатие кнопки мыши
  */
 void MouseController::PressButton(int buttonCode) {
@@ -214,34 +199,17 @@ void MouseController::SetMethod(MouseMethod method) {
     currentMethod = method;
     
     // Переинициализация устройств если сменился режим
-    switch (method) {
-        case MouseMethod::Makcu_UART:
-            // Инициализация Makcu будет вызвана из Aimbot::InitHardware()
-            std::cout << "[MouseController] Switched to Makcu UART mode" << std::endl;
-            break;
-        case MouseMethod::KMBox_Net:
-            // Инициализация KMBox будет вызвана из Aimbot::InitHardware()
-            std::cout << "[MouseController] Switched to KMBox Net mode" << std::endl;
-            break;
-        default:
-            break;
+    if (method == MouseMethod::Makcu_UART) {
+        // Инициализация Makcu будет вызвана из Aimbot::InitHardware()
+        std::cout << "[MouseController] Switched to Makcu UART mode" << std::endl;
     }
 }
 
-// Функции для инициализации устройств извне (вызываются из Aimbot)
 void InitMakcuDevice(const std::string& port) {
     g_makcuInstance = std::make_unique<MakcuInput>();
-    if (!g_makcuInstance->Initialize(port)) {
+    if (!g_makcuInstance->Init(port)) {
         std::cerr << "[MouseController] Failed to initialize Makcu on port " << port << std::endl;
         g_makcuInstance.reset();
-    }
-}
-
-void InitKMBoxDevice(const std::string& ip, int port) {
-    g_kmboxInstance = std::make_unique<KMBoxNet>();
-    if (!g_kmboxInstance->ConnectToDevice(ip, port)) {
-        std::cerr << "[MouseController] Failed to initialize KMBox at " << ip << ":" << port << std::endl;
-        g_kmboxInstance.reset();
     }
 }
 
@@ -249,13 +217,6 @@ void ShutdownMakcuDevice() {
     if (g_makcuInstance) {
         g_makcuInstance->Shutdown();
         g_makcuInstance.reset();
-    }
-}
-
-void ShutdownKMBoxDevice() {
-    if (g_kmboxInstance) {
-        g_kmboxInstance->Disconnect();
-        g_kmboxInstance.reset();
     }
 }
 

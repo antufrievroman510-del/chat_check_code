@@ -290,8 +290,6 @@ void Overlay::LoadConfig(Aimbot* aim) {
     handlers["bypass_mode_idx"] = [&](const std::string& v) { this->bypass_mode_idx = std::stoi(v); };
     handlers["baud_rate_idx"] = [&](const std::string& v) { this->baud_rate_idx = std::stoi(v); };
     handlers["com_port_buf"] = [&](const std::string& v) { strncpy_s(this->com_port_buf, sizeof(this->com_port_buf), v.c_str(), sizeof(this->com_port_buf) - 1); };
-    handlers["kmbox_ip_buf"] = [&](const std::string& v) { strncpy_s(this->kmbox_ip_buf, sizeof(this->kmbox_ip_buf), v.c_str(), sizeof(this->kmbox_ip_buf) - 1); };
-    handlers["kmbox_port"] = [&](const std::string& v) { this->kmbox_port = std::stoi(v); };
     handlers["random_delay_min"] = [&](const std::string& v) { this->random_delay_min = std::stoi(v); };
     handlers["random_delay_max"] = [&](const std::string& v) { this->random_delay_max = std::stoi(v); };
     handlers["test_move_x"] = [&](const std::string& v) { this->test_move_x = std::stoi(v); };
@@ -553,8 +551,6 @@ void Overlay::SaveConfig(Aimbot* aim) {
     ss << "bypass_mode_idx=" << this->bypass_mode_idx << "\n";
     ss << "baud_rate_idx=" << this->baud_rate_idx << "\n";
     ss << "com_port_buf=" << this->com_port_buf << "\n";
-    ss << "kmbox_ip_buf=" << this->kmbox_ip_buf << "\n";
-    ss << "kmbox_port=" << this->kmbox_port << "\n";
     ss << "random_delay_min=" << this->random_delay_min << "\n";
     ss << "random_delay_max=" << this->random_delay_max << "\n";
     ss << "test_move_x=" << this->test_move_x << "\n";
@@ -1349,7 +1345,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     const char* hw_modes[] = {
         "Local Mouse (SendInput) [UNSAFE]",
         "Makcu (UART/COM) [2PC]",
-        "KMbox Net (UDP) [2PC]"
+        "Makcu UART (COM)"
     };
     
     if (CustomCombo("Mode:", "##hw_mode", &this->hardware_mode_idx, hw_modes, 3, 
@@ -1363,7 +1359,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     const char* mouse_methods[] = {
         "SendInput (Windows API)",
         "Makcu (ESP32S3 HID)",
-        "KMbox (Network HID)"
+        "Makcu (UART/COM)"
     };
     
     if (CustomCombo("Mouse Input Method:", "##mouse_method", &this->mouse_input_method_idx, mouse_methods, 3,
@@ -1371,8 +1367,8 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         cfg_changed = true;
     }
     
-    HelpMarker(is_russian ? "SendInput - программный ввод (небезопасно)\nMakcu/KMbox - аппаратный ввод через 2PC (безопасно)" 
-                         : "SendInput - software input (unsafe)\nMakcu/KMbox - hardware input via 2PC (safe)");
+    HelpMarker(is_russian ? "SendInput - программный ввод (небезопасно)\nMakcu - аппаратный ввод через 2PC (безопасно)" 
+                         : "SendInput - software input (unsafe)\nMakcu - hardware input via 2PC (safe)");
     
     ImGui::Spacing();
     
@@ -1659,8 +1655,8 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         std::cout << "[OVERLAY] Hardware apply button pressed!" << std::endl;
     }
     HelpMarker(is_russian ? 
-        "Применить настройки hardware:\n- Режим ввода (SendInput/Makcu/KMbox)\n- COM-порт или IP/порт\n- Bypass режим\n\nПосле нажатия аимбот перезапустит hardware модуль." :
-        "Apply hardware settings:\n- Input mode (SendInput/Makcu/KMbox)\n- COM port or IP/port\n- Bypass mode\n\nAimbot will restart hardware module after pressing.");
+        "Применить настройки hardware:\n- Режим ввода (SendInput/Makcu)\n- COM-порт или IP/порт\n- Bypass режим\n\nПосле нажатия аимбот перезапустит hardware модуль." :
+        "Apply hardware settings:\n- Input mode (SendInput/Makcu)\n- COM port or IP/port\n- Bypass mode\n\nAimbot will restart hardware module after pressing.");
 }
 
 // ============================================================
