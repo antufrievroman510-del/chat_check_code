@@ -12,6 +12,8 @@
 constexpr unsigned char KMBOX_HEADER_1 = 0xEB;
 constexpr unsigned char KMBOX_HEADER_2 = 0x90;
 
+namespace pwnz_ai {
+
 KMBoxNet::KMBoxNet() 
     : hSocket(INVALID_SOCKET), isConnected(false), packetDelayMs(1), winsockInitialized(false), m_ipAddress("192.168.1.100"), m_port(5555) {}
 
@@ -234,3 +236,5 @@ bool KMBoxNet::MouseButton(uint8_t button, bool isPressed) {
 void KMBoxNet::SetPacketDelayMs(int ms) {
     packetDelayMs = (ms < 0) ? 0 : ms;
 }
+
+} // namespace pwnz_ai
