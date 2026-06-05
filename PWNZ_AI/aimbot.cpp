@@ -16,20 +16,17 @@
 #include "overlay.h"  // [ДОБАВЛЕНО] Для типа Overlay в SyncFromOverlay()
 #include "MakcuInput.h"  // Для доступа к классу MakcuInput и g_makcu_* переменным
 
-// Объявление глобальных переменных из main.cpp (namespace pwnz_ai)
-namespace pwnz_ai {
-    extern std::atomic<bool> g_makcu_aiming;
-    extern std::atomic<bool> g_makcu_shooting;
-    extern std::atomic<bool> g_makcu_zooming;
-}
-
-#pragma comment(lib, "ws2_32.lib")
-
+// Объявление глобальных переменных из main.cpp
+extern std::atomic<bool> aiming;    // RMB/SIDE2 - прицеливание (aliased к aiming)
+extern std::atomic<bool> shooting;  // LMB - стрельба (aliased к shooting)
+extern std::atomic<bool> zooming;   // RMB - зум/прицеливание (aliased к zooming)
+extern std::atomic<bool> g_remote_aim_key;  // Глобальная переменная из main.cpp
 extern std::atomic<float> g_last_inference_time;
 extern std::atomic<bool> g_is_target_locked;
 extern std::atomic<float> g_locked_screen_x;
 extern std::atomic<float> g_locked_screen_y;
-extern std::atomic<bool> g_remote_aim_key;  // Глобальная переменная из main.cpp
+
+#pragma comment(lib, "ws2_32.lib")
 
 // Глобальные переменные для совместимости
 static long long g_first_seen_time = 0;
@@ -566,14 +563,14 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     // ИСПРАВЛЕНИЕ: Проверяем все клавиши активации (main, sub, toggle)
     bool key_pressed = false;
     
-    // === КРИТИЧНО: Для аппаратного режима (Makcu) используем g_makcu_aiming/g_makcu_shooting И g_remote_aim_key ===
+    // === КРИТИЧНО: Для аппаратного режима (Makcu) используем aiming/shooting И g_remote_aim_key ===
     // Эти переменные обновляются из MakcuInput::OnButtonEvent при получении событий от устройства
     if (hardware_type >= 1) {
         // В аппаратном режиме состояние кнопок определяется через обратную связь от устройства
         // Проверяем все источники: SIDE2 (aiming), RMB (zooming), LMB (shooting), remote_key
-        bool makcu_aiming = pwnz_ai::g_makcu_aiming.load();      // SIDE2 (Mouse5)
-        bool makcu_zooming = pwnz_ai::g_makcu_zooming.load();    // RMB
-        bool makcu_shooting = pwnz_ai::g_makcu_shooting.load();  // LMB
+        bool makcu_aiming = aiming.load();      // SIDE2 (Mouse5)
+        bool makcu_zooming = zooming.load();    // RMB
+        bool makcu_shooting = shooting.load();  // LMB
         
         // Активация аимбота если нажата ЛЮБАЯ кнопка прицеливания или стрельбы
         key_pressed = makcu_aiming || makcu_zooming || makcu_shooting || g_remote_aim_key.load();
@@ -821,12 +818,12 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     // УДАЛЕНЫ: Pixelsmooth, Lerp, Path Randomization, Overshoot - теперь это делает AimMath
     
 // === ЛОГИКА АВТОСТРЕЛЬБЫ (Press/Release для аппаратного ввода) ===
-    // В аппаратном режиме key_pressed определяется из g_makcu_aiming/g_makcu_shooting
+    // В аппаратном режиме key_pressed определяется из aiming/shooting
     // которые обновляются при нажатии/отпускании кнопок на игровом ПК
     
     // КРИТИЧНО: Проверяем hardware_type >= 1 (Makcu/KMbox), а не != 0
     if (hardware_type >= 1) {
-        // Аппаратный режим: используем g_makcu_aiming/g_makcu_shooting напрямую
+        // Аппаратный режим: используем aiming/shooting напрямую
         
         // Статические переменные для отслеживания переходов
         static bool hw_lmb_pressed = false;
@@ -834,9 +831,9 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         
         // Получаем актуальное состояние кнопок из глобальных переменных
         // В РЕФЕРЕНСЕ: SIDE2 (Mouse5) = aiming, RMB = zooming, LMB = shooting
-        bool aiming_now = pwnz_ai::g_makcu_aiming.load();   // SIDE2 (Mouse5) - прицеливание
-        bool zooming_now = pwnz_ai::g_makcu_zooming.load(); // RMB - зум
-        bool shooting_now = pwnz_ai::g_makcu_shooting.load(); // LMB - стрельба
+        bool aiming_now = aiming.load();   // SIDE2 (Mouse5) - прицеливание
+        bool zooming_now = zooming.load(); // RMB - зум
+        bool shooting_now = shooting.load(); // LMB - стрельба
         
         // Для совместимости: считаем aiming активным если нажат SIDE2 или RMB
         bool aim_active = aiming_now || zooming_now;
@@ -910,7 +907,7 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
 void Aimbot::StartButtonMonitor() {
     // В новой реализации с коллбэками makcu::Device отдельный поток опроса НЕ НУЖЕН
     // Коллбэк setMouseButtonCallback вызывается асинхронно при получении событий от устройства
-    // и напрямую обновляет g_makcu_aiming/g_makcu_shooting/g_remote_aim_key в MakcuInput::onMouseButton
+    // и напрямую обновляет aiming/shooting/g_remote_aim_key в MakcuInput::onMouseButton
     std::cout << "[Aimbot] Button monitor not needed - using makcu::Device callbacks instead" << std::endl;
 }
 
