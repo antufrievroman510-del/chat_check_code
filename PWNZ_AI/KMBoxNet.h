@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KMBOXNET_H
+#define KMBOXNET_H
 
 #include "WinHeaders.h"
 

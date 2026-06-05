@@ -71,10 +71,11 @@ namespace pwnz_ai {
     std::atomic<bool> g_makcu_shooting(false);    // LMB - стрельба
     std::atomic<bool> g_makcu_zooming(false);     // RMB - зум/прицеливание
     
-    // Legacy переменные для обратной совместимости (aliased к новым переменным)
-    std::atomic<bool>& aiming = g_makcu_aiming;
-    std::atomic<bool>& shooting = g_makcu_shooting;
-    std::atomic<bool>& zooming = g_makcu_zooming;
+    // Переменные для обратной совместимости (aliased к новым переменным)
+    // Определения extern находятся в MakcuInput.h
+    std::atomic<bool> aiming = g_makcu_aiming;
+    std::atomic<bool> shooting = g_makcu_shooting;
+    std::atomic<bool> zooming = g_makcu_zooming;
 }
 
 // Глобальная переменная для 2PC-связки
