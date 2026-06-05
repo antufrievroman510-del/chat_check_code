@@ -229,6 +229,10 @@ public:
     bool hw_enabled = false;
     bool obs_bypass_enabled = false; // OBS Bypass toggle
     
+    // Makcu Net Settings (UDP)
+    char makcu_ip_buf[32] = "192.168.1.100";
+    int makcu_port = 3333;
+    
     // Test values
     int test_move_x = 50;
     int test_move_y = 50;

@@ -1121,19 +1121,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             aim.com_port = std::atoi(overlay.com_port_buf + 3); // "COM3" -> 3
             aim.hardware_type = overlay.hardware_mode_idx;
             aim.bypass_mode = overlay.bypass_mode_idx;
-            aim.net_ip = overlay.kmbox_ip_buf;
-            aim.net_port = overlay.kmbox_port;
+            aim.net_ip = overlay.makcu_ip_buf;
+            aim.net_port = overlay.makcu_port;
             
             // КРИТИЧНО: Синхронизация mouse_input_method_idx для выбора метода ввода
-            // 0=SendInput, 1=Makcu, 2=KMbox
+            // 0=SendInput, 1=Makcu
             int selected_method = overlay.mouse_input_method_idx;
             
             std::cout << "[MAIN] Applying hardware settings: type=" << aim.hardware_type 
                       << " method=" << selected_method
                       << " com_port=" << aim.com_port
                       << " bypass=" << aim.bypass_mode
-                      << " kmbox_ip=" << aim.net_ip
-                      << " kmbox_port=" << aim.net_port
+                      << " makcu_ip=" << aim.net_ip
+                      << " makcu_port=" << aim.net_port
                       << std::endl;
             
             // Пересоздаём устройство ввода с новыми настройками
