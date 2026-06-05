@@ -3,6 +3,7 @@
 #define MAKCU_INPUT_H
 
 #include "macku2pc/include/makcu.h"
+#include "IMouseInput.h"
 #include <atomic>
 #include <memory>
 #include <functional>
@@ -33,22 +34,22 @@ namespace pwnz_ai {
  * 3. Включение мониторинга enableButtonMonitoring(true) - ДО подключения!
  * 4. Подключение connect(port)
  */
-class MakcuInput {
+class MakcuInput : public IMouseInput {
 public:
     MakcuInput();
-    ~MakcuInput();
+    ~MakcuInput() override;
 
     /**
      * @brief Инициализация подключения к Makcu
      * @param port COM-порт (например "COM5")
      * @return true если успешно подключено
      */
-    bool Initialize(const std::string& port);
+    bool Initialize(const std::string& port) override;
 
     /**
      * @brief Завершение работы и отключение от устройства
      */
-    void Shutdown();
+    void Shutdown() override;
 
     /**
      * @brief Движение мыши через Makcu
@@ -56,40 +57,37 @@ public:
      * @param y Смещение по Y (в counts)
      * @return true если успешно отправлено
      */
-    bool Move(int32_t x, int32_t y);
+    void Move(int dx, int dy) override;
 
     /**
      * @brief Клик кнопкой мыши
-     * @param button 0=LMB, 1=RMB, 2=MMB, 3=Side1, 4=Side2
-     * @return true если успешно отправлено
+     * @param button Кнопка мыши
      */
-    bool Click(int button);
+    void Click(MouseButton button) override;
 
     /**
      * @brief Нажатие кнопки (удержание)
-     * @param button 0=LMB, 1=RMB, 2=MMB, 3=Side1, 4=Side2
-     * @return true если успешно отправлено
+     * @param button Кнопка мыши
      */
-    bool Press(int button);
+    void Press(MouseButton button) override;
 
     /**
      * @brief Отпускание кнопки
-     * @param button 0=LMB, 1=RMB, 2=MMB, 3=Side1, 4=Side2
-     * @return true если успешно отправлено
+     * @param button Кнопка мыши
      */
-    bool Release(int button);
+    void Release(MouseButton button) override;
 
     /**
      * @brief Получить текущее состояние кнопки (нажата/отпущена)
-     * @param button 0=LMB, 1=RMB, 2=MMB, 3=Side1, 4=Side2
+     * @param button Кнопка мыши
      * @return true если кнопка нажата
      */
-    bool IsButtonPressed(int button) const;
+    bool IsButtonPressed(MouseButton button) const;
 
     /**
      * @brief Проверка подключения к устройству
      */
-    bool IsConnected() const;
+    bool IsConnected() const override;
 
 private:
     std::unique_ptr<makcu::Device> m_device;
@@ -103,6 +101,9 @@ private:
 
     // Коллбэк для обработки событий кнопок
     void onMouseButton(makcu::MouseButton button, bool pressed);
+    
+    // Конвертация MouseButton в int для makcu::Device
+    int buttonToInt(MouseButton button) const;
 };
 
 } // namespace pwnz_ai
