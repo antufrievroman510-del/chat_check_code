@@ -1,17 +1,21 @@
 // PWNZ VISION PRO (UDP ULTIMATE) - Mouse Click Sender GUI
 // Главный файл приложения Dear ImGui для ПК1
+// Стандарт: C++23
 
-#include "imgui.h"
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx9.h"
+#include <windows.h>
 #include <d3d9.h>
-#include <tchar.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <string>
 #include <vector>
 #include <sstream>
 #include <iomanip>
+#include <format>
+#include <iostream>
+
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx9.h"
 
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "ws2_32.lib")
@@ -48,11 +52,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     g_szHostname = GetHostname();
 
     // Регистрация класса окна
-    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, _T("PWNZ Vision Pro"), NULL };
-    RegisterClassEx(&wc);
+    WNDCLASSEXW wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandleW(nullptr), nullptr, nullptr, nullptr, nullptr, L"PWNZ Vision Pro", nullptr };
+    RegisterClassExW(&wc);
 
     // Создание окна
-    HWND hwnd = CreateWindow(wc.lpszClassName, _T("PWNZ VISION PRO (UDP ULTIMATE)"), WS_OVERLAPPEDWINDOW, 100, 100, 800, 600, NULL, NULL, wc.hInstance, NULL);
+    HWND hwnd = CreateWindowW(wc.lpszClassName, L"PWNZ VISION PRO (UDP ULTIMATE)", WS_OVERLAPPEDWINDOW, 100, 100, 800, 600, nullptr, nullptr, wc.hInstance, nullptr);
 
     // Инициализация Direct3D
     LPDIRECT3D9 pD3D = Direct3DCreate9(D3D_SDK_VERSION);
@@ -62,7 +66,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    D3DPRESENT_PARAMETERS d3dpp = {};
+    D3DPRESENT_PARAMETERS d3dpp{};
     d3dpp.Windowed = TRUE;
     d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
     d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
@@ -70,10 +74,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
     d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_ONE;
 
-    LPDIRECT3DDEVICE9 pd3dDevice = NULL;
+    LPDIRECT3DDEVICE9 pd3dDevice = nullptr;
     if (pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hwnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &d3dpp, &pd3dDevice) < 0) {
         pD3D->Release();
-        UnregisterClass(wc.lpszClassName, wc.hInstance);
+        UnregisterClassW(wc.lpszClassName, wc.hInstance);
         WSACleanup();
         return 1;
     }
@@ -121,12 +125,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     UpdateWindow(hwnd);
 
     // Главный цикл
-    MSG msg;
+    MSG msg{};
     ZeroMemory(&msg, sizeof(msg));
     while (msg.message != WM_QUIT) {
-        if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE)) {
+        if (PeekMessageW(&msg, nullptr, 0U, 0U, PM_REMOVE)) {
             TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            DispatchMessageW(&msg);
             continue;
         }
 
@@ -138,7 +142,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         ImGui::SetNextWindowSize(ImVec2(800, 600));
         ImGui::SetNextWindowPos(ImVec2(100, 100));
         
-        if (ImGui::Begin("PWNZ VISION PRO (UDP ULTIMATE)", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse)) {
+        if (ImGui::Begin("PWNZ VISION PRO (UDP ULTIMATE)", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse)) {
             
             // Вкладки
             if (ImGui::BeginTabBar("MainTabs")) {
@@ -225,7 +229,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.00f, 0.58f, 0.90f, 1.00f));
                     if (ImGui::Button("[🔗 CONNECT]", ImVec2(-1, 30))) {
                         g_bConnected = true;
-                        g_szStatus = "CONNECTED - Sending mouse clicks to " + std::string(g_szRemoteIP) + ":" + g_szPort;
+                        g_szStatus = std::format("CONNECTED - Sending mouse clicks to {}:{}" , g_szRemoteIP, g_szPort);
                     }
                     ImGui::PopStyleColor(2);
                     
@@ -305,13 +309,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         ImGui::End();
 
         // Рендеринг
-        pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_COLORVALUE(0.12f, 0.12f, 0.12f), 1.0f, 0);
+        pd3dDevice->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DCOLOR_COLORVALUE(0.12f, 0.12f, 0.12f), 1.0f, 0);
         if (pd3dDevice->BeginScene() >= 0) {
             ImGui::Render();
             ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
             pd3dDevice->EndScene();
         }
-        pd3dDevice->Present(NULL, NULL, NULL, NULL);
+        pd3dDevice->Present(nullptr, nullptr, nullptr, nullptr);
     }
 
     // Очистка
@@ -321,7 +325,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     pd3dDevice->Release();
     pD3D->Release();
-    UnregisterClass(wc.lpszClassName, wc.hInstance);
+    UnregisterClassW(wc.lpszClassName, wc.hInstance);
     WSACleanup();
 
     return 0;
@@ -330,7 +334,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 // Обработчик сообщений окна
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
-        return true;
+        return TRUE;
 
     switch (msg) {
     case WM_SIZE:
@@ -345,7 +349,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         PostQuitMessage(0);
         return 0;
     }
-    return DefWindowProc(hWnd, msg, wParam, lParam);
+    return DefWindowProcW(hWnd, msg, wParam, lParam);
 }
 
 // Получение локального IP-адреса
@@ -356,16 +360,16 @@ bool GetLocalIP(std::string& ip) {
         return false;
     }
 
-    struct addrinfo hints = {}, *res = NULL;
+    struct addrinfo hints{}, *res = nullptr;
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
 
-    if (getaddrinfo(hostname, NULL, &hints, &res) != 0) {
+    if (getaddrinfo(hostname, nullptr, &hints, &res) != 0) {
         ip = "192.168.1.105";
         return false;
     }
 
-    struct sockaddr_in* addr = (struct sockaddr_in*)res->ai_addr;
+    struct sockaddr_in* addr = reinterpret_cast<struct sockaddr_in*>(res->ai_addr);
     inet_ntop(AF_INET, &(addr->sin_addr), hostname, sizeof(hostname));
     ip = hostname;
 
