@@ -19,14 +19,14 @@
 // Объявление глобальных переменных из main.cpp (namespace pwnz_ai)
 // Эти переменные определены в main.cpp как:
 //   std::atomic<bool> g_makcu_aiming, g_makcu_shooting, g_makcu_zooming;
-//   std::atomic<bool> aiming = g_makcu_aiming, shooting = g_makcu_shooting, zooming = g_makcu_zooming;
+//   std::atomic<bool>& aiming = g_makcu_aiming, shooting = g_makcu_shooting, zooming = g_makcu_zooming;
 namespace pwnz_ai {
     extern std::atomic<bool> g_makcu_aiming;
     extern std::atomic<bool> g_makcu_shooting;
     extern std::atomic<bool> g_makcu_zooming;
-    extern std::atomic<bool> aiming;
-    extern std::atomic<bool> shooting;
-    extern std::atomic<bool> zooming;
+    extern std::atomic<bool>& aiming;
+    extern std::atomic<bool>& shooting;
+    extern std::atomic<bool>& zooming;
 }
 
 extern std::atomic<bool> g_remote_aim_key;  // Глобальная переменная из main.cpp
