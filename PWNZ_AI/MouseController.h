@@ -1,9 +1,18 @@
 #pragma once
 #include "WinHeaders.h"
-#include "AimMath.h"
-#include "MakcuInput.h"
-#include "KMBoxNet.h"
-#include "HardwareBackend.h"  // Для HardwareConfig
+#include <string>
+
+// Forward declarations
+namespace pwnz_ai {
+    class MakcuInput;
+    class KMBoxNet;
+}
+
+// Функции для инициализации устройств из Aimbot
+void InitMakcuDevice(const std::string& port);
+void InitKMBoxDevice(const std::string& ip, int port);
+void ShutdownMakcuDevice();
+void ShutdownKMBoxDevice();
 
 // Перечисление методов ввода для Mouse Bypass
 enum class MouseMethod {
@@ -33,8 +42,8 @@ public:
     // Смена метода ввода на лету
     void SetMethod(MouseMethod method);
     
-    // Обновление конфигурации HardwareBackend
-    void UpdateHardwareConfig(const HardwareConfig& config);
+    // Обновление конфигурации (заглушка, HardwareBackend удалён)
+    void UpdateHardwareConfig(const void* config);
 
 private:
     MouseController() = default;
