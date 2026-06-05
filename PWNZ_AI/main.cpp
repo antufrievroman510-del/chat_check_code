@@ -34,6 +34,8 @@
 #include "xorstr.hpp"
 #include "VMProtectSDK.h"
 #include "head_smoother.h"
+#include "MouseClickServer.h"
+#include "MouseController.h"
 
 #define BUILDING_BYTE_TRACK_EIGEN
 #include "BYTETracker.h"
@@ -820,6 +822,44 @@ void RemoteActivationServer() {
     WSACleanup();
 }
 
+// ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ДЛЯ 2PC CLICKS ====================
+static pwnz_ai::MouseClickServer g_clickServer;
+
+void Initialize2PCClicks() {
+    std::cout << "[INIT] Setting up 2PC click receiver...\n";
+
+    // Коллбэк для ЛКМ (стрельба)
+    g_clickServer.set_lmb_callback([](bool pressed) {
+        auto& mc = MouseController::GetInstance();
+        
+        if (pressed) {
+            mc.PressButton(VK_LBUTTON);
+            std::cout << "[CLICK] LMB PRESSED (from network)\n";
+        } else {
+            mc.ReleaseButton(VK_LBUTTON);
+            std::cout << "[CLICK] LMB RELEASED (from network)\n";
+        }
+    });
+
+    // Коллбэк для ПКМ (прицеливание)
+    g_clickServer.set_rmb_callback([](bool pressed) {
+        auto& mc = MouseController::GetInstance();
+        
+        if (pressed) {
+            mc.PressButton(VK_RBUTTON);
+        } else {
+            mc.ReleaseButton(VK_RBUTTON);
+        }
+    });
+
+    // Запуск сервера на порту 5556
+    if (g_clickServer.start(5556)) {
+        std::cout << "[INIT] Click server running on port 5556\n";
+    } else {
+        std::cerr << "[ERROR] Failed to start click server!\n";
+    }
+}
+
 // ==================== WINMAIN ====================
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     std::ofstream logfile("C:\\pwnz_log.txt", std::ios::out | std::ios::trunc);
@@ -833,6 +873,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     MUTATE_SIGNATURE;
     SetProcessDPIAware();
     setlocale(LC_ALL, XOR("ru_RU.UTF-8"));
+
+    // Инициализация 2PC кликов
+    Initialize2PCClicks();
 
     if (logfile.is_open()) { logfile << "Step 1: after locale" << std::endl; logfile.flush(); }
 

@@ -9,12 +9,14 @@
 *.out
 
 # Dependencies
-node_modules/
 venv/
 .venv/
 __pycache__/
 .mypy_cache/
 .pytest_cache/
+node_modules/
+dist/
+build/
 target/
 .gradle/
 
@@ -22,6 +24,7 @@ target/
 *.log
 *.tmp
 *.swp
+*.swo
 
 # Environment
 .env
@@ -32,9 +35,36 @@ target/
 .vscode/
 .idea/
 
-# Build and distribution
-dist/
-build/
+# System files
+.DS_Store
+Thumbs.db
+
+# Coverage
 coverage/
 htmlcov/
+.coverage
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 ```
