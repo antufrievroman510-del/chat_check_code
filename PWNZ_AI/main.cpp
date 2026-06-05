@@ -64,6 +64,12 @@ std::mutex g_model_mutex;
 int g_capture_w = 1920;
 int g_capture_h = 1080;
 
+// Глобальные переменные для активации аимбота (как в source_logic/source_logic/sunone_aimbot_2.h)
+std::atomic<bool> aiming(false);      // RMB/SIDE2 - прицеливание (основная клавиша аима)
+std::atomic<bool> shooting(false);    // LMB - стрельба
+std::atomic<bool> zooming(false);     // RMB - зум/прицеливание
+
+// Legacy переменная для обратной совместимости с текущим кодом
 std::atomic<bool> g_remote_aim_key(false);
 SOCKET g_udp_sock = INVALID_SOCKET;
 
@@ -663,7 +669,12 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
         
         // ИСПРАВЛЕНИЕ: Проверяем overlay->aim_enable вместо local_cfg.aim_enable
         // Потому что SyncFromOverlay уже синхронизировал все настройки из overlay
-        bool currently_aiming = (IsAimKeyPressed(overlay) || g_remote_aim_key.load()) && overlay->aim_enable;
+        // Для 2PC-режима (Makcu) также проверяем глобальные переменные aiming/shooting/zooming
+        bool hardware_aim_active = false;
+        if (aim->hardware_type == 1) {  // Makcu 2PC режим
+            hardware_aim_active = aiming.load() || shooting.load() || zooming.load();
+        }
+        bool currently_aiming = (IsAimKeyPressed(overlay) || g_remote_aim_key.load() || hardware_aim_active) && overlay->aim_enable;
         
         // [DEBUG] Логирование состояния аимбота для отладки
         static bool debug_logged = false;
