@@ -11,17 +11,16 @@
 #include <iostream>
 
 /**
- * @brief Класс для передачи ТОЛЬКО нажатий кнопок мыши между ПК
+ * @brief Класс для передачи нажатий кнопок мыши между ПК через UDP
  * 
- * Архитектура 2PC без LAN кабеля:
- * - ПК1 (Игровой): Физическая мышь -> Makcu плата -> Читает нажатия кнопок
- * - ПК2 (Чит): Этот класс получает события кнопок по WiFi/интернету
+ * Архитектура 2PC:
+ * - ПК1 (Игровой): Перехват хуком -> Отправляет события по сети
+ * - ПК2 (Чит): MouseClickServer получает -> Эмулирует через SendInput
  * 
- * Важно: 
- * - Движения мыши передаются через Makcu (COM-порт)
- * - Этот класс передает ТОЛЬКО нажатия кнопок (LMB/RMB) для аимбота
- * - Использует UDP для минимальной задержки
- * - Античит не видит сетевое соединение т.к. оно идет от чита, а не от игры
+ * Поддерживаемые события:
+ * - ЛКМ, ПКМ, СКМ (нажатие/отпускание)
+ * - Колесо прокрутки (вверх/вниз)
+ * - Боковые кнопки X1 (Назад), X2 (Вперед)
  */
 class MouseClickNetwork {
 private:
@@ -30,16 +29,29 @@ private:
     std::atomic<bool> is_connected{false};
     std::atomic<bool> should_run{false};
     std::string target_ip = "192.168.1.100";
-    int target_port = 5556; // Отдельный порт для кликов (не путать с aim_data)
+    int target_port = 5556;
 
     std::mutex send_mutex;
 
-    // Пакет содержит ТОЛЬКО состояние кнопок
+    // Типы событий (должны совпадать с MouseClickServer.h)
+    #define MOUSE_EVENT_LMB_DOWN   0x01
+    #define MOUSE_EVENT_LMB_UP     0x02
+    #define MOUSE_EVENT_RMB_DOWN   0x03
+    #define MOUSE_EVENT_RMB_UP     0x04
+    #define MOUSE_EVENT_MMB_DOWN   0x05
+    #define MOUSE_EVENT_MMB_UP     0x06
+    #define MOUSE_EVENT_WHEEL_UP   0x07
+    #define MOUSE_EVENT_WHEEL_DOWN 0x08
+    #define MOUSE_EVENT_X1_DOWN    0x09
+    #define MOUSE_EVENT_X1_UP      0x0A
+    #define MOUSE_EVENT_X2_DOWN    0x0B
+    #define MOUSE_EVENT_X2_UP      0x0C
+
     struct ClickPacket {
-        bool lmb_pressed;    // Левая кнопка (стрельба)
-        bool rmb_pressed;    // Правая кнопка (прицеливание)
-        bool mmb_pressed;    // Средняя кнопка (опционально)
-        uint8_t reserved;    // Выравнивание
+        uint8_t event_type;
+        uint8_t reserved;
+        int16_t wheel_delta;
+        int32_t extra;
     };
 
 public:
@@ -83,7 +95,7 @@ public:
 #endif
 
         // Отправляем тестовый пакет
-        ClickPacket test_pkt = {false, false, false, 0};
+        ClickPacket test_pkt = {0x00, 0, 0, 0};
         sendto(sock, (const char*)&test_pkt, sizeof(test_pkt), 0, 
                (struct sockaddr*)&server_addr, sizeof(server_addr));
 
@@ -101,41 +113,33 @@ public:
         }
     }
 
-    /**
-     * @brief Отправка состояния кнопок мыши
-     * @param lmb Левая кнопка нажата
-     * @param rmb Правая кнопка нажата
-     * @param mmb Средняя кнопка нажата (опционально)
-     */
-    bool send_click_state(bool lmb, bool rmb, bool mmb = false) {
-        if (!is_connected.load() || sock == INVALID_SOCKET) return false;
+    void send_event(uint8_t event_type, int16_t wheel_delta = 0) {
+        if (!is_connected.load() || sock == INVALID_SOCKET) return;
 
         ClickPacket pkt;
-        pkt.lmb_pressed = lmb;
-        pkt.rmb_pressed = rmb;
-        pkt.mmb_pressed = mmb;
+        pkt.event_type = event_type;
         pkt.reserved = 0;
+        pkt.wheel_delta = htons(wheel_delta);
+        pkt.extra = 0;
 
         std::lock_guard<std::mutex> lock(send_mutex);
-        int result = sendto(sock, (const char*)&pkt, sizeof(pkt), 0, 
-                           (struct sockaddr*)&server_addr, sizeof(server_addr));
-
-        return (result != SOCKET_ERROR);
+        sendto(sock, (const char*)&pkt, sizeof(pkt), 0, 
+               (struct sockaddr*)&server_addr, sizeof(server_addr));
     }
 
-    /**
-     * @brief Быстрая отправка только LMB (для стрельбы)
-     */
-    bool send_lmb(bool pressed) {
-        return send_click_state(pressed, false, false);
-    }
-
-    /**
-     * @brief Быстрая отправка только RMB (для прицеливания)
-     */
-    bool send_rmb(bool pressed) {
-        return send_click_state(false, pressed, false);
-    }
+    // Удобные методы для отправки конкретных событий
+    void send_lmb_down() { send_event(MOUSE_EVENT_LMB_DOWN); }
+    void send_lmb_up() { send_event(MOUSE_EVENT_LMB_UP); }
+    void send_rmb_down() { send_event(MOUSE_EVENT_RMB_DOWN); }
+    void send_rmb_up() { send_event(MOUSE_EVENT_RMB_UP); }
+    void send_mmb_down() { send_event(MOUSE_EVENT_MMB_DOWN); }
+    void send_mmb_up() { send_event(MOUSE_EVENT_MMB_UP); }
+    void send_wheel_up() { send_event(MOUSE_EVENT_WHEEL_UP, 120); }
+    void send_wheel_down() { send_event(MOUSE_EVENT_WHEEL_DOWN, -120); }
+    void send_x1_down() { send_event(MOUSE_EVENT_X1_DOWN); }
+    void send_x1_up() { send_event(MOUSE_EVENT_X1_UP); }
+    void send_x2_down() { send_event(MOUSE_EVENT_X2_DOWN); }
+    void send_x2_up() { send_event(MOUSE_EVENT_X2_UP); }
 
     bool is_connected_status() const {
         return is_connected.load();
@@ -146,4 +150,10 @@ public:
 
     std::string get_ip() const { return target_ip; }
     int get_port() const { return target_port; }
+
+    void reconnect_if_needed() {
+        if (!is_connected.load() && sock == INVALID_SOCKET) {
+            connect(target_ip, target_port);
+        }
+    }
 };

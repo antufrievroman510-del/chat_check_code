@@ -1,5 +1,6 @@
 // MouseClickSender.cpp - Отдельная программа для ПК1 (Игровой)
 // Компилировать: cl /EHsc MouseClickSender.cpp Ws2_32.lib /Fe:MouseClickSender.exe
+// Поддерживает: ЛКМ, ПКМ, СКМ, Колесо, Боковые кнопки (X1/X2)
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -13,19 +14,36 @@
 // Глобальные переменные для состояния мыши
 std::atomic<bool> g_lmb_pressed(false);
 std::atomic<bool> g_rmb_pressed(false);
+std::atomic<bool> g_mmb_pressed(false);
+std::atomic<bool> g_x1_pressed(false);
+std::atomic<bool> g_x2_pressed(false);
 SOCKET g_socket = INVALID_SOCKET;
 sockaddr_in g_serverAddr{};
 bool g_connected = false;
 
+// Типы событий в пакете
+#define MOUSE_EVENT_LMB_DOWN   0x01
+#define MOUSE_EVENT_LMB_UP     0x02
+#define MOUSE_EVENT_RMB_DOWN   0x03
+#define MOUSE_EVENT_RMB_UP     0x04
+#define MOUSE_EVENT_MMB_DOWN   0x05
+#define MOUSE_EVENT_MMB_UP     0x06
+#define MOUSE_EVENT_WHEEL_UP   0x07
+#define MOUSE_EVENT_WHEEL_DOWN 0x08
+#define MOUSE_EVENT_X1_DOWN    0x09
+#define MOUSE_EVENT_X1_UP      0x0A
+#define MOUSE_EVENT_X2_DOWN    0x0B
+#define MOUSE_EVENT_X2_UP      0x0C
+
 // Функция отправки пакета
-void send_click(uint8_t type, uint8_t state) {
+void send_click(uint8_t event_type, int16_t wheel_delta = 0) {
     if (!g_connected || g_socket == INVALID_SOCKET) return;
 
-    char buffer[4];
-    buffer[0] = type;   // 0x01 = ЛКМ, 0x02 = ПКМ
-    buffer[1] = state;  // 1 = нажато, 0 = отпущено
-    buffer[2] = 0;
-    buffer[3] = 0;
+    char buffer[8];
+    buffer[0] = event_type;      // Тип события
+    buffer[1] = 0;               // Резерв
+    *(int16_t*)&buffer[2] = htons(wheel_delta); // Для колеса
+    *(int32_t*)&buffer[4] = 0;   // Резерв
 
     sendto(g_socket, buffer, sizeof(buffer), 0, (sockaddr*)&g_serverAddr, sizeof(g_serverAddr));
 }
@@ -37,25 +55,74 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode >= 0) {
         MSLLHOOKSTRUCT* pMouseStruct = (MSLLHOOKSTRUCT*)lParam;
 
+        // ЛКМ
         if (wParam == WM_LBUTTONDOWN) {
             g_lmb_pressed = true;
-            send_click(0x01, 1); // ЛКМ нажата
+            send_click(MOUSE_EVENT_LMB_DOWN);
             std::cout << "[SEND] LMB PRESSED\n";
         }
         else if (wParam == WM_LBUTTONUP) {
             g_lmb_pressed = false;
-            send_click(0x01, 0); // ЛКМ отпущена
+            send_click(MOUSE_EVENT_LMB_UP);
             std::cout << "[SEND] LMB RELEASED\n";
         }
+        // ПКМ
         else if (wParam == WM_RBUTTONDOWN) {
             g_rmb_pressed = true;
-            send_click(0x02, 1); // ПКМ нажата
+            send_click(MOUSE_EVENT_RMB_DOWN);
             std::cout << "[SEND] RMB PRESSED\n";
         }
         else if (wParam == WM_RBUTTONUP) {
             g_rmb_pressed = false;
-            send_click(0x02, 0); // ПКМ отпущена
+            send_click(MOUSE_EVENT_RMB_UP);
             std::cout << "[SEND] RMB RELEASED\n";
+        }
+        // СКМ (Колесико нажатие)
+        else if (wParam == WM_MBUTTONDOWN) {
+            g_mmb_pressed = true;
+            send_click(MOUSE_EVENT_MMB_DOWN);
+            std::cout << "[SEND] MMB PRESSED\n";
+        }
+        else if (wParam == WM_MBUTTONUP) {
+            g_mmb_pressed = false;
+            send_click(MOUSE_EVENT_MMB_UP);
+            std::cout << "[SEND] MMB RELEASED\n";
+        }
+        // Колесо прокрутка
+        else if (wParam == WM_MOUSEWHEEL) {
+            SHORT wheel_delta = GET_WHEEL_DELTA_WPARAM(pMouseStruct->mouseData);
+            if (wheel_delta > 0) {
+                send_click(MOUSE_EVENT_WHEEL_UP, wheel_delta);
+                std::cout << "[SEND] WHEEL UP (" << wheel_delta << ")\n";
+            } else if (wheel_delta < 0) {
+                send_click(MOUSE_EVENT_WHEEL_DOWN, -wheel_delta);
+                std::cout << "[SEND] WHEEL DOWN (" << -wheel_delta << ")\n";
+            }
+        }
+        // Боковая кнопка X1 (Назад)
+        else if (wParam == WM_XBUTTONDOWN) {
+            if (GET_XBUTTON_WPARAM(pMouseStruct->mouseData) == XBUTTON1) {
+                g_x1_pressed = true;
+                send_click(MOUSE_EVENT_X1_DOWN);
+                std::cout << "[SEND] X1 (BACK) PRESSED\n";
+            }
+            else if (GET_XBUTTON_WPARAM(pMouseStruct->mouseData) == XBUTTON2) {
+                g_x2_pressed = true;
+                send_click(MOUSE_EVENT_X2_DOWN);
+                std::cout << "[SEND] X2 (FORWARD) PRESSED\n";
+            }
+        }
+        else if (wParam == WM_XBUTTONUP) {
+            if (GET_XBUTTON_WPARAM(pMouseStruct->mouseData) == XBUTTON1) {
+                g_x1_pressed = false;
+                send_click(MOUSE_EVENT_X1_UP);
+                std::cout << "[SEND] X1 (BACK) RELEASED\n";
+            }
+            else if (GET_XBUTTON_WPARAM(pMouseStruct->mouseData) == XBUTTON2) {
+                g_x2_pressed = false;
+                send_click(MOUSE_EVENT_X2_UP);
+                std::cout << "[SEND] X2 (FORWARD) RELEASED\n";
+            }
         }
     }
     return CallNextHookEx(g_mouse_hook, nCode, wParam, lParam);
@@ -78,8 +145,8 @@ void try_reconnect(const std::string& ip, int port) {
     g_serverAddr.sin_port = htons(port);
     inet_pton(AF_INET, ip.c_str(), &g_serverAddr.sin_addr);
 
-    // Тестовый пакет
-    char test_buf[4] = { 0x00, 0x00, 0x00, 0x00 };
+    // Тестовый пакет (8 байт для совместимости с новым форматом)
+    char test_buf[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     if (sendto(g_socket, test_buf, sizeof(test_buf), 0, (sockaddr*)&g_serverAddr, sizeof(g_serverAddr)) != SOCKET_ERROR) {
         g_connected = true;
         std::cout << "[OK] Connected to " << ip << ":" << port << "\n";

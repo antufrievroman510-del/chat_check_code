@@ -236,6 +236,11 @@ public:
     char makcu_ip_buf[32] = "192.168.1.100";
     int makcu_port = 3333;
     
+    // Mouse Click 2PC Settings (UDP)
+    bool mouse_click_udp_enabled = false;
+    char mouse_click_ip_buf[32] = "192.168.1.100";
+    int mouse_click_port = 5556;
+    
     // Test values
     int test_move_x = 50;
     int test_move_y = 50;
