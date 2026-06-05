@@ -1806,7 +1806,7 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
         if (this->hw_enabled) {
             if (this->hardware_mode_idx == 1) {
                 // Makcu mode - use MouseController
-                auto& mc = MouseController::GetInstance();
+                auto& mc = pwnz_ai::MouseController::GetInstance();
                 mc.PressButton(VK_LBUTTON);
                 mc.ReleaseButton(VK_LBUTTON);
                 Sleep(50);
