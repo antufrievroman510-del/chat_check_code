@@ -1,5 +1,5 @@
 ```
-# Build artifacts and binaries
+# Compiled and build artifacts
 *.o
 *.obj
 *.exe
@@ -7,44 +7,42 @@
 *.so
 *.a
 *.out
-*.vcxproj
-*.vcxproj.filters
-*.sln
-*.lib
 
 # Dependencies
-node_modules/
 venv/
 .venv/
 __pycache__/
+.mypy_cache/
+.pytest_cache/
+node_modules/
 dist/
 build/
 target/
 .gradle/
 
-# Editor/IDE files
-.vscode/
-.idea/
+# Logs and temp files
+*.log
+*.tmp
 *.swp
 *.swo
-*.tmp
 
-# Logs
-*.log
-
-# Coverage reports
-coverage/
-htmlcov/
-.coverage
-
-# Environment variables
+# Environment
 .env
 .env.local
 *.env.*
 
-# OS specific
+# Editors
+.vscode/
+.idea/
+
+# System files
 .DS_Store
 Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
 
 # Compressed files
 *.zip
@@ -65,17 +63,4 @@ Thumbs.db
 *.Z
 *.lz
 *.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
-
-# Image files (if accidentally added)
-*.png
-*.jpg
-*.jpeg
-*.bmp
-*.gif
-*.webm
-
 ```
