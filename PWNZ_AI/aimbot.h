@@ -23,9 +23,12 @@ namespace pwnz_ai {
 #include "AimbotTarget.h"
 #include "AimMath.h"
 #include "MouseController.h"
-#include "IMouseInput.h"
+#include "IMouseInput.h"  // Должен быть включен ДО SendInputMouse.h и MakcuInput.h
 #include "SendInputMouse.h"
 #include "MakcuInput.h"
+
+// Forward declaration для Overlay
+class Overlay;
 
 // ============================================================
 // Класс Aimbot
@@ -36,7 +39,7 @@ public:
     ~Aimbot();
 
     void SetConfig(const AimConfig& cfg);
-    void SyncFromOverlay(class Overlay& overlay);  // Синхронизация с UI в реальном времени
+    void SyncFromOverlay(Overlay& overlay);  // Синхронизация с UI в реальном времени
     void Update(const std::vector<Detection>& detections, int screen_w, int screen_h,
         bool is_new_frame, long long current_time_ms, float zoom_scale = 1.0f);
     void ResetTarget();
