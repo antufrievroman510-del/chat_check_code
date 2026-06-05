@@ -22,13 +22,28 @@ SOCKET g_socket = INVALID_SOCKET;
 std::string g_target_ip = "192.168.1.100"; // IP второго ПК (читового)
 int g_target_port = 5556;
 
-// Структура пакета клика
+// Структура пакета клика (должна совпадать с MouseClickServer.h)
 #pragma pack(push, 1)
 struct ClickPacket {
-    uint8_t button; // 0 = ЛКМ, 1 = ПКМ
-    uint8_t pressed; // 1 = нажато, 0 = отпущено
+    uint8_t event_type; // Тип события (должен совпадать с константами в сервере)
+    uint8_t reserved;   // Выравнивание
+    int16_t wheel_delta; // Для колеса прокрутки (+120/-120), для кнопок = 0
 };
 #pragma pack(pop)
+
+// Типы событий (должны точно совпадать с MouseClickServer.h строки 48-59)
+#define MOUSE_EVENT_LMB_DOWN   0x01
+#define MOUSE_EVENT_LMB_UP     0x02
+#define MOUSE_EVENT_RMB_DOWN   0x03
+#define MOUSE_EVENT_RMB_UP     0x04
+#define MOUSE_EVENT_MMB_DOWN   0x05
+#define MOUSE_EVENT_MMB_UP     0x06
+#define MOUSE_EVENT_WHEEL_UP   0x07
+#define MOUSE_EVENT_WHEEL_DOWN 0x08
+#define MOUSE_EVENT_X1_DOWN    0x09
+#define MOUSE_EVENT_X1_UP      0x0A
+#define MOUSE_EVENT_X2_DOWN    0x0B
+#define MOUSE_EVENT_X2_UP      0x0C
 
 // Чтение конфигурации из файла
 void load_config() {
@@ -50,12 +65,13 @@ void load_config() {
 }
 
 // Отправка пакета
-bool send_click(uint8_t button, uint8_t pressed) {
+bool send_click(uint8_t event_type, int16_t wheel_delta = 0) {
     if (g_socket == INVALID_SOCKET) return false;
 
     ClickPacket packet;
-    packet.button = button;
-    packet.pressed = pressed;
+    packet.event_type = event_type;
+    packet.reserved = 0;
+    packet.wheel_delta = htons(wheel_delta); // Преобразуем в network byte order
 
     sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
@@ -75,38 +91,74 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode >= 0) {
         MSLLHOOKSTRUCT* pMouseStruct = (MSLLHOOKSTRUCT*)lParam;
         
-        uint8_t button = 0xFF;
-        uint8_t pressed = 0;
+        uint8_t event_type = 0;
 
         switch (wParam) {
             case WM_LBUTTONDOWN:
-                button = 0; // ЛКМ
-                pressed = 1;
+                event_type = MOUSE_EVENT_LMB_DOWN;
                 break;
             case WM_LBUTTONUP:
-                button = 0;
-                pressed = 0;
+                event_type = MOUSE_EVENT_LMB_UP;
                 break;
             case WM_RBUTTONDOWN:
-                button = 1; // ПКМ
-                pressed = 1;
+                event_type = MOUSE_EVENT_RMB_DOWN;
                 break;
             case WM_RBUTTONUP:
-                button = 1;
-                pressed = 0;
+                event_type = MOUSE_EVENT_RMB_UP;
+                break;
+            case WM_MBUTTONDOWN:
+                event_type = MOUSE_EVENT_MMB_DOWN;
+                break;
+            case WM_MBUTTONUP:
+                event_type = MOUSE_EVENT_MMB_UP;
+                break;
+            case WM_MOUSEWHEEL:
+                // Определяем направление прокрутки
+                if (GET_WHEEL_DELTA_WPARAM(pMouseStruct->mouseData) > 0) {
+                    event_type = MOUSE_EVENT_WHEEL_UP;
+                } else {
+                    event_type = MOUSE_EVENT_WHEEL_DOWN;
+                }
+                break;
+            case WM_XBUTTONDOWN:
+                if (HIWORD(pMouseStruct->mouseData) == XBUTTON1) {
+                    event_type = MOUSE_EVENT_X1_DOWN;
+                } else if (HIWORD(pMouseStruct->mouseData) == XBUTTON2) {
+                    event_type = MOUSE_EVENT_X2_DOWN;
+                }
+                break;
+            case WM_XBUTTONUP:
+                if (HIWORD(pMouseStruct->mouseData) == XBUTTON1) {
+                    event_type = MOUSE_EVENT_X1_UP;
+                } else if (HIWORD(pMouseStruct->mouseData) == XBUTTON2) {
+                    event_type = MOUSE_EVENT_X2_UP;
+                }
                 break;
         }
 
-        if (button != 0xFF) {
-            if (!send_click(button, pressed)) {
+        if (event_type != 0) {
+            if (!send_click(event_type)) {
                 // Попытка переподключения при ошибке
                 std::cout << "[WARN] Ошибка отправки, попытка переподключения..." << std::endl;
                 closesocket(g_socket);
                 g_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
             } else {
-                const char* btn_name = (button == 0) ? "ЛКМ" : "ПКМ";
-                const char* action = pressed ? "НАЖАТА" : "ОТПУЩЕНА";
-                std::cout << "[CLICK] " << btn_name << " " << action << std::endl;
+                const char* event_name = "UNKNOWN";
+                switch (event_type) {
+                    case MOUSE_EVENT_LMB_DOWN: event_name = "ЛКМ НАЖАТА"; break;
+                    case MOUSE_EVENT_LMB_UP: event_name = "ЛКМ ОТПУЩЕНА"; break;
+                    case MOUSE_EVENT_RMB_DOWN: event_name = "ПКМ НАЖАТА"; break;
+                    case MOUSE_EVENT_RMB_UP: event_name = "ПКМ ОТПУЩЕНА"; break;
+                    case MOUSE_EVENT_MMB_DOWN: event_name = "СКМ НАЖАТА"; break;
+                    case MOUSE_EVENT_MMB_UP: event_name = "СКМ ОТПУЩЕНА"; break;
+                    case MOUSE_EVENT_WHEEL_UP: event_name = "КОЛЕСО ВВЕРХ"; break;
+                    case MOUSE_EVENT_WHEEL_DOWN: event_name = "КОЛЕСО ВНИЗ"; break;
+                    case MOUSE_EVENT_X1_DOWN: event_name = "X1 (НАЗАД) НАЖАТА"; break;
+                    case MOUSE_EVENT_X1_UP: event_name = "X1 (НАЗАД) ОТПУЩЕНА"; break;
+                    case MOUSE_EVENT_X2_DOWN: event_name = "X2 (ВПЕРЕД) НАЖАТА"; break;
+                    case MOUSE_EVENT_X2_UP: event_name = "X2 (ВПЕРЕД) ОТПУЩЕНА"; break;
+                }
+                std::cout << "[CLICK] " << event_name << std::endl;
             }
         }
     }
