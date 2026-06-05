@@ -29,6 +29,14 @@ public:
 extern std::vector<Detection> g_shared_heads;
 extern std::mutex g_heads_mutex;
 
+// 2PC Click Server extern declarations (defined in main.cpp)
+extern std::atomic<bool> g_click_server_running;
+extern std::atomic<std::chrono::steady_clock::time_point> g_last_lmb_click;
+extern std::atomic<std::chrono::steady_clock::time_point> g_last_rmb_click;
+extern std::atomic<int> g_last_click_type;
+extern std::atomic<float> g_last_inference_time;
+extern std::atomic<float> g_last_capture_time;
+
 struct MacroStep { int type; int val; std::string display_text; };
 struct ChatMessage { std::string text; bool is_user; };
 
