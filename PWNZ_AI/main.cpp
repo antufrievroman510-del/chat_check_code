@@ -830,7 +830,7 @@ void Initialize2PCClicks() {
 
     // Коллбэк для ЛКМ (стрельба)
     g_clickServer.set_lmb_callback([](bool pressed) {
-        auto& mc = MouseController::GetInstance();
+        MouseController& mc = MouseController::GetInstance();
         
         if (pressed) {
             mc.PressButton(VK_LBUTTON);
@@ -843,12 +843,14 @@ void Initialize2PCClicks() {
 
     // Коллбэк для ПКМ (прицеливание)
     g_clickServer.set_rmb_callback([](bool pressed) {
-        auto& mc = MouseController::GetInstance();
+        MouseController& mc = MouseController::GetInstance();
         
         if (pressed) {
             mc.PressButton(VK_RBUTTON);
+            std::cout << "[CLICK] RMB PRESSED (from network)\n";
         } else {
             mc.ReleaseButton(VK_RBUTTON);
+            std::cout << "[CLICK] RMB RELEASED (from network)\n";
         }
     });
 

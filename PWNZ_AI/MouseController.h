@@ -59,3 +59,5 @@ private:
     MouseMethod currentMethod = MouseMethod::Standard;
     bool isInitialized = false;
 };
+
+} // namespace pwnz_ai

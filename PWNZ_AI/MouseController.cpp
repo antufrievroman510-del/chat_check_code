@@ -3,13 +3,15 @@
 #include "KMBoxNet.h"
 #include <iostream>
 
+namespace pwnz_ai {
+
 // Singleton instance
 static MouseController* g_Instance = nullptr;
 
 // Глобальный экземпляр MakcuInput для режима Makcu_UART
-static std::unique_ptr<pwnz_ai::MakcuInput> g_makcuInstance;
+static std::unique_ptr<MakcuInput> g_makcuInstance;
 // Глобальный экземпляр KMBoxNet для режима KMBox_Net
-static std::unique_ptr<pwnz_ai::KMBoxNet> g_kmboxInstance;
+static std::unique_ptr<KMBoxNet> g_kmboxInstance;
 
 MouseController& MouseController::GetInstance() {
     if (!g_Instance) {
@@ -228,7 +230,7 @@ void MouseController::SetMethod(MouseMethod method) {
 
 // Функции для инициализации устройств извне (вызываются из Aimbot)
 void InitMakcuDevice(const std::string& port) {
-    g_makcuInstance = std::make_unique<pwnz_ai::MakcuInput>();
+    g_makcuInstance = std::make_unique<MakcuInput>();
     if (!g_makcuInstance->Initialize(port)) {
         std::cerr << "[MouseController] Failed to initialize Makcu on port " << port << std::endl;
         g_makcuInstance.reset();
@@ -236,7 +238,7 @@ void InitMakcuDevice(const std::string& port) {
 }
 
 void InitKMBoxDevice(const std::string& ip, int port) {
-    g_kmboxInstance = std::make_unique<pwnz_ai::KMBoxNet>();
+    g_kmboxInstance = std::make_unique<KMBoxNet>();
     if (!g_kmboxInstance->ConnectToDevice(ip, port)) {
         std::cerr << "[MouseController] Failed to initialize KMBox at " << ip << ":" << port << std::endl;
         g_kmboxInstance.reset();
@@ -256,3 +258,5 @@ void ShutdownKMBoxDevice() {
         g_kmboxInstance.reset();
     }
 }
+
+} // namespace pwnz_ai
