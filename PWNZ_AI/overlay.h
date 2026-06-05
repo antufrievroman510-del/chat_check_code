@@ -32,6 +32,9 @@ extern std::mutex g_heads_mutex;
 struct MacroStep { int type; int val; std::string display_text; };
 struct ChatMessage { std::string text; bool is_user; };
 
+// Forward declaration for Aimbot (defined in aimbot.h)
+class Aimbot;
+
 class Overlay {
 public:
     // ---- Состояние (все поля остаются как у вас) ----

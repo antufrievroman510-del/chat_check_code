@@ -20,6 +20,8 @@ enum class MouseMethod {
     Makcu_UART     // Плата Makcu через COM-порт
 };
 
+namespace pwnz_ai {
+
 class MouseController {
 public:
     static MouseController& GetInstance();
@@ -54,3 +56,5 @@ private:
     MouseMethod currentMethod = MouseMethod::Standard;
     bool isInitialized = false;
 };
+
+} // namespace pwnz_ai
