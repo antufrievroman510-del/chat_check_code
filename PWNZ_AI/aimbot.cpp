@@ -899,80 +899,28 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
 // Поток опроса кнопок для 2PC-связки
 // ============================================================
 void Aimbot::StartButtonMonitor() {
-    if (m_buttonMonitorRunning.load()) {
-        std::cout << "[Aimbot] Button monitor already running" << std::endl;
-        return;
-    }
-    
-    m_stopButtonMonitor.store(false);
-    m_buttonMonitorThread = std::thread(&Aimbot::ButtonMonitorThread, this);
-    m_buttonMonitorRunning.store(true);
-    
-    std::cout << "[Aimbot] Button monitor started for 2PC mode" << std::endl;
+    // В новой реализации с коллбэками makcu::Device отдельный поток опроса НЕ НУЖЕН
+    // Коллбэк setMouseButtonCallback вызывается асинхронно при получении событий от устройства
+    // и напрямую обновляет g_makcu_aiming/g_makcu_shooting/g_remote_aim_key в MakcuInput::onMouseButton
+    std::cout << "[Aimbot] Button monitor not needed - using makcu::Device callbacks instead" << std::endl;
 }
 
 void Aimbot::StopButtonMonitor() {
-    if (!m_buttonMonitorRunning.load()) {
-        return;
+    // В новой реализации с коллбэками makcu::Device отдельный поток опроса НЕ НУЖЕН
+    if (m_buttonMonitorRunning.load()) {
+        m_stopButtonMonitor.store(true);
+        
+        if (m_buttonMonitorThread.joinable()) {
+            m_buttonMonitorThread.join();
+        }
+        
+        m_buttonMonitorRunning.store(false);
+        std::cout << "[Aimbot] Legacy button monitor stopped (if it was running)" << std::endl;
     }
-    
-    m_stopButtonMonitor.store(true);
-    
-    if (m_buttonMonitorThread.joinable()) {
-        m_buttonMonitorThread.join();
-    }
-    
-    m_buttonMonitorRunning.store(false);
-    
-    std::cout << "[Aimbot] Button monitor stopped" << std::endl;
 }
 
 void Aimbot::ButtonMonitorThread() {
-    std::cout << "[Aimbot] Button monitor thread started" << std::endl;
-    
-    // Опрос состояния кнопок каждые 5 мс для минимальной задержки
-    const int poll_interval_ms = 5;
-    
-    while (!m_stopButtonMonitor.load() && hardware_type >= 1) {
-        // В аппаратном режиме состояние кнопок обновляется через MakcuInput::MonitorThreadFunc
-        // который читает события от устройства и обновляет g_makcu_aiming/g_makcu_shooting
-        // Здесь мы только логируем изменения для отладки
-        
-        static bool prev_aiming = false;
-        static bool prev_shooting = false;
-        
-        bool current_aiming = pwnz_ai::g_makcu_aiming.load();
-        bool current_shooting = pwnz_ai::g_makcu_shooting.load();
-        
-        // Детектирование нажатия ПКМ (прицеливание)
-        if (current_aiming && !prev_aiming) {
-            std::cout << "[AIM DEBUG] Aim key PRESSED! (RMB from Makcu)" << std::endl;
-            g_remote_aim_key.store(true);
-        } else if (!current_aiming && prev_aiming) {
-            std::cout << "[AIM DEBUG] Aim key RELEASED! (RMB from Makcu)" << std::endl;
-            // Не сбрасываем g_remote_aim_key если ЛКМ ещё нажата
-            if (!current_shooting) {
-                g_remote_aim_key.store(false);
-            }
-        }
-        
-        // Детектирование нажатия ЛКМ (стрельба)
-        if (current_shooting && !prev_shooting) {
-            std::cout << "[AIM DEBUG] Fire key PRESSED! (LMB from Makcu)" << std::endl;
-            g_remote_aim_key.store(true);
-        } else if (!current_shooting && prev_shooting) {
-            std::cout << "[AIM DEBUG] Fire key RELEASED! (LMB from Makcu)" << std::endl;
-            // Не сбрасываем g_remote_aim_key если ПКМ ещё нажата
-            if (!current_aiming) {
-                g_remote_aim_key.store(false);
-            }
-        }
-        
-        prev_aiming = current_aiming;
-        prev_shooting = current_shooting;
-        
-        std::this_thread::sleep_for(std::chrono::milliseconds(poll_interval_ms));
-    }
-    
-    std::cout << "[Aimbot] Button monitor thread ended" << std::endl;
+    // УСТАРЕВШАЯ ФУНКЦИЯ - больше не используется
+    // Логика перенесена в MakcuInput::onMouseButton коллбэк
+    std::cout << "[Aimbot] ButtonMonitorThread is deprecated - callbacks handle button events" << std::endl;
 }

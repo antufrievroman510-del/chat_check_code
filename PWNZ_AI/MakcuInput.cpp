@@ -2,6 +2,9 @@
 #include <iostream>
 #include <algorithm>
 
+// Объявление глобальной переменной из main.cpp
+extern std::atomic<bool> g_remote_aim_key;
+
 namespace pwnz_ai {
 
 // Определение глобальных атомарных переменных для состояния кнопок Makcu (2PC режим)
@@ -64,8 +67,8 @@ void MakcuInput::Shutdown() {
     std::cout << "[MakcuInput] Shutdown called" << std::endl;
     
     if (m_device) {
-        // Отключаем мониторинг
-        m_device->enableButtonMonitoring(false);
+        // Отключаем мониторинг (игнорируем возврат, т.к. устройство может быть уже отключено)
+        (void)m_device->enableButtonMonitoring(false);
         std::cout << "[MakcuInput] Button monitoring disabled" << std::endl;
         
         // Отключаемся от устройства
@@ -208,6 +211,11 @@ void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
                       << " pressed=" << pressed << std::endl;
             break;
     }
+    
+    // КРИТИЧНО: Обновляем g_remote_aim_key напрямую в коллбэке для мгновенной реакции
+    // Аимбот активируется при нажатии ЛЮБОЙ кнопки прицеливания или стрельбы
+    bool any_aim_key = g_makcu_aiming.load() || g_makcu_zooming.load() || g_makcu_shooting.load();
+    g_remote_aim_key.store(any_aim_key);
 }
 
 } // namespace pwnz_ai
