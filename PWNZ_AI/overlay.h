@@ -36,6 +36,10 @@ extern std::atomic<std::chrono::steady_clock::time_point> g_last_rmb_click;
 extern std::atomic<int> g_last_click_type;
 extern std::atomic<float> g_last_inference_time;
 extern std::atomic<float> g_last_capture_time;
+extern std::string GetLocalIPAddress();
+extern void Restart2PCClicks(int port);
+extern void Initialize2PCClicks(int port);
+extern void Shutdown2PCClicks();
 
 struct MacroStep { int type; int val; std::string display_text; };
 struct ChatMessage { std::string text; bool is_user; };

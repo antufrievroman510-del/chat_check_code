@@ -50,9 +50,7 @@
 #include "MakcuInput.h"
 #include "MouseController.h"
 
-// Forward declarations from main.cpp for 2PC click server
-extern std::string GetLocalIPAddress();
-extern void Restart2PCClicks(int port);
+// Forward declarations from main.cpp for 2PC click server (now in overlay.h)
 extern std::atomic<bool> g_click_server_running;
 extern std::atomic<std::chrono::steady_clock::time_point> g_last_lmb_click;
 extern std::atomic<std::chrono::steady_clock::time_point> g_last_rmb_click;
@@ -1707,23 +1705,25 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     
     // Bottom Section - Quick Guide for 2PC UDP
     ImGui::Spacing();
-    if (BeginPanel(is_russian ? "📖 Быстрая инструкция по 2PC UDP" : "📖 Quick Guide for 2PC UDP", ImVec2(-1, 160), acc_vec)) {
+    if (BeginPanel(is_russian ? "📖 Быстрая инструкция по 2PC UDP" : "📖 Quick Guide for 2PC UDP", ImVec2(-1, 220), acc_vec)) {
         ImGui::Columns(2, nullptr, false);
         
         // Column 1: Setup Steps
         ImGui::TextColored(acc_vec, is_russian ? "НАСТРОЙКА (5 шагов):" : "SETUP (5 steps):");
         ImGui::Separator();
         ImGui::TextWrapped(is_russian ? 
-            "1. На этом ПК (читовом): скопируй IP выше\n"
+            "1. На этом ПК (читовом): скопируй IP из поля выше\n"
             "2. На игровом ПК: запусти MouseClickSender.exe\n"
             "3. Введи IP читового ПК в настройках клиента\n"
             "4. Нажми 'Start' на клиенте\n"
-            "5. Здесь нажми 'APPLY / ПРИНЯТЬ'" :
-            "1. On this PC (cheat): copy IP above\n"
+            "5. Здесь нажми 'APPLY / ПРИНЯТЬ'\n\n"
+            "После этого нажимай ПКМ на игровом ПК - аимбот активируется!" :
+            "1. On this PC (cheat): copy IP from field above\n"
             "2. On gaming PC: run MouseClickSender.exe\n"
             "3. Enter cheat PC IP in client settings\n"
             "4. Click 'Start' on client\n"
-            "5. Here click 'APPLY / ПРИНЯТЬ'");
+            "5. Here click 'APPLY / ПРИНЯТЬ'\n\n"
+            "After that press RMB on gaming PC - aimbot will activate!");
         
         ImGui::NextColumn();
         
@@ -1733,21 +1733,38 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         ImGui::TextWrapped(is_russian ? 
             "• Сервер слушает порт 5556 (по умолчанию)\n"
             "• Брандмауэр должен разрешать UDP 5556\n"
-            "• ПКМ активирует аимбот\n"
-            "• ЛКМ активирует стрельбу\n"
-            "• Индикатор показывает последний клик" :
+            "• ПКМ активирует аимбот (g_remote_aim_key)\n"
+            "• ЛКМ активирует стрельбу (SendInput)\n"
+            "• Индикатор показывает последний клик\n"
+            "• Оба ПК должны быть в одной сети" :
             "• Server listens on port 5556 (default)\n"
             "• Firewall must allow UDP 5556\n"
-            "• RMB activates aimbot\n"
-            "• LMB activates shooting\n"
-            "• Indicator shows last click");
+            "• RMB activates aimbot (g_remote_aim_key)\n"
+            "• LMB activates shooting (SendInput)\n"
+            "• Indicator shows last click\n"
+            "• Both PCs must be in same network");
         
         ImGui::Columns(1);
         
         ImGui::Spacing();
-        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), is_russian ? 
-            "✓ Статус: Сервер принимает клики → Аимбот активируется при ПКМ" :
-            "✓ Status: Server receives clicks → Aimbot activates on RMB");
+        ImGui::Separator();
+        ImGui::Spacing();
+        
+        // Status line with green checkmark
+        if (g_click_server_running.load()) {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), is_russian ? 
+                "✓ СТАТУС: Сервер запущен и принимает клики → Аимбот активируется при ПКМ" :
+                "✓ STATUS: Server running and receiving clicks → Aimbot activates on RMB");
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), is_russian ? 
+                "⚠ СТАТУС: Сервер остановлен - нажми APPLY для запуска" :
+                "⚠ STATUS: Server stopped - click APPLY to start");
+        }
+        
+        ImGui::Spacing();
+        ImGui::TextDisabled(is_russian ? 
+            "Подробная документация: 2PC_UDP_INSTRUCTION_RU.md" :
+            "Full documentation: 2PC_UDP_INSTRUCTION_RU.md");
     }
     EndPanel();
     
