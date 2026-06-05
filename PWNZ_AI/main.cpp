@@ -70,14 +70,14 @@ namespace pwnz_ai {
     std::atomic<bool> g_makcu_aiming(false);      // SIDE2 (Mouse5) - прицеливание (основная клавиша аима)
     std::atomic<bool> g_makcu_shooting(false);    // LMB - стрельба
     std::atomic<bool> g_makcu_zooming(false);     // RMB - зум/прицеливание
+    
+    // Legacy переменные для обратной совместимости (aliased к новым переменным)
+    std::atomic<bool>& aiming = g_makcu_aiming;
+    std::atomic<bool>& shooting = g_makcu_shooting;
+    std::atomic<bool>& zooming = g_makcu_zooming;
 }
 
-// Legacy переменные для обратной совместимости (aliased к новым переменным)
-std::atomic<bool>& aiming = pwnz_ai::g_makcu_aiming;
-std::atomic<bool>& shooting = pwnz_ai::g_makcu_shooting;
-std::atomic<bool>& zooming = pwnz_ai::g_makcu_zooming;
-
-// Legacy переменная для обратной совместимости с текущим кодом
+// Глобальная переменная для 2PC-связки
 std::atomic<bool> g_remote_aim_key(false);
 SOCKET g_udp_sock = INVALID_SOCKET;
 

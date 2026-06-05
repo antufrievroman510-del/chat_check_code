@@ -1481,11 +1481,11 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         ImGui::Separator();
         ImGui::Spacing();
 
-        // === КРИТИЧНО: Используем MakcuWrapper для 2PC-связки ===
-        // MakcuWrapper имеет встроенный поток мониторинга кнопок через C API
-        static std::unique_ptr<pwnz_ai::MakcuWrapper> g_makcu_wrapper;
+        // === КРИТИЧНО: Используем MakcuInput для 2PC-связки ===
+        // MakcuInput использует библиотеку macku2pc с коллбэками для кнопок
+        static std::unique_ptr<pwnz_ai::MakcuInput> g_makcu_input;
         
-        bool connected = (g_makcu_wrapper != nullptr && g_makcu_wrapper->IsConnected());
+        bool connected = (g_makcu_input != nullptr && g_makcu_input->IsConnected());
 
         // Кнопка "Принять" для подключения
         if (!connected) {
@@ -1493,17 +1493,18 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             if (ImGui::Button("Apply/Connect", ImVec2(150, 35))) {
                 // Попытка подключения к выбранному порту
                 std::cout << "[OVERLAY] Attempting to connect to " << this->com_port_buf 
-                          << " at " << baud_values[baud_rate_idx] << " baud..." << std::endl;
+                          << "..." << std::endl;
                 
-                // Создаём объект MakcuWrapper если ещё не создан
-                if (!g_makcu_wrapper) {
-                    g_makcu_wrapper = std::make_unique<pwnz_ai::MakcuWrapper>();
+                // Создаём объект MakcuInput если ещё не создан
+                if (!g_makcu_input) {
+                    g_makcu_input = std::make_unique<pwnz_ai::MakcuInput>();
                 }
                 
-                // Подключаемся через MakcuWrapper (автопоиск по VID:PID 1A86:55D3)
-                bool result = g_makcu_wrapper->Connect();
+                // Подключаемся через MakcuInput (используя порт из настроек)
+                std::string portStr = std::string(this->com_port_buf);
+                bool result = g_makcu_input->Initialize(portStr);
                 if (result) {
-                    std::cout << "[OVERLAY] Successfully connected to Makcu device (VID:PID 1A86:55D3)" << std::endl;
+                    std::cout << "[OVERLAY] Successfully connected to Makcu on " << portStr << std::endl;
                     // === КРИТИЧНО: Запускаем поток опроса кнопок для 2PC-связки ===
                     // Устанавливаем флаг для main.cpp, который запустит StartButtonMonitor()
                     this->apply_hw_flag = true;
@@ -1513,16 +1514,16 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
                     std::cout << "[OVERLAY] Set apply_hw_flag to trigger button monitor start" << std::endl;
                 } else {
                     std::cerr << "[OVERLAY] Failed to connect to Makcu device" << std::endl;
-                    g_makcu_wrapper.reset();  // Очищаем при ошибке
+                    g_makcu_input.reset();  // Очищаем при ошибке
                 }
             }
             ImGui::PopStyleColor();
         } else {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
             if (ImGui::Button("Disconnect", ImVec2(150, 35))) {
-                if (g_makcu_wrapper) {
-                    g_makcu_wrapper->Disconnect();
-                    g_makcu_wrapper.reset();
+                if (g_makcu_input) {
+                    g_makcu_input->Shutdown();
+                    g_makcu_input.reset();
                 }
                 std::cout << "[OVERLAY] Disconnected from Makcu" << std::endl;
             }
