@@ -71,13 +71,13 @@ namespace KMBoxCmd {
     constexpr uint8_t MOVE_ABS = 0x02;      // Абсолютное позиционирование
     constexpr uint8_t BUTTON = 0x03;        // Кнопка мыши
     constexpr uint8_t SCROLL = 0x04;        // Скролл
-}
+} // namespace KMBoxCmd
 
 // Кнопки мыши
 namespace KMBoxButton {
     constexpr uint8_t LEFT = 0x01;
     constexpr uint8_t RIGHT = 0x02;
     constexpr uint8_t MIDDLE = 0x04;
-}
+} // namespace KMBoxButton
 
 #endif // KMBOXNET_H
