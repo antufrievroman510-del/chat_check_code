@@ -1,5 +1,7 @@
-```
-# Compiled and build artifacts
+```cpp
+// Configuration file for PWNZ_AI project
+
+// Ignore compiled object files
 *.o
 *.obj
 *.exe
@@ -8,78 +10,32 @@
 *.a
 *.out
 
-# Dependencies
-venv/
-.venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-.venv.bak/
-pip-log.txt
-pip-selfcheck.json
-
-# Build directories
+// Ignore build directories
 build/
 dist/
-*.egg-info/
+target/
 
-# Editors
+// Ignore IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Logs and temporary files
-*.log
+// Ignore temporary files
 *.tmp
-*.temp
-*~
-.DS_Store
-Thumbs.db
+*.log
 
-# Environment variables
+// Ignore environment files
 .env
 .env.local
 *.env.*
-!*.env.example
 
-# Coverage reports
-coverage/
-htmlcov/
-.coverage
-
-# Python specific
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# C/C++ specific
-*.o
-*.obj
-*.exe
-*.dll
-*.so
-*.a
-*.dylib
-*.plist
-*.dSYM/
+// Ignore dependency directories
+node_modules/
+venv/
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+.gradle/
 ```
