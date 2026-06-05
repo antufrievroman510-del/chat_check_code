@@ -824,7 +824,7 @@ void RemoteActivationServer() {
 
 // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ДЛЯ 2PC CLICKS ====================
 static pwnz_ai::MouseClickServer g_clickServer;
-static std::atomic<bool> g_click_server_running{false};
+std::atomic<bool> g_click_server_running{false};
 
 // Глобальные переменные для отслеживания последних кликов (для GUI)
 std::atomic<std::chrono::steady_clock::time_point> g_last_lmb_click{std::chrono::steady_clock::now()};

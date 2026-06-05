@@ -31,6 +31,9 @@ namespace pwnz_ai {
 
 #include "MakcuInput.h"  // Оставляем, т.к. нужен полный тип для unique_ptr
 
+// Глобальная переменная для 2PC-связки (определена в main.cpp)
+extern std::atomic<bool> g_remote_aim_key;
+
 // Forward declaration для Overlay
 class Overlay;
 
