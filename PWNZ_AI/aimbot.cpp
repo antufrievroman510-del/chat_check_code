@@ -221,7 +221,7 @@ bool Aimbot::InitHardware() {
                     std::cout << "[Aimbot] Creating MakcuInput for port: " << comPort << std::endl;
                     
                     auto makcuInstance = std::make_unique<pwnz_ai::MakcuInput>();
-                    if (!makcuInstance->Initialize(comPort)) {
+                    if (!makcuInstance->Init(comPort)) {
                         std::cerr << "[Aimbot] Failed to initialize MakcuInput on " << comPort << std::endl;
                         // Fallback на SendInput
                         m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();

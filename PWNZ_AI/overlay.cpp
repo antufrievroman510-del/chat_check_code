@@ -1503,7 +1503,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
                 
                 // Подключаемся через MakcuInput (используя порт из настроек)
                 std::string portStr = std::string(this->com_port_buf);
-                bool result = g_makcu_input->Initialize(portStr);
+                bool result = g_makcu_input->Init(portStr);
                 if (result) {
                     std::cout << "[OVERLAY] Successfully connected to Makcu on " << portStr << std::endl;
                     // === КРИТИЧНО: Запускаем поток опроса кнопок для 2PC-связки ===
