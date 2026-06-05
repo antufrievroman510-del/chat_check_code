@@ -17,10 +17,16 @@
 #include "MakcuInput.h"  // Для доступа к классу MakcuInput и g_makcu_* переменным
 
 // Объявление глобальных переменных из main.cpp (namespace pwnz_ai)
+// Эти переменные определены в main.cpp как:
+//   std::atomic<bool> g_makcu_aiming, g_makcu_shooting, g_makcu_zooming;
+//   std::atomic<bool> aiming = g_makcu_aiming, shooting = g_makcu_shooting, zooming = g_makcu_zooming;
 namespace pwnz_ai {
     extern std::atomic<bool> g_makcu_aiming;
     extern std::atomic<bool> g_makcu_shooting;
     extern std::atomic<bool> g_makcu_zooming;
+    extern std::atomic<bool> aiming;
+    extern std::atomic<bool> shooting;
+    extern std::atomic<bool> zooming;
 }
 
 extern std::atomic<bool> g_remote_aim_key;  // Глобальная переменная из main.cpp
@@ -571,9 +577,9 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
     if (hardware_type >= 1) {
         // В аппаратном режиме состояние кнопок определяется через обратную связь от устройства
         // Проверяем все источники: SIDE2 (aiming), RMB (zooming), LMB (shooting), remote_key
-        bool makcu_aiming = pwnz_ai::g_makcu_aiming.load();      // SIDE2 (Mouse5)
-        bool makcu_zooming = pwnz_ai::g_makcu_zooming.load();    // RMB
-        bool makcu_shooting = pwnz_ai::g_makcu_shooting.load();  // LMB
+        bool makcu_aiming = pwnz_ai::aiming.load();      // SIDE2 (Mouse5)
+        bool makcu_zooming = pwnz_ai::zooming.load();    // RMB
+        bool makcu_shooting = pwnz_ai::shooting.load();  // LMB
         
         // Активация аимбота если нажата ЛЮБАЯ кнопка прицеливания или стрельбы
         key_pressed = makcu_aiming || makcu_zooming || makcu_shooting || g_remote_aim_key.load();
@@ -834,9 +840,9 @@ void Aimbot::Update(const std::vector<Detection>& detections, int screen_w, int 
         
         // Получаем актуальное состояние кнопок из глобальных переменных
         // В РЕФЕРЕНСЕ: SIDE2 (Mouse5) = aiming, RMB = zooming, LMB = shooting
-        bool aiming_now = pwnz_ai::g_makcu_aiming.load();   // SIDE2 (Mouse5) - прицеливание
-        bool zooming_now = pwnz_ai::g_makcu_zooming.load(); // RMB - зум
-        bool shooting_now = pwnz_ai::g_makcu_shooting.load(); // LMB - стрельба
+        bool aiming_now = pwnz_ai::aiming.load();   // SIDE2 (Mouse5) - прицеливание
+        bool zooming_now = pwnz_ai::zooming.load(); // RMB - зум
+        bool shooting_now = pwnz_ai::shooting.load(); // LMB - стрельба
         
         // Для совместимости: считаем aiming активным если нажат SIDE2 или RMB
         bool aim_active = aiming_now || zooming_now;
