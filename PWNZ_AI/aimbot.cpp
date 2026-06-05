@@ -202,18 +202,23 @@ bool Aimbot::InitHardware() {
                 break;
             case 1: // Makcu (аппаратный ввод через COM-порт)
                 {
-                    // Используем новый MakcuInput с автопоиском по VID:PID
-                    std::cout << "[Aimbot] Creating MakcuInput with VID:PID " 
-                              << std::hex << 0x1A86 << ":" << 0x55D3 << std::dec << std::endl;
+                    // Формируем имя COM-порта из настроек оверлея
+                    std::string comPort = "COM5"; // По умолчанию
+                    if (strlen(overlay.com_port_buf) > 0) {
+                        comPort = std::string(overlay.com_port_buf);
+                    }
+                    
+                    std::cout << "[Aimbot] Creating MakcuInput for port: " << comPort << std::endl;
                     
                     auto makcuInstance = std::make_unique<pwnz_ai::MakcuInput>();
-                    if (!makcuInstance->Initialize(0x1A86, 0x55D3)) {
-                        std::cerr << "[Aimbot] Failed to initialize MakcuInput!" << std::endl;
+                    if (!makcuInstance->Initialize(comPort)) {
+                        std::cerr << "[Aimbot] Failed to initialize MakcuInput on " << comPort << std::endl;
                         // Fallback на SendInput
                         m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
                     } else {
                         // Сохраняем указатель на MakcuInput
                         m_makcuInstance = std::move(makcuInstance);
+                        std::cout << "[Aimbot] MakcuInput initialized successfully on " << comPort << std::endl;
                     }
                 }
                 break;
@@ -242,12 +247,6 @@ bool Aimbot::InitHardware() {
         }
 
         std::cout << "[Aimbot] Hardware initialized successfully. Type=" << hardware_type << std::endl;
-        
-        // === КРИТИЧНО: Для 2PC-связки запускаем поток опроса кнопок ===
-        if (hardware_type == 1) { // Makcu mode
-            StartButtonMonitor();
-            std::cout << "[Aimbot] Button monitor auto-started for Makcu 2PC mode" << std::endl;
-        }
         
         return true;
     }
