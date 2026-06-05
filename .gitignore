@@ -7,41 +7,50 @@
 *.so
 *.a
 *.out
-build/
-dist/
 
 # Dependencies
-.venv/
 venv/
-node_modules/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+ENV/
+
+# Build directories
+build/
+dist/
+*.egg-info/
 
 # Logs and temp files
 *.log
 *.tmp
 *.swp
+*.swo
 
-# Environment
+# Environment variables
 .env
 .env.local
-*.env.*
+.env.*
 
 # Editors
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# Coverage reports
+# Coverage
+.coverage
 coverage/
 htmlcov/
-*.coverage
 
-# Python specific
-__pycache__/
-*.pyc
-*.pyo
-.Python
-*.pyd
+# OS generated files
+.DS_Store
+Thumbs.db
 
-# Compression files
+# Compressed files
 *.zip
 *.gz
 *.tar

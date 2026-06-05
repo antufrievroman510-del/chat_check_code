@@ -1578,26 +1578,25 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         ImGui::Separator();
         ImGui::Spacing();
         
-        auto& makcu = pwnz_ai::MakcuInput::Instance();
-        bool connected = makcu.IsConnected();
-        
-        if (!connected) {
+        // Makcu connection status using global instance from MouseController
+        bool makcuConnected = false;  // Placeholder - will be implemented with proper singleton
+        if (!makcuConnected) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
             if (ImGui::Button("Connect MAKCU", ImVec2(150, 35))) {
                 std::string port(this->com_port_buf);
-                makcu.Connect(port);
+                InitMakcuDevice(port);
             }
             ImGui::PopStyleColor();
         } else {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
             if (ImGui::Button("Disconnect MAKCU", ImVec2(150, 35))) {
-                makcu.Disconnect();
+                ShutdownMakcuDevice();
             }
             ImGui::PopStyleColor();
         }
         
         ImGui::SameLine();
-        if (connected) {
+        if (makcuConnected) {
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "CONNECTED");
         } else {
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "DISCONNECTED");
@@ -1761,18 +1760,18 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     
     ImGui::Spacing();
     
-    auto& makcu = pwnz_ai::MakcuInput::Instance();
-    
-    // Test Move Button
+    // Test Move Button using MouseController functions
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 0.8f));
     if (ImGui::Button(is_russian ? "Test Move Mouse" : "Test Move Mouse", ImVec2(200, 40))) {
         if (this->hw_enabled) {
-            if (this->hardware_mode_idx == 1 && makcu.IsConnected()) {
-                makcu.Move(this->test_move_x, this->test_move_y);
+            if (this->hardware_mode_idx == 1) {
+                // Makcu mode - use global instance via MouseController
+                auto& mc = MouseController::GetInstance();
+                mc.MoveMouse(this->test_move_x, this->test_move_y);
                 std::cout << "[OVERLAY] Sent Makcu move: (" << this->test_move_x << ", " << this->test_move_y << ")" << std::endl;
             } else if (this->hardware_mode_idx == 2) {
-                // KMbox logic removed
-                std::cout << "[OVERLAY] KMbox not supported" << std::endl;
+                // KMbox mode - not fully implemented yet
+                std::cout << "[OVERLAY] KMbox move not fully implemented" << std::endl;
             } else if (this->hardware_mode_idx == 0) {
                 // Local mouse - use SendInput
                 #ifdef _WIN32
@@ -1812,12 +1811,16 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.7f, 0.2f, 0.8f));
     if (ImGui::Button(is_russian ? "Test Left Click" : "Test Left Click", ImVec2(200, 35))) {
         if (this->hw_enabled) {
-            if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
-                hw.SendMackuClick(0); // Left click (0=left для прошивки MAKCM)
-                std::cout << "[OVERLAY] Sent Macku left click" << std::endl;
-            } else if (this->hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
-                hw.SendKMboxClick(1); // Left click
-                std::cout << "[OVERLAY] Sent KMbox left click" << std::endl;
+            if (this->hardware_mode_idx == 1) {
+                // Makcu mode - use MouseController
+                auto& mc = MouseController::GetInstance();
+                mc.PressButton(VK_LBUTTON);
+                Sleep(50);
+                mc.ReleaseButton(VK_LBUTTON);
+                std::cout << "[OVERLAY] Sent Makcu left click" << std::endl;
+            } else if (this->hardware_mode_idx == 2) {
+                // KMbox mode - not fully implemented
+                std::cout << "[OVERLAY] KMbox click not fully implemented" << std::endl;
             } else {
                 #ifdef _WIN32
                 INPUT inputs[2] = {};
@@ -1849,16 +1852,18 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.5f, 0.2f, 0.8f));
     if (ImGui::Button(is_russian ? "Test Double Click" : "Test Double Click", ImVec2(200, 35))) {
         if (this->hw_enabled) {
-            if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
-                hw.SendMackuClick(0); // Left click
+            if (this->hardware_mode_idx == 1) {
+                // Makcu mode - use MouseController
+                auto& mc = MouseController::GetInstance();
+                mc.PressButton(VK_LBUTTON);
+                mc.ReleaseButton(VK_LBUTTON);
                 Sleep(50);
-                hw.SendMackuClick(0); // Left click again
-                std::cout << "[OVERLAY] Sent Macku double click" << std::endl;
-            } else if (this->hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
-                hw.SendKMboxClick(1);
-                Sleep(50);
-                hw.SendKMboxClick(1);
-                std::cout << "[OVERLAY] Sent KMbox double click" << std::endl;
+                mc.PressButton(VK_LBUTTON);
+                mc.ReleaseButton(VK_LBUTTON);
+                std::cout << "[OVERLAY] Sent Makcu double click" << std::endl;
+            } else if (this->hardware_mode_idx == 2) {
+                // KMbox mode - not fully implemented
+                std::cout << "[OVERLAY] KMbox double click not fully implemented" << std::endl;
             } else {
                 #ifdef _WIN32
                 INPUT inputs[4] = {};
@@ -1915,8 +1920,9 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     ImGui::TextColored(acc_vec, is_russian ? "Статус оборудования:" : "Hardware Status:");
     ImGui::Spacing();
     
-    bool macku_connected = hw.IsMackuConnected();
-    bool kmbox_connected = hw.IsKMboxConnected();
+    // Check Makcu connection status via MouseController global instance
+    bool macku_connected = false;  // Placeholder - would need proper status check
+    bool kmbox_connected = false;  // Placeholder - would need proper status check
     
     if (macku_connected) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ Makcu: CONNECTED");
