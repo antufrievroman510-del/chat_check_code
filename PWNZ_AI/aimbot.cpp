@@ -16,10 +16,21 @@
 #include "overlay.h"  // [ДОБАВЛЕНО] Для типа Overlay в SyncFromOverlay()
 #include "MakcuInput.h"  // Для доступа к классу MakcuInput и g_makcu_* переменным
 
-// Объявление глобальных переменных из main.cpp
-extern std::atomic<bool> aiming;    // RMB/SIDE2 - прицеливание (aliased к aiming)
-extern std::atomic<bool> shooting;  // LMB - стрельба (aliased к shooting)
-extern std::atomic<bool> zooming;   // RMB - зум/прицеливание (aliased к zooming)
+// Объявление глобальных переменных из main.cpp (namespace pwnz_ai)
+extern namespace pwnz_ai {
+    extern std::atomic<bool> g_makcu_aiming;
+    extern std::atomic<bool> g_makcu_shooting;
+    extern std::atomic<bool> g_makcu_zooming;
+    // Legacy алиасы
+    extern std::atomic<bool>& aiming;
+    extern std::atomic<bool>& shooting;
+    extern std::atomic<bool>& zooming;
+}
+
+using pwnz_ai::aiming;
+using pwnz_ai::shooting;
+using pwnz_ai::zooming;
+
 extern std::atomic<bool> g_remote_aim_key;  // Глобальная переменная из main.cpp
 extern std::atomic<float> g_last_inference_time;
 extern std::atomic<bool> g_is_target_locked;
