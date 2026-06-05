@@ -8,6 +8,7 @@
 #include <memory>
 #include <functional>
 #include <string>
+#include <makcu.h>
 
 // Глобальные атомарные переменные для состояния кнопок Makcu (2PC режим)
 // Эти переменные обновляются в коллбэке и читаются из aimbot.cpp
