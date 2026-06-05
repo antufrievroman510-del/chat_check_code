@@ -162,6 +162,14 @@ void MouseController::PressButton(int buttonCode) {
         case VK_MBUTTON:
             input.mi.dwFlags = MOUSEEVENTF_MIDDLEDOWN;
             break;
+        case VK_XBUTTON1:
+            input.mi.dwFlags = MOUSEEVENTF_XDOWN;
+            input.mi.mouseData = XBUTTON1;
+            break;
+        case VK_XBUTTON2:
+            input.mi.dwFlags = MOUSEEVENTF_XDOWN;
+            input.mi.mouseData = XBUTTON2;
+            break;
         default:
             return;
     }
@@ -185,6 +193,14 @@ void MouseController::ReleaseButton(int buttonCode) {
             break;
         case VK_MBUTTON:
             input.mi.dwFlags = MOUSEEVENTF_MIDDLEUP;
+            break;
+        case VK_XBUTTON1:
+            input.mi.dwFlags = MOUSEEVENTF_XUP;
+            input.mi.mouseData = XBUTTON1;
+            break;
+        case VK_XBUTTON2:
+            input.mi.dwFlags = MOUSEEVENTF_XUP;
+            input.mi.mouseData = XBUTTON2;
             break;
         default:
             return;
