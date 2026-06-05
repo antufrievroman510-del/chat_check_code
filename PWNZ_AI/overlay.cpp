@@ -48,6 +48,7 @@
 #include "VMProtectSDK.h"
 #include "head_smoother.h"
 #include "MakcuInput.h"
+#include "MouseController.h"
 
 extern HeadSmoother g_head_smoother;
 #pragma comment(lib, "dwmapi.lib")

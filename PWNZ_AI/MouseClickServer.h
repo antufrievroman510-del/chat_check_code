@@ -9,6 +9,8 @@
 #include <iostream>
 #include <functional>
 
+namespace pwnz_ai {
+
 /**
  * @brief Сервер для приема нажатий кнопок мыши с первого ПК
  * 
@@ -185,3 +187,5 @@ public:
         return is_running.load();
     }
 };
+
+} // namespace pwnz_ai
