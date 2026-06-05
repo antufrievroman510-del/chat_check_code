@@ -1,6 +1,7 @@
 #include "MouseController.h"
 #include "MakcuInput.h"
 #include <iostream>
+#include <memory>
 
 namespace pwnz_ai {
 

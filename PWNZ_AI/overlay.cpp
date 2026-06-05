@@ -1552,6 +1552,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         
     } else if (this->hardware_mode_idx == 2) {
         // KMbox удалён - показываем сообщение
+        ImVec4 disable_vec = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);  // Серый цвет для отключенных элементов
         if (BeginPanel(is_russian ? "KMbox (удалено)" : "KMbox (removed)", ImVec2(0, 150), disable_vec)) cfg_changed = true;
         
         ImGui::TextColored(disable_vec, is_russian ? 
@@ -1588,6 +1589,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             "1. Connect board\n2. Find COM port\n3. Enter port & Baud\n4. Click Connect");
         
         ImGui::NextColumn();
+        ImVec4 disable_vec = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);  // Серый цвет для отключенных элементов
         ImGui::TextColored(disable_vec, is_russian ? "(Удалено)" : "(Removed)");
         ImGui::TextWrapped(is_russian ? 
             "KMbox удалён из проекта" :

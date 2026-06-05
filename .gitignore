@@ -1,1 +1,66 @@
-Nothing should be ignored based on the provided file changes. The only modified file is 'PWNZ_AI/MouseController.h', which appears to be a source code header file and should not be ignored. There are no build artifacts, dependencies, or temporary files in the changes list.
+```
+# Compiled and build artifacts
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.out
+
+# Dependencies
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+*.swo
+*.bak
+*.~*
+
+# Environment variables
+.env
+.env.local
+.env.*
+!env.example
+
+# Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Build directories
+build/
+dist/
+*.egg
+*.whl
+*.pot
+*.pyc
+*.pyo
+*.pyd
+.coverage
+htmlcov/
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+```
