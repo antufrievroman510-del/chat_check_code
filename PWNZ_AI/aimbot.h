@@ -15,7 +15,7 @@
 // Сначала включаем IMouseInput.h чтобы получить полное определение интерфейса
 #include "IMouseInput.h"
 
-// Forward declarations для других классов
+// Forward declarations для других классов (чтобы избежать циклических зависимостей)
 namespace pwnz_ai {
     class MakcuInput;
     class SendInputMouse;  // Forward declaration вместо include
@@ -26,8 +26,10 @@ namespace pwnz_ai {
 #include "AimbotTarget.h"
 #include "AimMath.h"
 #include "MouseController.h"
-// #include "SendInputMouse.h"  // Убрано - используем forward declaration
-#include "MakcuInput.h"
+// SendInputMouse.h и MakcuInput.h не включаем здесь - они будут в .cpp файле
+// чтобы разорвать цикл: aimbot.h -> SendInputMouse.h -> IMouseInput.h -> ... -> aimbot.h
+
+#include "MakcuInput.h"  // Оставляем, т.к. нужен полный тип для unique_ptr
 
 // Forward declaration для Overlay
 class Overlay;
