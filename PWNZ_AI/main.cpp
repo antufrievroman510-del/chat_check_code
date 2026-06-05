@@ -824,9 +824,15 @@ void RemoteActivationServer() {
 
 // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ДЛЯ 2PC CLICKS ====================
 static pwnz_ai::MouseClickServer g_clickServer;
+static std::atomic<bool> g_click_server_running{false};
 
-void Initialize2PCClicks() {
-    std::cout << "[INIT] Setting up 2PC click receiver...\n";
+void Initialize2PCClicks(int port = 5556) {
+    if (g_click_server_running.load()) {
+        std::cout << "[INIT] Click server already running, skipping...\n";
+        return;
+    }
+    
+    std::cout << "[INIT] Setting up 2PC click receiver on port " << port << "...\n";
 
     // Коллбэк для ЛКМ (стрельба)
     g_clickServer.set_lmb_callback([](bool pressed) {
@@ -854,11 +860,66 @@ void Initialize2PCClicks() {
         }
     });
 
-    // Запуск сервера на порту 5556
-    if (g_clickServer.start(5556)) {
-        std::cout << "[INIT] Click server running on port 5556\n";
+    // Коллбэк для СКМ
+    g_clickServer.set_mmb_callback([](bool pressed) {
+        pwnz_ai::MouseController& mc = pwnz_ai::MouseController::GetInstance();
+        
+        if (pressed) {
+            mc.PressButton(VK_MBUTTON);
+            std::cout << "[CLICK] MMB PRESSED (from network)\n";
+        } else {
+            mc.ReleaseButton(VK_MBUTTON);
+            std::cout << "[CLICK] MMB RELEASED (from network)\n";
+        }
+    });
+
+    // Коллбэк для колеса прокрутки
+    g_clickServer.set_wheel_callback([](int delta) {
+        pwnz_ai::MouseController& mc = pwnz_ai::MouseController::GetInstance();
+        mc.ScrollWheel(delta);
+        std::cout << "[CLICK] WHEEL SCROLL " << (delta > 0 ? "UP" : "DOWN") << " (from network)\n";
+    });
+
+    // Коллбэк для боковой кнопки X1 (Назад)
+    g_clickServer.set_x1_callback([](bool pressed) {
+        pwnz_ai::MouseController& mc = pwnz_ai::MouseController::GetInstance();
+        
+        if (pressed) {
+            mc.PressButton(VK_XBUTTON1);
+            std::cout << "[CLICK] X1 (BACK) PRESSED (from network)\n";
+        } else {
+            mc.ReleaseButton(VK_XBUTTON1);
+            std::cout << "[CLICK] X1 (BACK) RELEASED (from network)\n";
+        }
+    });
+
+    // Коллбэк для боковой кнопки X2 (Вперед)
+    g_clickServer.set_x2_callback([](bool pressed) {
+        pwnz_ai::MouseController& mc = pwnz_ai::MouseController::GetInstance();
+        
+        if (pressed) {
+            mc.PressButton(VK_XBUTTON2);
+            std::cout << "[CLICK] X2 (FORWARD) PRESSED (from network)\n";
+        } else {
+            mc.ReleaseButton(VK_XBUTTON2);
+            std::cout << "[CLICK] X2 (FORWARD) RELEASED (from network)\n";
+        }
+    });
+
+    // Запуск сервера на указанном порту
+    if (g_clickServer.start(port)) {
+        g_click_server_running.store(true);
+        std::cout << "[INIT] Click server running on port " << port << "\n";
     } else {
         std::cerr << "[ERROR] Failed to start click server!\n";
+    }
+}
+
+void Shutdown2PCClicks() {
+    if (g_click_server_running.load()) {
+        g_clickServer.stop();
+        g_click_server_running.store(false);
+        std::cout << "[SHUTDOWN] Click server stopped\n";
     }
 }
 
@@ -876,8 +937,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     SetProcessDPIAware();
     setlocale(LC_ALL, XOR("ru_RU.UTF-8"));
 
-    // Инициализация 2PC кликов
-    Initialize2PCClicks();
+    // Инициализация 2PC кликов с портом из настроек overlay
+    Initialize2PCClicks(overlay.mouse_click_port);
 
     if (logfile.is_open()) { logfile << "Step 1: after locale" << std::endl; logfile.flush(); }
 

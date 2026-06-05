@@ -494,6 +494,15 @@ void Overlay::LoadConfig(Aimbot* aim) {
     handlers["kalman_additional_prediction_ms"] = [&](const std::string& v) { kalman_additional_prediction_ms = safe_stof(v); };
     handlers["prediction_interval"] = [&](const std::string& v) { prediction_interval = safe_stof(v); };
     handlers["disable_headshot"] = [&](const std::string& v) { disable_headshot = std::stoi(v); };
+    
+    // Mouse Click UDP Settings
+    handlers["mouse_click_udp_enabled"] = [&](const std::string& v) { this->mouse_click_udp_enabled = std::stoi(v); };
+    handlers["mouse_click_ip_buf"] = [&](const std::string& v) { strncpy_s(this->mouse_click_ip_buf, sizeof(this->mouse_click_ip_buf), v.c_str(), sizeof(this->mouse_click_ip_buf) - 1); };
+    handlers["mouse_click_port"] = [&](const std::string& v) { this->mouse_click_port = std::stoi(v); };
+    
+    // Makcu Net Settings
+    handlers["makcu_ip_buf"] = [&](const std::string& v) { strncpy_s(this->makcu_ip_buf, sizeof(this->makcu_ip_buf), v.c_str(), sizeof(this->makcu_ip_buf) - 1); };
+    handlers["makcu_port"] = [&](const std::string& v) { this->makcu_port = std::stoi(v); };
 
     std::istringstream stream(config_data);
     std::string line;
@@ -668,6 +677,15 @@ void Overlay::SaveConfig(Aimbot* aim) {
     ss << "kalman_additional_prediction_ms=" << kalman_additional_prediction_ms << "\n";
     ss << "prediction_interval=" << prediction_interval << "\n";
     ss << "disable_headshot=" << disable_headshot << "\n";
+    
+    // Mouse Click UDP Settings
+    ss << "mouse_click_udp_enabled=" << this->mouse_click_udp_enabled << "\n";
+    ss << "mouse_click_ip_buf=" << this->mouse_click_ip_buf << "\n";
+    ss << "mouse_click_port=" << this->mouse_click_port << "\n";
+    
+    // Makcu Net Settings
+    ss << "makcu_ip_buf=" << this->makcu_ip_buf << "\n";
+    ss << "makcu_port=" << this->makcu_port << "\n";
 
     std::string config_str = ss.str();
     DATA_BLOB DataIn;
@@ -1575,6 +1593,70 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         // Закрываем панель всегда, даже если BeginPanel вернул false
         EndPanel();
     }
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    // === 2PC Mouse Click UDP Settings ===
+    if (BeginPanel("2PC Mouse Click UDP", ImVec2(0, 220), acc_vec)) cfg_changed = true;
+    
+    ImGui::TextColored(acc_vec, is_russian ? "Передача нажатий мыши по сети" : "Mouse Click Transfer over Network");
+    ImGui::Spacing();
+    
+    // Чекбокс включения
+    if (DrawToggle("Enable UDP Transfer:", "##udp_click_en", &this->mouse_click_udp_enabled, acc_u32,
+        is_russian ? "Отправлять нажатия на второй ПК" : "Send clicks to second PC")) {
+        cfg_changed = true;
+    }
+    
+    ImGui::Spacing();
+    
+    // Настройка IP
+    ImGui::Text(is_russian ? "Target PC IP (Чит):" : "Target PC IP (Cheat PC):");
+    ImGui::PushItemWidth(200);
+    if (ImGui::InputText("##udp_ip", this->mouse_click_ip_buf, sizeof(this->mouse_click_ip_buf))) {
+        cfg_changed = true;
+    }
+    ImGui::PopItemWidth();
+    HelpMarker(is_russian ? "IP адрес второго ПК с читом (например, 192.168.1.55)" : "IP address of the second PC with cheat (e.g., 192.168.1.55)");
+    
+    ImGui::Spacing();
+    
+    // Настройка Порта
+    ImGui::Text(is_russian ? "UDP Port:" : "UDP Port:");
+    ImGui::PushItemWidth(100);
+    int port_temp = this->mouse_click_port;
+    if (ImGui::InputInt("##udp_port", &port_temp)) {
+        if (port_temp < 1) port_temp = 1;
+        if (port_temp > 65535) port_temp = 65535;
+        this->mouse_click_port = port_temp;
+        cfg_changed = true;
+    }
+    ImGui::PopItemWidth();
+    ImGui::SameLine();
+    HelpMarker(is_russian ? "Порт для получения нажатий (по умолчанию 5556)" : "Port for receiving clicks (default 5556)");
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    // Информация о режиме
+    if (this->mouse_click_udp_enabled) {
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
+            is_russian ? "✓ Режим активен" : "✓ Mode Active");
+        ImGui::TextWrapped(is_russian ? 
+            "Все нажатия мыши (ЛКМ, ПКМ, СКМ, Колесо, X1/X2) будут передаваться на указанный ПК." :
+            "All mouse clicks (LMB, RMB, MMB, Wheel, X1/X2) will be sent to specified PC.");
+    } else {
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), 
+            is_russian ? "⚠ Режим отключен" : "⚠ Mode Disabled");
+        ImGui::TextWrapped(is_russian ? 
+            "Нажмите 'Enable UDP Transfer' для активации передачи." :
+            "Press 'Enable UDP Transfer' to activate click transfer.");
+    }
+    
+    EndPanel();
     
     ImGui::Columns(1);
     
