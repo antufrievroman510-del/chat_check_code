@@ -1,24 +1,28 @@
 ```
-# Build artifacts
-CMakeFiles/
-cmake-build-*/
-Makefile
+# Build artifacts and binaries
 *.o
 *.obj
-*.a
-*.lib
-*.so
-*.dll
 *.exe
-build/
-dist/
+*.dll
+*.so
+*.a
+*.out
+*.vcxproj
+*.vcxproj.filters
+*.sln
+*.lib
 
 # Dependencies
-imgui_lib/
 node_modules/
-vendor/
+venv/
+.venv/
+__pycache__/
+dist/
+build/
+target/
+.gradle/
 
-# IDE files
+# Editor/IDE files
 .vscode/
 .idea/
 *.swp
@@ -28,33 +32,19 @@ vendor/
 # Logs
 *.log
 
-# Environment
-.env
-.env.local
-*.env.*
-
-# Coverage
+# Coverage reports
 coverage/
 htmlcov/
 .coverage
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
+# Environment variables
+.env
+.env.local
+*.env.*
 
-# C/C++
-*.out
-*.i
-*.ii
-*.s
-*.su
-*.gcda
-*.gcno
-*.gcov
+# OS specific
+.DS_Store
+Thumbs.db
 
 # Compressed files
 *.zip
@@ -79,4 +69,13 @@ __pycache__/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
+
+# Image files (if accidentally added)
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.webm
+
 ```
