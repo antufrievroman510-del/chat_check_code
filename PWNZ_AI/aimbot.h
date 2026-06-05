@@ -122,7 +122,7 @@ private:
     AimConfig m_config;
 
     // Полиморфный указатель на метод ввода (интерфейс IMouseInput)
-    std::unique_ptr<IMouseInput> m_mouseInput;
+    std::unique_ptr<pwnz_ai::IMouseInput> m_mouseInput;
     
     // Указатель на экземпляр MakcuInput для аппаратного режима
     std::unique_ptr<pwnz_ai::MakcuInput> m_makcuInstance;
