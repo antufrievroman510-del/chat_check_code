@@ -402,7 +402,12 @@ void DrawLogo(ImDrawList* draw_list, ImVec2 pos, float size) {
     
     // Рисуем щит (упрощенная форма)
     draw_list->AddQuadFilled(top_center, mid_right, bottom_right, bottom_left, shield_fill);
-    draw_list->AddQuad(top_center, mid_right, bottom_right, bottom_left, shield_border, 2.0f);
+    draw_list->AddQuad(top_center, mid_right, bottom_right, bottom_left, shield_border);
+    
+    // Текст "PV" по центру
+    ImVec2 text_pos = ImVec2(pos.x + shield_width / 2 - size * 0.3f, pos.y + shield_height / 2 - size * 0.25f);
+    draw_list->AddText(text_pos, IM_COL32_WHITE, "PV");
+}r, 2.0f);
     
     // Текст "PV" по центру
     ImVec2 text_pos = ImVec2(pos.x + shield_width / 2 - 10, pos.y + shield_height / 2 - 10);
