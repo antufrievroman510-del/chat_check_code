@@ -44,7 +44,7 @@ public:
      * @param port COM-порт (например "COM5")
      * @return true если успешно подключено
      */
-    bool Initialize(const std::string& port) override;
+    bool Init(const std::string& port) override;
 
     /**
      * @brief Завершение работы и отключение от устройства

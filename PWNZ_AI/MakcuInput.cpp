@@ -16,8 +16,8 @@ MakcuInput::~MakcuInput() {
     Shutdown();
 }
 
-bool MakcuInput::Initialize(const std::string& port) {
-    std::cout << "[MakcuInput] Initialize started with port: " << port << std::endl;
+bool MakcuInput::Init(const std::string& port) {
+    std::cout << "[MakcuInput] Init started with port: " << port << std::endl;
 
     // 1. Создание объекта устройства
     m_device = std::make_unique<makcu::Device>();
@@ -73,16 +73,16 @@ void MakcuInput::Move(int dx, int dy) {
     }
     
     // Отправляем движение через makcu
-    m_device->moveMouse(dx, dy);
+    m_device->mouseMove(dx, dy);
 }
 
 int MakcuInput::buttonToInt(MouseButton button) const {
     switch (button) {
-        case MouseButton::Left:   return 0;
-        case MouseButton::Right:  return 1;
-        case MouseButton::Middle: return 2;
-        case MouseButton::Side1:  return 3;
-        case MouseButton::Side2:  return 4;
+        case MouseButton::LEFT:   return 0;
+        case MouseButton::RIGHT:  return 1;
+        case MouseButton::MIDDLE: return 2;
+        case MouseButton::SIDE1:  return 3;
+        case MouseButton::SIDE2:  return 4;
         default:                  return -1;
     }
 }
@@ -96,7 +96,7 @@ void MakcuInput::Click(MouseButton button) {
         return;
     }
     
-    m_device->click(btn);
+    m_device->click(static_cast<makcu::MouseButton>(btn));
 }
 
 void MakcuInput::Press(MouseButton button) {
@@ -108,7 +108,7 @@ void MakcuInput::Press(MouseButton button) {
         return;
     }
     
-    m_device->press(btn);
+    m_device->mouseDown(static_cast<makcu::MouseButton>(btn));
 }
 
 void MakcuInput::Release(MouseButton button) {
@@ -120,16 +120,16 @@ void MakcuInput::Release(MouseButton button) {
         return;
     }
     
-    m_device->release(btn);
+    m_device->mouseUp(static_cast<makcu::MouseButton>(btn));
 }
 
 bool MakcuInput::IsButtonPressed(MouseButton button) const {
     switch (button) {
-        case MouseButton::Left:   return m_btnLmb.load();
-        case MouseButton::Right:  return m_btnRmb.load();
-        case MouseButton::Middle: return m_btnMmb.load();
-        case MouseButton::Side1:  return m_btnSide1.load();
-        case MouseButton::Side2:  return m_btnSide2.load();
+        case MouseButton::LEFT:   return m_btnLmb.load();
+        case MouseButton::RIGHT:  return m_btnRmb.load();
+        case MouseButton::MIDDLE: return m_btnMmb.load();
+        case MouseButton::SIDE1:  return m_btnSide1.load();
+        case MouseButton::SIDE2:  return m_btnSide2.load();
         default:                  return false;
     }
 }

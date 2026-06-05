@@ -1,4 +1,5 @@
 #include "KMboxMouse.h"
+#include "KMBoxNet.h"
 #include <iostream>
 
 namespace pwnz_ai {
