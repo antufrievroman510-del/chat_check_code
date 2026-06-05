@@ -401,15 +401,27 @@ void DrawLogo(ImDrawList* draw_list, ImVec2 pos, float size) {
     ImColor shield_border = ImColor(30, 60, 100, 255);
     
     // Рисуем щит (упрощенная форма)
-    draw_list->AddQuadFilled(top_center, mid_right, bottom_right, bottom_left, shield_fill);
-    draw_list->AddQuad(top_center, mid_right, bottom_right, bottom_left, shield_border);
+    // Для AddQuad нужно 4 точки: верх, право, низ, лево (порядок важен для формы)
+    // Но AddQuad рисует замкнутый контур из 4 точек. 
+    // Наша форма: вершина (top_center), правый угол (mid_right), низ право (bottom_right), низ лево (bottom_left), левый угол (mid_left) - это 5 точек.
+    // Упростим до прямоугольника с треугольной крышей или просто используем полигон.
+    // Используем AddConvexPolyFilled для правильной формы щита, если нужно, но для простоты нарисуем как путь.
     
+    // Рисуем контур щита через линию (путь)
+    draw_list->AddLine(top_center, mid_right, shield_border, 2.0f);
+    draw_list->AddLine(mid_right, bottom_right, shield_border, 2.0f);
+    draw_list->AddLine(bottom_right, bottom_left, shield_border, 2.0f);
+    draw_list->AddLine(bottom_left, mid_left, shield_border, 2.0f);
+    draw_list->AddLine(mid_left, top_center, shield_border, 2.0f);
+    
+    // Заливка (используем тот же путь для заполнения, но AddConvexPolyFilled требует массив)
+    // Для простоты зальем как два треугольника или используем AddQuadFilled если форма позволяет
+    // Здесь нарисуем заливку через полигон из 5 точек вручную нельзя одним вызовом AddQuadFilled
+    // Используем AddConvexPolyFilled
+    ImVec2 pts[5] = { top_center, mid_right, bottom_right, bottom_left, mid_left };
+    draw_list->AddConvexPolyFilled(pts, 5, shield_fill);
+
     // Текст "PV" по центру
     ImVec2 text_pos = ImVec2(pos.x + shield_width / 2 - size * 0.3f, pos.y + shield_height / 2 - size * 0.25f);
-    draw_list->AddText(text_pos, IM_COL32_WHITE, "PV");
-}r, 2.0f);
-    
-    // Текст "PV" по центру
-    ImVec2 text_pos = ImVec2(pos.x + shield_width / 2 - 10, pos.y + shield_height / 2 - 10);
     draw_list->AddText(text_pos, IM_COL32_WHITE, "PV");
 }
