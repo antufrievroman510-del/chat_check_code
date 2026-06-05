@@ -1,5 +1,5 @@
-```cpp
-# Compiled files
+```
+# Compiled and binary files
 *.o
 *.obj
 *.exe
@@ -8,11 +8,6 @@
 *.a
 *.out
 
-# Build directories
-build/
-dist/
-target/
-
 # Dependencies
 node_modules/
 venv/
@@ -20,9 +15,15 @@ venv/
 __pycache__/
 .mypy_cache/
 .pytest_cache/
+target/
 .gradle/
-julia-*/
-zig*/
+
+# Build artifacts
+dist/
+build/
+coverage/
+htmlcov/
+.coverage
 
 # Editor/IDE files
 .vscode/
@@ -31,9 +32,6 @@ zig*/
 *.swo
 *.tmp
 
-# Logs
-*.log
-
 # System files
 .DS_Store
 Thumbs.db
@@ -41,8 +39,6 @@ Thumbs.db
 .env.local
 *.env.*
 
-# Coverage
-coverage/
-htmlcov/
-.coverage
+# Logs
+*.log
 ```

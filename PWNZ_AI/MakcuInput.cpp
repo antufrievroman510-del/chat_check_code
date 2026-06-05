@@ -52,121 +52,85 @@ bool MakcuInput::Initialize(const std::string& port) {
         return false;
     }
 
-    std::cout << "[MakcuInput] SUCCESS: Connected to Makcu on " << port << std::endl;
-    std::cout << "[MakcuInput] Device version: " << m_device->getVersion() << std::endl;
-
+    std::cout << "[MakcuInput] Successfully connected to Makcu on " << port << std::endl;
     return true;
 }
 
 void MakcuInput::Shutdown() {
     std::cout << "[MakcuInput] Shutdown called" << std::endl;
-    
-    if (m_device) {
-        // Отключаем мониторинг
-        (void)m_device->enableButtonMonitoring(false);
-        std::cout << "[MakcuInput] Button monitoring disabled" << std::endl;
-        
-        // Отключаемся от устройства
+    if (m_device && m_device->isConnected()) {
         m_device->disconnect();
-        std::cout << "[MakcuInput] Device disconnected" << std::endl;
-        
-        m_device.reset();
-        std::cout << "[MakcuInput] Device object destroyed" << std::endl;
+        std::cout << "[MakcuInput] Disconnected from device" << std::endl;
     }
+    m_device.reset();
+    std::cout << "[MakcuInput] Device object destroyed" << std::endl;
 }
 
-bool MakcuInput::Move(int32_t x, int32_t y) {
+void MakcuInput::Move(int dx, int dy) {
     if (!m_device || !m_device->isConnected()) {
-        return false;
+        std::cerr << "[MakcuInput] Cannot move: not connected" << std::endl;
+        return;
     }
     
-    bool result = m_device->mouseMove(x, y);
-    if (!result) {
-        std::cerr << "[MakcuInput] Move failed: x=" << x << " y=" << y << std::endl;
-    }
-    return result;
+    // Отправляем движение через makcu
+    m_device->moveMouse(dx, dy);
 }
 
-bool MakcuInput::Click(int button) {
+int MakcuInput::buttonToInt(MouseButton button) const {
+    switch (button) {
+        case MouseButton::Left:   return 0;
+        case MouseButton::Right:  return 1;
+        case MouseButton::Middle: return 2;
+        case MouseButton::Side1:  return 3;
+        case MouseButton::Side2:  return 4;
+        default:                  return -1;
+    }
+}
+
+void MakcuInput::Click(MouseButton button) {
+    int btn = buttonToInt(button);
+    if (btn < 0) return;
+    
     if (!m_device || !m_device->isConnected()) {
-        return false;
+        std::cerr << "[MakcuInput] Cannot click: not connected" << std::endl;
+        return;
     }
-
-    makcu::MouseButton mb = makcu::MouseButton::LEFT;
-    switch (button) {
-        case 0: mb = makcu::MouseButton::LEFT; break;
-        case 1: mb = makcu::MouseButton::RIGHT; break;
-        case 2: mb = makcu::MouseButton::MIDDLE; break;
-        case 3: mb = makcu::MouseButton::SIDE1; break;
-        case 4: mb = makcu::MouseButton::SIDE2; break;
-        default: 
-            std::cerr << "[MakcuInput] Invalid button: " << button << std::endl;
-            return false;
-    }
-
-    bool result = m_device->click(mb);
-    if (!result) {
-        std::cerr << "[MakcuInput] Click failed: button=" << button << std::endl;
-    }
-    return result;
+    
+    m_device->click(btn);
 }
 
-bool MakcuInput::Press(int button) {
+void MakcuInput::Press(MouseButton button) {
+    int btn = buttonToInt(button);
+    if (btn < 0) return;
+    
     if (!m_device || !m_device->isConnected()) {
-        return false;
+        std::cerr << "[MakcuInput] Cannot press: not connected" << std::endl;
+        return;
     }
-
-    makcu::MouseButton mb = makcu::MouseButton::LEFT;
-    switch (button) {
-        case 0: mb = makcu::MouseButton::LEFT; break;
-        case 1: mb = makcu::MouseButton::RIGHT; break;
-        case 2: mb = makcu::MouseButton::MIDDLE; break;
-        case 3: mb = makcu::MouseButton::SIDE1; break;
-        case 4: mb = makcu::MouseButton::SIDE2; break;
-        default: 
-            std::cerr << "[MakcuInput] Invalid button: " << button << std::endl;
-            return false;
-    }
-
-    bool result = m_device->mouseDown(mb);
-    if (!result) {
-        std::cerr << "[MakcuInput] Press failed: button=" << button << std::endl;
-    }
-    return result;
+    
+    m_device->press(btn);
 }
 
-bool MakcuInput::Release(int button) {
+void MakcuInput::Release(MouseButton button) {
+    int btn = buttonToInt(button);
+    if (btn < 0) return;
+    
     if (!m_device || !m_device->isConnected()) {
-        return false;
+        std::cerr << "[MakcuInput] Cannot release: not connected" << std::endl;
+        return;
     }
-
-    makcu::MouseButton mb = makcu::MouseButton::LEFT;
-    switch (button) {
-        case 0: mb = makcu::MouseButton::LEFT; break;
-        case 1: mb = makcu::MouseButton::RIGHT; break;
-        case 2: mb = makcu::MouseButton::MIDDLE; break;
-        case 3: mb = makcu::MouseButton::SIDE1; break;
-        case 4: mb = makcu::MouseButton::SIDE2; break;
-        default: 
-            std::cerr << "[MakcuInput] Invalid button: " << button << std::endl;
-            return false;
-    }
-
-    bool result = m_device->mouseUp(mb);
-    if (!result) {
-        std::cerr << "[MakcuInput] Release failed: button=" << button << std::endl;
-    }
-    return result;
+    
+    m_device->release(btn);
 }
 
-bool MakcuInput::IsButtonPressed(int button) const {
+bool MakcuInput::IsButtonPressed(MouseButton button) const {
     switch (button) {
-        case 0: return m_btnLmb.load();
-        case 1: return m_btnRmb.load();
-        case 2: return m_btnMmb.load();
-        case 3: return m_btnSide1.load();
-        case 4: return m_btnSide2.load();
-        default: return false;
+        case MouseButton::Left:   return m_btnLmb.load();
+        case MouseButton::Right:  return m_btnRmb.load();
+        case MouseButton::Middle: return m_btnMmb.load();
+        case MouseButton::Side1:  return m_btnSide1.load();
+        case MouseButton::Side2:  return m_btnSide2.load();
+        default:                  return false;
     }
 }
 
@@ -179,13 +143,13 @@ void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
     switch (button) {
         case makcu::MouseButton::LEFT:
             m_btnLmb.store(pressed);
-            pwnz_ai::shooting.store(pressed);  // LMB = стрельба (как в source_logic/source_logic/mouse/Makcu.cpp)
+            pwnz_ai::shooting.store(pressed);  // LMB = стрельба
             std::cout << "[MakcuInput] LMB " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         case makcu::MouseButton::RIGHT:
             m_btnRmb.store(pressed);
-            pwnz_ai::zooming.store(pressed);   // RMB = зум/прицеливание (как в source_logic)
-            pwnz_ai::aiming.store(pressed);    // RMB = прицеливание (дублируем для совместимости)
+            pwnz_ai::zooming.store(pressed);   // RMB = зум/прицеливание
+            pwnz_ai::aiming.store(pressed);    // RMB = прицеливание
             std::cout << "[MakcuInput] RMB " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         case makcu::MouseButton::MIDDLE:
@@ -197,11 +161,11 @@ void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
             std::cout << "[MakcuInput] SIDE1 " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         case makcu::MouseButton::SIDE2:
-            pwnz_ai::aiming.store(pressed);    // SIDE2 = прицеливание (как в source_logic/source_logic/mouse/Makcu.cpp)
+            pwnz_ai::aiming.store(pressed);    // SIDE2 = прицеливание
             std::cout << "[MakcuInput] SIDE2 " << (pressed ? "PRESSED" : "RELEASED") << std::endl;
             break;
         default:
-            std::cout << "[MakcuInput] Unknown button event: " << static_cast<int>(button) 
+            std::cout << "[MakcuInput] Unknown button event: " << static_cast<int>(button)
                       << " pressed=" << pressed << std::endl;
             break;
     }
