@@ -14,8 +14,8 @@
 #include <iostream>
 
 #include "imgui.h"
-#include "backends/imgui_impl_win32.h"
-#include "backends/imgui_impl_dx9.h"
+#include "imgui_lib/backends/imgui_impl_win32.h"
+#include "imgui_lib/backends/imgui_impl_dx9.h"
 
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "ws2_32.lib")

@@ -62,7 +62,7 @@ private:
         std::cout << "[MouseClickServer] Listening on port " << listen_port << std::endl;
 
         while (is_running.load()) {
-            char buffer[8];
+            char buffer[4]; // 4 байта: event_type(1) + reserved(1) + wheel_delta(2)
             sockaddr_in client_addr;
             int client_addr_size = sizeof(client_addr);
 
