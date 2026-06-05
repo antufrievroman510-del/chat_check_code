@@ -1,12 +1,13 @@
 #include "MouseController.h"
 #include <iostream>
 
-// Явное включение для полного определения типов
-#include "HardwareBackend.h"
-#include "HardwareController.h"
-
 // Singleton instance
 static MouseController* g_Instance = nullptr;
+
+// Глобальный экземпляр MakcuInput для режима Makcu_UART
+static std::unique_ptr<pwnz_ai::MakcuInput> g_makcuInstance;
+// Глобальный экземпляр KMBoxNet для режима KMBox_Net
+static std::unique_ptr<pwnz_ai::KMBoxNet> g_kmboxInstance;
 
 MouseController& MouseController::GetInstance() {
     if (!g_Instance) {
@@ -27,27 +28,6 @@ void MouseController::Initialize(MouseMethod method) {
 
     currentMethod = method;
     isInitialized = true;
-
-    // Инициализация HardwareController для режимов Makcu/KMBox
-    ::HardwareConfig hwConfig;
-    hwConfig.mode = ::HardwareMode::LocalMouse;
-    
-    switch (method) {
-        case MouseMethod::Makcu_UART:
-            hwConfig.mode = ::HardwareMode::MackuUART;
-            hwConfig.com_port = "COM3";
-            hwConfig.baud_rate = 9600;
-            break;
-        case MouseMethod::KMBox_Net:
-            hwConfig.mode = ::HardwareMode::KMboxNet;
-            hwConfig.kmbox_ip = "192.168.1.100";
-            hwConfig.kmbox_port = 5555;
-            break;
-        default:
-            break;
-    }
-    
-    HardwareController::Instance().Initialize(hwConfig);
 
     std::cout << "[MouseController] Initialized with method: " 
               << (method == MouseMethod::Standard ? "Standard" : 
@@ -161,14 +141,18 @@ void MouseController::MoveDriver(int dx, int dy) {
  * @brief Движение через плату Makcu (UART/COM)
  */
 void MouseController::MoveMakcu(int dx, int dy) {
-    HardwareController::Instance().MoveMouse(dx, dy);
+    if (g_makcuInstance && g_makcuInstance->IsConnected()) {
+        g_makcuInstance->Move(dx, dy);
+    }
 }
 
 /**
  * @brief Движение через плату KMbox (Network)
  */
 void MouseController::MoveKMBox(int dx, int dy) {
-    HardwareController::Instance().MoveMouse(dx, dy);
+    if (g_kmboxInstance && g_kmboxInstance->IsConnected()) {
+        g_kmboxInstance->MoveMouse(dx, dy);
+    }
 }
 
 /**
@@ -225,28 +209,53 @@ void MouseController::ReleaseButton(int buttonCode) {
 void MouseController::SetMethod(MouseMethod method) {
     currentMethod = method;
     
-    // Переинициализация HardwareController если сменился режим
-    ::HardwareConfig hwConfig;
-    hwConfig.mode = ::HardwareMode::LocalMouse;
-    
+    // Переинициализация устройств если сменился режим
     switch (method) {
         case MouseMethod::Makcu_UART:
-            hwConfig.mode = ::HardwareMode::MackuUART;
-            hwConfig.com_port = "COM3";
-            hwConfig.baud_rate = 9600;
-            HardwareController::Instance().Initialize(hwConfig);
+            // Инициализация Makcu будет вызвана из Aimbot::InitHardware()
+            std::cout << "[MouseController] Switched to Makcu UART mode" << std::endl;
             break;
         case MouseMethod::KMBox_Net:
-            hwConfig.mode = ::HardwareMode::KMboxNet;
-            hwConfig.kmbox_ip = "192.168.1.100";
-            hwConfig.kmbox_port = 5555;
-            HardwareController::Instance().Initialize(hwConfig);
+            // Инициализация KMBox будет вызвана из Aimbot::InitHardware()
+            std::cout << "[MouseController] Switched to KMBox Net mode" << std::endl;
             break;
         default:
             break;
     }
 }
 
-void MouseController::UpdateHardwareConfig(const ::HardwareConfig& config) {
-    HardwareController::Instance().UpdateConfig(config);
+void MouseController::UpdateHardwareConfig(const void* config) {
+    // HardwareBackend удалён - эта функция больше не нужна
+    (void)config;
+}
+
+// Функции для инициализации устройств извне (вызываются из Aimbot)
+void InitMakcuDevice(const std::string& port) {
+    g_makcuInstance = std::make_unique<pwnz_ai::MakcuInput>();
+    if (!g_makcuInstance->Initialize(port)) {
+        std::cerr << "[MouseController] Failed to initialize Makcu on port " << port << std::endl;
+        g_makcuInstance.reset();
+    }
+}
+
+void InitKMBoxDevice(const std::string& ip, int port) {
+    g_kmboxInstance = std::make_unique<pwnz_ai::KMBoxNet>();
+    if (!g_kmboxInstance->ConnectToDevice(ip, port)) {
+        std::cerr << "[MouseController] Failed to initialize KMBox at " << ip << ":" << port << std::endl;
+        g_kmboxInstance.reset();
+    }
+}
+
+void ShutdownMakcuDevice() {
+    if (g_makcuInstance) {
+        g_makcuInstance->Shutdown();
+        g_makcuInstance.reset();
+    }
+}
+
+void ShutdownKMBoxDevice() {
+    if (g_kmboxInstance) {
+        g_kmboxInstance->Disconnect();
+        g_kmboxInstance.reset();
+    }
 }

@@ -24,9 +24,11 @@ namespace pwnz_ai {
     extern std::atomic<bool> g_makcu_aiming;
     extern std::atomic<bool> g_makcu_shooting;
     extern std::atomic<bool> g_makcu_zooming;
-    extern std::atomic<bool>& aiming;
-    extern std::atomic<bool>& shooting;
-    extern std::atomic<bool>& zooming;
+    
+    // Ссылки для обратной совместимости
+    inline std::atomic<bool>& aiming = g_makcu_aiming;
+    inline std::atomic<bool>& shooting = g_makcu_shooting;
+    inline std::atomic<bool>& zooming = g_makcu_zooming;
 }
 
 extern std::atomic<bool> g_remote_aim_key;  // Глобальная переменная из main.cpp
