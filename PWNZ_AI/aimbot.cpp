@@ -14,7 +14,14 @@
 #include "AimMath.h"
 #include "MouseController.h"
 #include "overlay.h"  // [ДОБАВЛЕНО] Для типа Overlay в SyncFromOverlay()
-#include "MakcuInput.h"  // Для доступа к классу MakcuInput
+#include "MakcuInput.h"  // Для доступа к классу MakcuInput и g_makcu_* переменным
+
+// Объявление глобальных переменных из main.cpp (namespace pwnz_ai)
+namespace pwnz_ai {
+    extern std::atomic<bool> g_makcu_aiming;
+    extern std::atomic<bool> g_makcu_shooting;
+    extern std::atomic<bool> g_makcu_zooming;
+}
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -134,6 +141,8 @@ void Aimbot::SyncFromOverlay(Overlay& overlay) {
     } else {
         com_port = overlay.com_port; // Fallback
     }
+    // Копируем буфер COM-порта для использования в InitHardware()
+    strncpy_s(com_port_buf, overlay.com_port_buf, sizeof(com_port_buf) - 1);
     bypass_mode = overlay.bypass_mode_idx;      // Добавляем синхронизацию bypass_mode
     net_ip = overlay.kmbox_ip_buf;              // Синхронизация IP для KMbox
     net_port = overlay.kmbox_port;              // Синхронизация порта для KMbox
@@ -204,8 +213,8 @@ bool Aimbot::InitHardware() {
                 {
                     // Формируем имя COM-порта из настроек оверлея
                     std::string comPort = "COM5"; // По умолчанию
-                    if (strlen(overlay.com_port_buf) > 0) {
-                        comPort = std::string(overlay.com_port_buf);
+                    if (strlen(com_port_buf) > 0) {
+                        comPort = std::string(com_port_buf);
                     }
                     
                     std::cout << "[Aimbot] Creating MakcuInput for port: " << comPort << std::endl;
