@@ -15,13 +15,18 @@ namespace pwnz_ai {
  * @brief Сервер для приема нажатий кнопок мыши с первого ПК
  * 
  * Архитектура 2PC:
- * - ПК1 (Игровой): Физическая мышь -> Makcu плата -> Отправляет клики по сети
+ * - ПК1 (Игровой): Физическая мышь -> Перехват хуком -> Отправляет клики по сети
  * - ПК2 (Чит): Этот сервер получает клики и эмулирует их через SendInput
  * 
  * Важно:
  * - Движения мыши обрабатываются отдельно через MakcuInput (COM-порт)
  * - Этот сервер принимает ТОЛЬКО нажатия кнопок
  * - Использует UDP порт 5556 (отдельно от aim_data порта 5555)
+ * 
+ * Поддерживаемые события:
+ * - ЛКМ, ПКМ, СКМ (нажатие/отпускание)
+ * - Колесо прокрутки (вверх/вниз)
+ * - Боковые кнопки X1 (Назад), X2 (Вперед)
  */
 class MouseClickServer {
 private:
@@ -35,46 +40,87 @@ private:
     std::function<void(bool)> on_lmb_pressed = nullptr;
     std::function<void(bool)> on_rmb_pressed = nullptr;
     std::function<void(bool)> on_mmb_pressed = nullptr;
+    std::function<void(int)> on_wheel_scrolled = nullptr; // +120 вверх, -120 вниз
+    std::function<void(bool)> on_x1_pressed = nullptr;
+    std::function<void(bool)> on_x2_pressed = nullptr;
 
-    // Формат пакета должен совпадать с MouseSender.cpp на ПК1
-    struct ClickPacket {
-        uint8_t button;  // 0 = ЛКМ, 1 = ПКМ
-        uint8_t pressed; // 1 = нажато, 0 = отпущено
-    };
+    // Типы событий (должны совпадать с MouseClickSender.cpp)
+    #define MOUSE_EVENT_LMB_DOWN   0x01
+    #define MOUSE_EVENT_LMB_UP     0x02
+    #define MOUSE_EVENT_RMB_DOWN   0x03
+    #define MOUSE_EVENT_RMB_UP     0x04
+    #define MOUSE_EVENT_MMB_DOWN   0x05
+    #define MOUSE_EVENT_MMB_UP     0x06
+    #define MOUSE_EVENT_WHEEL_UP   0x07
+    #define MOUSE_EVENT_WHEEL_DOWN 0x08
+    #define MOUSE_EVENT_X1_DOWN    0x09
+    #define MOUSE_EVENT_X1_UP      0x0A
+    #define MOUSE_EVENT_X2_DOWN    0x0B
+    #define MOUSE_EVENT_X2_UP      0x0C
 
     void receive_loop() {
         std::cout << "[MouseClickServer] Listening on port " << listen_port << std::endl;
 
         while (is_running.load()) {
-            ClickPacket pkt;
+            char buffer[8];
             sockaddr_in client_addr;
             int client_addr_size = sizeof(client_addr);
 
             int result = recvfrom(
                 sock,
-                (char*)&pkt,
-                sizeof(pkt),
+                buffer,
+                sizeof(buffer),
                 0,
                 (sockaddr*)&client_addr,
                 &client_addr_size
             );
 
-            if (result == SOCKET_ERROR || result != sizeof(pkt)) {
+            if (result == SOCKET_ERROR || result != sizeof(buffer)) {
                 continue;
             }
 
-            // Обработка полученного пакета в зависимости от кнопки
-            if (pkt.button == 0) { // ЛКМ
-                if (on_lmb_pressed) {
-                    on_lmb_pressed(pkt.pressed ? true : false);
-                }
-            } else if (pkt.button == 1) { // ПКМ
-                if (on_rmb_pressed) {
-                    on_rmb_pressed(pkt.pressed ? true : false);
-                }
+            uint8_t event_type = buffer[0];
+            int16_t wheel_delta = ntohs(*(int16_t*)&buffer[2]);
+
+            // Обработка полученного пакета в зависимости от типа события
+            switch (event_type) {
+                case MOUSE_EVENT_LMB_DOWN:
+                    if (on_lmb_pressed) on_lmb_pressed(true);
+                    break;
+                case MOUSE_EVENT_LMB_UP:
+                    if (on_lmb_pressed) on_lmb_pressed(false);
+                    break;
+                case MOUSE_EVENT_RMB_DOWN:
+                    if (on_rmb_pressed) on_rmb_pressed(true);
+                    break;
+                case MOUSE_EVENT_RMB_UP:
+                    if (on_rmb_pressed) on_rmb_pressed(false);
+                    break;
+                case MOUSE_EVENT_MMB_DOWN:
+                    if (on_mmb_pressed) on_mmb_pressed(true);
+                    break;
+                case MOUSE_EVENT_MMB_UP:
+                    if (on_mmb_pressed) on_mmb_pressed(false);
+                    break;
+                case MOUSE_EVENT_WHEEL_UP:
+                    if (on_wheel_scrolled) on_wheel_scrolled(120);
+                    break;
+                case MOUSE_EVENT_WHEEL_DOWN:
+                    if (on_wheel_scrolled) on_wheel_scrolled(-120);
+                    break;
+                case MOUSE_EVENT_X1_DOWN:
+                    if (on_x1_pressed) on_x1_pressed(true);
+                    break;
+                case MOUSE_EVENT_X1_UP:
+                    if (on_x1_pressed) on_x1_pressed(false);
+                    break;
+                case MOUSE_EVENT_X2_DOWN:
+                    if (on_x2_pressed) on_x2_pressed(true);
+                    break;
+                case MOUSE_EVENT_X2_UP:
+                    if (on_x2_pressed) on_x2_pressed(false);
+                    break;
             }
-            
-            // MMB можно добавить при необходимости
         }
     }
 
@@ -181,6 +227,28 @@ public:
      */
     void set_mmb_callback(std::function<void(bool)> callback) {
         on_mmb_pressed = callback;
+    }
+
+    /**
+     * @brief Установка коллбэка для колеса прокрутки
+     * @param callback Функция, принимающая delta (+120 вверх, -120 вниз)
+     */
+    void set_wheel_callback(std::function<void(int)> callback) {
+        on_wheel_scrolled = callback;
+    }
+
+    /**
+     * @brief Установка коллбэка для боковой кнопки X1 (Назад)
+     */
+    void set_x1_callback(std::function<void(bool)> callback) {
+        on_x1_pressed = callback;
+    }
+
+    /**
+     * @brief Установка коллбэка для боковой кнопки X2 (Вперед)
+     */
+    void set_x2_callback(std::function<void(bool)> callback) {
+        on_x2_pressed = callback;
     }
 
     bool is_running_status() const {

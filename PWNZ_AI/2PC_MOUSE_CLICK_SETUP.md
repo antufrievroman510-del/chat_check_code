@@ -1,283 +1,250 @@
-# Решение для 2PC: Передача нажатий мыши
+# Настройка передачи кликов мыши между двумя ПК (2PC)
 
-## 📋 Обзор
+## Обзор архитектуры
 
-Это решение позволяет передавать **только нажатия кнопок мыши** с игрового ПК (ПК1) на читовый ПК (ПК2) через WiFi/интернет. Движения мыши обрабатываются отдельно через Makcu плату (COM-порт).
+Система состоит из двух компьютеров:
+- **ПК1 (Игровой)**: Физическая мышь подключена к этому ПК. Перехватывает нажатия хуком и отправляет их по сети.
+- **ПК2 (Чит)**: Запускает чит с GUI. Получает клики по сети и эмулирует их через SendInput.
 
-### Архитектура
+**Важно**: Движение курсора обрабатывается отдельно через Makcu (COM-порт). Этот модуль передает ТОЛЬКО нажатия кнопок.
 
+## Поддерживаемые события
+
+- ЛКМ (Левая кнопка) - нажатие/отпускание
+- ПКМ (Правая кнопка) - нажатие/отпускание
+- СКМ (Колесо нажатие) - нажатие/отпускание
+- Колесо прокрутки - вверх/вниз
+- X1 (Боковая кнопка "Назад") - нажатие/отпускание
+- X2 (Боковая кнопка "Вперед") - нажатие/отпускание
+
+---
+
+## Шаг 1: Настройка ПК2 (Чит)
+
+### 1.1 Запуск сервера приема кликов
+
+В GUI чита перейдите во вкладку **Hardware** → **Mouse Click 2PC Settings**:
+
+1. Включите опцию **"Enable Mouse Click UDP"** (mouse_click_udp_enabled)
+2. Укажите IP адрес ПК2 (обычно это локальный IP, например `192.168.1.100`)
+3. Порт по умолчанию: `5556`
+
+### 1.2 Проверка работы сервера
+
+Сервер автоматически запускается при включении опции. В консоли должно появиться:
 ```
-┌─────────────────────┐                    ┌─────────────────────┐
-│   ПК1 (Игровой)     │                    │   ПК2 (Чит)         │
-│                     │                    │                     │
-│  Физическая мышь    │                    │  MouseClickServer   │
-│       │             │      WiFi/UDP      │       │             │
-│       ├─→ Makcu     │◄─────5556─────►│       ├─→ SendInput     │
-│       │   (движения)│      порт        │       │   (эмуляция)   │
-│       │             │                    │       │             │
-│       └─→ MouseClick│                    │       └─→ Аимбот    │
-│           Sender    │                    │                     │
-│           (отправка)│                    │                     │
-└─────────────────────┘                    └─────────────────────┘
+[MouseClickServer] Started successfully on port 5556
+[MouseClickServer] Listening on port 5556
 ```
 
-## 🚀 Быстрый старт
+---
 
-### Вариант 1: Отдельная программа для ПК1 (Рекомендуется)
+## Шаг 2: Настройка ПК1 (Игровой)
 
-#### Шаг 1: Компиляция программы для ПК1
+### 2.1 Компиляция отправителя
 
-На ПК1 (игровой) скомпилируйте `MouseClickSender.cpp`:
+Файл: `MouseClickSender.cpp`
 
 ```bash
 cl /EHsc MouseClickSender.cpp Ws2_32.lib /Fe:MouseClickSender.exe
 ```
 
-Или используйте MinGW:
-```bash
-g++ MouseClickSender.cpp -o MouseClickSender.exe -lws2_32 -static
+Или используйте готовый `.exe` файл из репозитория.
+
+### 2.2 Запуск отправителя
+
+1. Запустите `MouseClickSender.exe` на ПК1
+2. Введите IP адрес ПК2 (где запущен чит)
+3. Введите порт (по умолчанию 5556)
+
+Пример:
 ```
+===========================================
+   Mouse Click Sender for 2PC Setup
+   (C) PWNZ_AI
+===========================================
 
-#### Шаг 2: Запуск на ПК1
+Enter IP address of second PC (default: 192.168.1.100): 192.168.1.100
+Enter port (default: 5556): 5556
 
-1. Запустите `MouseClickSender.exe`
-2. Введите IP адрес ПК2 (читового)
-3. Программа начнет перехватывать нажатия ЛКМ/ПКМ и отправлять их на ПК2
+Initializing WinSock...
+[OK] Connected to 192.168.1.100:5556
+Installing mouse hook...
 
-#### Шаг 3: Интеграция в чит на ПК2
+=== LISTENING FOR MOUSE CLICKS ===
+Press Ctrl+C to exit
 
-В файле `main.cpp` или там где инициализируется чит, добавьте:
-
-```cpp
-#include "MouseClickServer.h"
-#include "MouseController.h"
-
-// Глобальный сервер кликов
-pwnz_ai::MouseClickServer clickServer;
-
-// Инициализация (вызвать при старте чита)
-void InitClickServer() {
-    // Установка коллбэка для ЛКМ
-    clickServer.set_lmb_callback([](bool pressed) {
-        if (pressed) {
-            // Эмуляция нажатия ЛКМ
-            MouseController::GetInstance().PressButton(VK_LBUTTON);
-            std::cout << "[CLICK] LMB PRESSED (from network)\n";
-        } else {
-            // Эмуляция отпускания ЛКМ
-            MouseController::GetInstance().ReleaseButton(VK_LBUTTON);
-            std::cout << "[CLICK] LMB RELEASED (from network)\n";
-        }
-    });
-
-    // Установка коллбэка для ПКМ (опционально)
-    clickServer.set_rmb_callback([](bool pressed) {
-        if (pressed) {
-            MouseController::GetInstance().PressButton(VK_RBUTTON);
-        } else {
-            MouseController::GetInstance().ReleaseButton(VK_RBUTTON);
-        }
-    });
-
-    // Запуск сервера на порту 5556
-    if (!clickServer.start(5556)) {
-        std::cerr << "[ERROR] Failed to start click server!\n";
-    }
-}
+[SEND] LMB PRESSED
+[SEND] LMB RELEASED
 ```
-
-#### Шаг 4: Настройка сети
-
-1. **На ПК2 (чит):** Назначьте статический IP (например, `192.168.1.100`)
-2. **Откройте порт 5556 UDP** в брандмауэре Windows:
-   ```powershell
-   netsh advfirewall firewall add rule name="PWNZ Click Server" dir=in action=allow protocol=UDP localport=5556
-   ```
-3. **Убедитесь что оба ПК в одной сети** (WiFi или роутер)
 
 ---
 
-### Вариант 2: Библиотека в обоих процессах
+## Шаг 3: Проверка соединения
 
-Если вы хотите больше контроля, можно использовать классы напрямую:
+### Тест ЛКМ:
+1. Нажмите левую кнопку мыши на ПК1
+2. На ПК1 в консоли должно появиться: `[SEND] LMB PRESSED`
+3. На ПК2 в консоли чита должно сработать событие (проверьте логи)
 
-#### На ПК1 (в процессе игры или отдельном процессе):
+### Тест ПКМ:
+1. Нажмите правую кнопку мыши на ПК1
+2. Проверьте логи на обоих ПК
+
+### Тест колеса:
+1. Прокрутите колесо вверх/вниз
+2. Должны появиться сообщения `[SEND] WHEEL UP/DOWN`
+
+### Тест боковых кнопок:
+1. Нажмите боковые кнопки X1/X2
+2. Должны появиться сообщения `[SEND] X1/X2 PRESSED/RELEASED`
+
+---
+
+## Шаг 4: Интеграция с читом (для разработчиков)
+
+### Использование MouseClickNetwork в коде
 
 ```cpp
 #include "MouseClickNetwork.h"
 
-MouseClickNetwork clickNet;
+// Глобальный экземпляр
+pwnz_ai::MouseClickNetwork click_sender;
 
-// Подключение к ПК2
-if (clickNet.connect("192.168.1.100", 5556)) {
-    // В цикле аимбота или хуке мыши
-    if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) {
-        clickNet.send_lmb(true);
-    } else {
-        clickNet.send_lmb(false);
+// Инициализация (при запуске чита)
+void init_mouse_network() {
+    if (overlay.mouse_click_udp_enabled) {
+        click_sender.connect(overlay.mouse_click_ip_buf, overlay.mouse_click_port);
     }
+}
+
+// Отправка событий из хука мыши
+LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (nCode >= 0 && overlay.mouse_click_udp_enabled) {
+        if (wParam == WM_LBUTTONDOWN) {
+            click_sender.send_lmb_down();
+        }
+        else if (wParam == WM_LBUTTONUP) {
+            click_sender.send_lmb_up();
+        }
+        else if (wParam == WM_RBUTTONDOWN) {
+            click_sender.send_rmb_down();
+        }
+        else if (wParam == WM_RBUTTONUP) {
+            click_sender.send_rmb_up();
+        }
+        // ... остальные кнопки
+    }
+    return CallNextHookEx(...);
 }
 ```
 
-#### На ПК2 (в чите):
-
-См. код выше в Шаге 3.
-
----
-
-## 🔧 Детальная настройка
-
-### Изменение порта
-
-По умолчанию используется порт **5556**. Чтобы изменить:
-
-```cpp
-// На обоих ПК укажите одинаковый порт
-clickServer.start(5557);  // ПК2
-clickNet.connect(ip, 5557);  // ПК1
-```
-
-### Отладка и логи
-
-Обе программы выводят логи в консоль:
-
-**ПК1 (Sender):**
-```
-[SEND] LMB PRESSED
-[SEND] LMB RELEASED
-[OK] Connected to 192.168.1.100:5556
-```
-
-**ПК2 (Server):**
-```
-[MouseClickServer] Started successfully on port 5556
-[MouseClickServer] Received click from 192.168.1.50
-```
-
-### Автопереподключение
-
-`MouseClickSender.exe` автоматически пытается переподключиться каждые 2 секунды если соединение потеряно.
-
----
-
-## 🛡️ Безопасность (Античит)
-
-### Почему это безопасно?
-
-1. **Сетевое соединение идет от чита**, а не от процесса игры
-2. **MouseClickSender** - отдельный процесс, античит игры его не видит
-3. **Makcu плата** определяется как обычное USB устройство (клавиатура/мышь)
-4. **Нет инъекций DLL** в процесс игры
-
-### Рекомендации:
-
-✅ Используйте отдельную программу `MouseClickSender.exe` для ПК1  
-✅ Не внедряйте сетевой код в процесс игры  
-✅ Используйте стандартный UDP порт (можно сменить с 5556 на другой)  
-✅ Отключайте логирование в релизной версии  
-
----
-
-## 📁 Структура файлов
-
-```
-PWNZ_AI/
-├── MouseClickSender.cpp       # Программа для ПК1 (отправка кликов)
-├── MouseClickNetwork.h        # Библиотека клиента (альтернатива для ПК1)
-├── MouseClickServer.h         # Библиотека сервера (для ПК2, вшить в чит)
-└── 2PC_MOUSE_CLICK_SETUP.md   # Эта документация
-```
-
----
-
-## ❓ Частые проблемы
-
-### Проблема: "Cannot connect to ..."
-**Решение:**
-1. Проверьте что ПК2 имеет статический IP
-2. Убедитесь что порт 5556 открыт в брандмауэре ПК2
-3. Проверьте что оба ПК в одной сети (ping между ними)
-
-### Проблема: Клики не эмулируются на ПК2
-**Решение:**
-1. Проверьте что коллбэки установлены до вызова `start()`
-2. Убедитесь что `MouseController` инициализирован
-3. Запустите чит от имени администратора (нужно для SendInput)
-
-### Проблема: Большая задержка
-**Решение:**
-1. Используйте WiFi 5GHz вместо 2.4GHz
-2. Убедитесь что нет других устройств нагружающих сеть
-3. Проверьте пинг: `ping 192.168.1.100 -t`
-
----
-
-## 🎯 Пример полной интеграции
-
-### Файл: `main.cpp` (ПК2, чит)
+### Обработка на стороне ПК2 (MouseClickServer)
 
 ```cpp
 #include "MouseClickServer.h"
-#include "MouseController.h"
-#include <iostream>
 
-// Глобальный сервер
-static pwnz_ai::MouseClickServer g_clickServer;
+pwnz_ai::MouseClickServer click_server;
 
-void Initialize2PCClicks() {
-    std::cout << "[INIT] Setting up 2PC click receiver...\n";
-
-    // Коллбэк для ЛКМ (стрельба)
-    g_clickServer.set_lmb_callback([](bool pressed) {
-        auto& mc = MouseController::GetInstance();
-        
+// Инициализация
+void init_click_server() {
+    click_server.set_lmb_callback([](bool pressed) {
         if (pressed) {
-            mc.PressButton(VK_LBUTTON);
-            // Можно добавить триггербот логику здесь
+            // Эмуляция нажатия ЛКМ через SendInput
+            INPUT input = {};
+            input.type = INPUT_MOUSE;
+            input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+            SendInput(1, &input, sizeof(input));
         } else {
-            mc.ReleaseButton(VK_LBUTTON);
+            // Эмуляция отпускания ЛКМ
+            INPUT input = {};
+            input.type = INPUT_MOUSE;
+            input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+            SendInput(1, &input, sizeof(input));
         }
     });
-
-    // Коллбэк для ПКМ (прицеливание)
-    g_clickServer.set_rmb_callback([](bool pressed) {
-        auto& mc = MouseController::GetInstance();
-        
-        if (pressed) {
-            mc.PressButton(VK_RBUTTON);
-        } else {
-            mc.ReleaseButton(VK_RBUTTON);
-        }
+    
+    click_server.set_rmb_callback([](bool pressed) {
+        // Аналогично для ПКМ
     });
-
-    // Запуск
-    if (g_clickServer.start(5556)) {
-        std::cout << "[INIT] Click server running on port 5556\n";
-    } else {
-        std::cerr << "[ERROR] Failed to start click server!\n";
-    }
-}
-
-int main() {
-    // ... инициализация чита ...
     
-    // Инициализация 2PC кликов
-    Initialize2PCClicks();
-    
-    // ... основной цикл чита ...
-    
-    return 0;
+    click_server.start(5556);
 }
 ```
 
 ---
 
-## 📞 Поддержка
+## Решение проблем
 
-Если возникли проблемы:
-1. Проверьте логи в консоли обеих программ
-2. Убедитесь что порты совпадают
-3. Проверьте сетевое соединение (ping)
-4. Убедитесь что брандмауэр не блокирует порт 5556
+### Проблема: "[ERROR] Cannot connect to ..."
 
-**Удачи в настройке! 🎮**
+**Причины:**
+1. Неправильный IP адрес
+2. Брандмауэр блокирует порт 5556
+3. Сервер не запущен на ПК2
+
+**Решение:**
+1. Проверьте IP адрес командой `ipconfig` на ПК2
+2. Добавьте правило в брандмауэр для порта 5556 (UDP)
+3. Убедитесь, что опция "Enable Mouse Click UDP" включена в GUI
+
+### Проблема: Клики не эмулируются на ПК2
+
+**Причины:**
+1. Коллбэки не установлены
+2. SendInput блокируется игрой/античитом
+
+**Решение:**
+1. Проверьте установку коллбэков в коде
+2. Используйте аппаратный метод (Makcu) если SendInput блокируется
+
+### Проблема: Большая задержка
+
+**Причины:**
+1. WiFi вместо LAN кабеля
+2. Высокая загрузка сети
+
+**Решение:**
+1. Используйте LAN кабель для соединения ПК1↔ПК2
+2. Закройте лишние сетевые приложения
+
+---
+
+## Безопасность
+
+- UDP пакеты не шифруются (локальная сеть)
+- Античит не видит соединение т.к. оно идет от отдельного процесса
+- Рекомендуется использовать статические IP адреса
+
+---
+
+## Формат пакета
+
+```
+Размер: 8 байт
+Структура:
+[0]     uint8_t  event_type   - Тип события (0x01-0x0C)
+[1]     uint8_t  reserved     - Резерв
+[2-3]   int16_t  wheel_delta  - Дельта колеса (для прокрутки)
+[4-7]   int32_t  extra        - Дополнительные данные
+```
+
+Типы событий:
+- `0x01` - LMB Down
+- `0x02` - LMB Up
+- `0x03` - RMB Down
+- `0x04` - RMB Up
+- `0x05` - MMB Down
+- `0x06` - MMB Up
+- `0x07` - Wheel Up
+- `0x08` - Wheel Down
+- `0x09` - X1 Down
+- `0x0A` - X1 Up
+- `0x0B` - X2 Down
+- `0x0C` - X2 Up
+
+---
+
+## Контакты
+
+При возникновении проблем обращайтесь в поддержку PWNZ_AI.
