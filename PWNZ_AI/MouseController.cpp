@@ -194,6 +194,21 @@ void MouseController::ReleaseButton(int buttonCode) {
 }
 
 /**
+ * @brief Прокрутка колеса мыши
+ * @param delta Положительное значение - вверх, отрицательное - вниз
+ */
+void MouseController::ScrollWheel(int delta) {
+    if (delta == 0) return;
+    
+    INPUT input = {0};
+    input.type = INPUT_MOUSE;
+    input.mi.dwFlags = MOUSEEVENTF_WHEEL;
+    input.mi.mouseData = static_cast<DWORD>(delta);
+    
+    SendInput(1, &input, sizeof(INPUT));
+}
+
+/**
  * @brief Смена метода ввода на лету
  */
 void MouseController::SetMethod(MouseMethod method) {

@@ -937,14 +937,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     SetProcessDPIAware();
     setlocale(LC_ALL, XOR("ru_RU.UTF-8"));
 
-    // Инициализация 2PC кликов с портом из настроек overlay
-    Initialize2PCClicks(overlay.mouse_click_port);
-
     if (logfile.is_open()) { logfile << "Step 1: after locale" << std::endl; logfile.flush(); }
 
     g_capture_w = GetSystemMetrics(SM_CXSCREEN);
     g_capture_h = GetSystemMetrics(SM_CYSCREEN);
     DXGICapture cap; Detector det; Overlay overlay; Aimbot aim;
+    
+    // Инициализация 2PC кликов с портом из настроек overlay
+    Initialize2PCClicks(overlay.mouse_click_port);
     const char* model_files[] = { "models\\BogX-Nano.onnx", "models\\BogX-Lite.onnx", "models\\BogX-Pro.onnx", "models\\BogX-Ultra.onnx" };
 
     if (logfile.is_open()) { logfile << "Step 2: before try block" << std::endl; logfile.flush(); }
