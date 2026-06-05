@@ -7,6 +7,7 @@
 #include <random>
 #include <vector>
 #include <chrono>
+#include <memory>
 
 #include "protect.h"
 #include "xorstr.hpp"
