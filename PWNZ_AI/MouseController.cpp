@@ -1,4 +1,6 @@
 #include "MouseController.h"
+#include "MakcuInput.h"
+#include "KMBoxNet.h"
 #include <iostream>
 
 // Singleton instance

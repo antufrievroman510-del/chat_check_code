@@ -146,6 +146,8 @@ std::vector<unsigned char> KMBoxNet::BuildPacket(uint8_t command, const unsigned
 }
 
 bool KMBoxNet::SendData(const unsigned char* data, size_t length) {
+    std::lock_guard<std::mutex> lock(mtx);
+
     if (!isConnected || hSocket == INVALID_SOCKET) {
         return false;
     }
@@ -154,7 +156,9 @@ bool KMBoxNet::SendData(const unsigned char* data, size_t length) {
     while (totalSent < static_cast<int>(length)) {
         int result = send(hSocket, (const char*)(data + totalSent), length - totalSent, 0);
         if (result == SOCKET_ERROR || result == 0) {
-            Disconnect();
+            isConnected = false;
+            closesocket(hSocket);
+            hSocket = INVALID_SOCKET;
             return false;
         }
         totalSent += result;
@@ -164,11 +168,11 @@ bool KMBoxNet::SendData(const unsigned char* data, size_t length) {
 }
 
 bool KMBoxNet::MoveMouse(int dx, int dy) {
+    std::lock_guard<std::mutex> lock(mtx);
+
     if (!isConnected || hSocket == INVALID_SOCKET) {
         return false;
     }
-
-    std::lock_guard<std::mutex> lock(mtx);
 
     // Формируем данные: DX (int16, little-endian), DY (int16, little-endian)
     unsigned char data[4];
@@ -188,11 +192,11 @@ bool KMBoxNet::MoveMouse(int dx, int dy) {
 }
 
 bool KMBoxNet::MoveMouseAbsolute(int x, int y) {
+    std::lock_guard<std::mutex> lock(mtx);
+
     if (!isConnected || hSocket == INVALID_SOCKET) {
         return false;
     }
-
-    std::lock_guard<std::mutex> lock(mtx);
 
     // Абсолютные координаты (uint16, 0-65535)
     unsigned char data[4];
@@ -212,11 +216,11 @@ bool KMBoxNet::MoveMouseAbsolute(int x, int y) {
 }
 
 bool KMBoxNet::MouseButton(uint8_t button, bool isPressed) {
+    std::lock_guard<std::mutex> lock(mtx);
+
     if (!isConnected || hSocket == INVALID_SOCKET) {
         return false;
     }
-
-    std::lock_guard<std::mutex> lock(mtx);
 
     // Данные: Button ID, State (0=release, 1=press)
     unsigned char data[2];

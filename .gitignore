@@ -12,43 +12,36 @@
 venv/
 .venv/
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-ENV/
-
-# Build directories
-build/
+.mypy_cache/
+.pytest_cache/
+node_modules/
 dist/
-*.egg-info/
+build/
+target/
+.gradle/
 
 # Logs and temp files
 *.log
 *.tmp
 *.swp
-*.swo
 
-# Environment variables
+# Environment
 .env
 .env.local
-.env.*
+*.env.*
 
 # Editors
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# Coverage
-.coverage
-coverage/
-htmlcov/
-
-# OS generated files
+# System files
 .DS_Store
 Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
 
 # Compressed files
 *.zip
