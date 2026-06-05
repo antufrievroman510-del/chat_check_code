@@ -51,7 +51,7 @@ Aimbot::Aimbot() {
     try {
         m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
         if (m_mouseInput) {
-            m_mouseInput->Init();
+            m_mouseInput->Init("");
         }
     } catch (...) {
         // В случае ошибки оставляем nullptr, будет создан при первом вызове InitHardware
@@ -247,13 +247,13 @@ bool Aimbot::InitHardware() {
             return false;
         }
 
-        bool initResult = m_mouseInput->Init();
+        bool initResult = m_mouseInput->Init("");
         if (!initResult) {
             std::cerr << "[Aimbot] Failed to initialize mouse input for hardware_type=" << hardware_type << std::endl;
             // НЕ возвращаем false, а продолжаем с SendInput как fallback
             std::cerr << "[Aimbot] Fallback to SendInput..." << std::endl;
             m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
-            m_mouseInput->Init();
+            m_mouseInput->Init("");
         }
 
         std::cout << "[Aimbot] Hardware initialized successfully. Type=" << hardware_type << std::endl;
@@ -266,7 +266,7 @@ bool Aimbot::InitHardware() {
         try {
             CloseHardware();
             m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
-            m_mouseInput->Init();
+            m_mouseInput->Init("");
             std::cout << "[Aimbot] Fallback to SendInput after exception" << std::endl;
             return true;
         }
@@ -281,7 +281,7 @@ bool Aimbot::InitHardware() {
         try {
             CloseHardware();
             m_mouseInput = std::make_unique<pwnz_ai::SendInputMouse>();
-            m_mouseInput->Init();
+            m_mouseInput->Init("");
             std::cout << "[Aimbot] Fallback to SendInput after unknown exception" << std::endl;
             return true;
         }
@@ -343,13 +343,13 @@ void Aimbot::SendHardwareMove(int x, int y) {
 void Aimbot::SendHardwareClick() {
     // Для режима Makcu используем прямой вызов через m_makcuInstance
     if (hardware_type == 1 && m_makcuInstance) {
-        m_makcuInstance->Click(0); // 0 = левая кнопка мыши
+        m_makcuInstance->Click(pwnz_ai::MouseButton::LEFT); // LEFT = левая кнопка мыши
         return;
     }
     
     // ИСПОЛЬЗУЕМ ТОЛЬКО полиморфный интерфейс для клика
     if (m_mouseInput) {
-        m_mouseInput->Click(0); // 0 = левая кнопка мыши
+        m_mouseInput->Click(pwnz_ai::MouseButton::LEFT); // LEFT = левая кнопка мыши
         return;
     }
 
@@ -357,20 +357,25 @@ void Aimbot::SendHardwareClick() {
     std::cerr << "[AIM WARNING] m_mouseInput is null for click! Re-initializing..." << std::endl;
     InitHardware();
     if (m_mouseInput) {
-        m_mouseInput->Click(0);
+        m_mouseInput->Click(pwnz_ai::MouseButton::LEFT);
     }
 }
 
 void Aimbot::SendHardwareClick(int button) {
+    // Преобразование int в MouseButton enum
+    pwnz_ai::MouseButton mb = pwnz_ai::MouseButton::LEFT;
+    if (button == 1) mb = pwnz_ai::MouseButton::RIGHT;
+    else if (button == 2) mb = pwnz_ai::MouseButton::MIDDLE;
+    
     // Для режима Makcu используем прямой вызов через m_makcuInstance
     if (hardware_type == 1 && m_makcuInstance) {
-        m_makcuInstance->Click(button);
+        m_makcuInstance->Click(mb);
         return;
     }
     
     // Клик указанной кнопкой через полиморфный интерфейс
     if (m_mouseInput) {
-        m_mouseInput->Click(button);
+        m_mouseInput->Click(mb);
         return;
     }
 
@@ -378,22 +383,27 @@ void Aimbot::SendHardwareClick(int button) {
     std::cerr << "[AIM WARNING] m_mouseInput is null for click(button)! Re-initializing..." << std::endl;
     InitHardware();
     if (m_mouseInput) {
-        m_mouseInput->Click(button);
+        m_mouseInput->Click(mb);
     }
 }
 
 void Aimbot::SendHardwarePress(int button) {
+    // Преобразование int в MouseButton enum
+    pwnz_ai::MouseButton mb = pwnz_ai::MouseButton::LEFT;
+    if (button == 1) mb = pwnz_ai::MouseButton::RIGHT;
+    else if (button == 2) mb = pwnz_ai::MouseButton::MIDDLE;
+    
     // Для режима Makcu используем прямой вызов через m_makcuInstance
     if (hardware_type == 1 && m_makcuInstance) {
         std::cout << "[Aimbot] SendHardwarePress: button=" << button << " hw=" << hardware_type << std::endl;
-        m_makcuInstance->Press(button);
+        m_makcuInstance->Press(mb);
         return;
     }
     
     // Отправка команды нажатия кнопки через полиморфный интерфейс
     if (m_mouseInput) {
         std::cout << "[Aimbot] SendHardwarePress: button=" << button << " hw=" << hardware_type << std::endl;
-        m_mouseInput->Press(button);
+        m_mouseInput->Press(mb);
         return;
     }
 
@@ -401,22 +411,27 @@ void Aimbot::SendHardwarePress(int button) {
     std::cerr << "[AIM WARNING] m_mouseInput is null for press! Re-initializing..." << std::endl;
     InitHardware();
     if (m_mouseInput) {
-        m_mouseInput->Press(button);
+        m_mouseInput->Press(mb);
     }
 }
 
 void Aimbot::SendHardwareRelease(int button) {
+    // Преобразование int в MouseButton enum
+    pwnz_ai::MouseButton mb = pwnz_ai::MouseButton::LEFT;
+    if (button == 1) mb = pwnz_ai::MouseButton::RIGHT;
+    else if (button == 2) mb = pwnz_ai::MouseButton::MIDDLE;
+    
     // Для режима Makcu используем прямой вызов через m_makcuInstance
     if (hardware_type == 1 && m_makcuInstance) {
         std::cout << "[Aimbot] SendHardwareRelease: button=" << button << " hw=" << hardware_type << std::endl;
-        m_makcuInstance->Release(button);
+        m_makcuInstance->Release(mb);
         return;
     }
     
     // Отправка команды отпускания кнопки через полиморфный интерфейс
     if (m_mouseInput) {
         std::cout << "[Aimbot] SendHardwareRelease: button=" << button << " hw=" << hardware_type << std::endl;
-        m_mouseInput->Release(button);
+        m_mouseInput->Release(mb);
         return;
     }
 
@@ -424,7 +439,7 @@ void Aimbot::SendHardwareRelease(int button) {
     std::cerr << "[AIM WARNING] m_mouseInput is null for release! Re-initializing..." << std::endl;
     InitHardware();
     if (m_mouseInput) {
-        m_mouseInput->Release(button);
+        m_mouseInput->Release(mb);
     }
 }
 
