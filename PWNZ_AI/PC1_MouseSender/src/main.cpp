@@ -14,16 +14,14 @@
 #include <iostream>
 
 #include "imgui.h"
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx9.h"
+#include "backends/imgui_impl_win32.h"
+#include "backends/imgui_impl_dx9.h"
 
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "imm32.lib")
 
 // Глобальные переменные
-static ID3DXFont* g_pFont = NULL;
-static ID3DXFont* g_pFontBold = NULL;
 static bool g_bAutoConnect = true;
 static bool g_bDebugMode = false;
 static char g_szRemoteIP[64] = "10.0.0.120";
@@ -43,7 +41,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     // Инициализация Winsock
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        MessageBox(NULL, "Failed to initialize Winsock", "Error", MB_ICONERROR);
+        MessageBoxW(NULL, L"Failed to initialize Winsock", L"Error", MB_ICONERROR);
         return 1;
     }
 
