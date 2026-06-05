@@ -900,9 +900,9 @@ void Initialize2PCClicks(int port = 5556) {
     // Коллбэк для ПКМ (прицеливание) - ВАЖНО: обновляем g_remote_aim_key
     g_clickServer.set_rmb_callback([](bool pressed) {
         pwnz_ai::MouseController& mc = pwnz_ai::MouseController::GetInstance();
+        int aim_bind = g_current_aim_bind_vk; // Выносим объявление наружу
         
         if (pressed) {
-            int aim_bind = g_current_aim_bind_vk;
             mc.PressButton(aim_bind);
             g_remote_aim_key.store(true);
             g_last_rmb_click.store(std::chrono::steady_clock::now());

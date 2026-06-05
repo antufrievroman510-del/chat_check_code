@@ -7,16 +7,19 @@
 *.so
 *.a
 *.out
-build/
-dist/
 
 # Dependencies
 venv/
 .venv/
 __pycache__/
-.mypy_cache/
-.pytest_cache/
-node_modules/
+*.pyc
+*.pyo
+*.pyd
+
+# Build directories
+build/
+dist/
+target/
 
 # Editors
 .vscode/
@@ -33,14 +36,14 @@ node_modules/
 .env.local
 *.env.*
 
-# System files
-.DS_Store
-Thumbs.db
-
 # Coverage
 coverage/
 htmlcov/
 .coverage
+
+# System files
+.DS_Store
+Thumbs.db
 
 # Compressed files
 *.zip
@@ -61,8 +64,4 @@ htmlcov/
 *.Z
 *.lz
 *.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
 ```
