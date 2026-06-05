@@ -36,6 +36,7 @@ extern std::atomic<std::chrono::steady_clock::time_point> g_last_rmb_click;
 extern std::atomic<int> g_last_click_type;
 extern std::atomic<float> g_last_inference_time;
 extern std::atomic<float> g_last_capture_time;
+extern int g_current_aim_bind_vk; // Current aim button bind from settings
 extern std::string GetLocalIPAddress();
 extern void Restart2PCClicks(int port);
 extern void Initialize2PCClicks(int port);

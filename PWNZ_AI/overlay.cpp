@@ -55,7 +55,6 @@ extern std::atomic<bool> g_click_server_running;
 extern std::atomic<std::chrono::steady_clock::time_point> g_last_lmb_click;
 extern std::atomic<std::chrono::steady_clock::time_point> g_last_rmb_click;
 extern std::atomic<int> g_last_click_type;
-extern int g_current_aim_bind_vk; // Текущая привязка кнопки мыши из настроек аимбота
 
 extern HeadSmoother g_head_smoother;
 #pragma comment(lib, "dwmapi.lib")
