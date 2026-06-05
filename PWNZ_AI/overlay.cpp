@@ -47,7 +47,7 @@
 #include "xorstr.hpp"
 #include "VMProtectSDK.h"
 #include "head_smoother.h"
-#include "HardwareBackend.h"
+#include "MakcuInput.h"
 
 extern HeadSmoother g_head_smoother;
 #pragma comment(lib, "dwmapi.lib")
@@ -1578,19 +1578,20 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         ImGui::Separator();
         ImGui::Spacing();
         
-        auto& hw = HardwareBackend::Instance();
-        bool connected = hw.IsKMboxConnected();
+        auto& makcu = pwnz_ai::MakcuInput::Instance();
+        bool connected = makcu.IsConnected();
         
         if (!connected) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
-            if (ImGui::Button("Connect KMbox", ImVec2(150, 35))) {
-                hw.ConnectKMbox(this->kmbox_ip_buf, this->kmbox_port);
+            if (ImGui::Button("Connect MAKCU", ImVec2(150, 35))) {
+                std::string port(this->com_port_buf);
+                makcu.Connect(port);
             }
             ImGui::PopStyleColor();
         } else {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
-            if (ImGui::Button("Disconnect KMbox", ImVec2(150, 35))) {
-                hw.DisconnectKMbox();
+            if (ImGui::Button("Disconnect MAKCU", ImVec2(150, 35))) {
+                makcu.Disconnect();
             }
             ImGui::PopStyleColor();
         }
@@ -1760,18 +1761,18 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
     
     ImGui::Spacing();
     
-    auto& hw = HardwareBackend::Instance();
+    auto& makcu = pwnz_ai::MakcuInput::Instance();
     
     // Test Move Button
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 0.8f));
     if (ImGui::Button(is_russian ? "Test Move Mouse" : "Test Move Mouse", ImVec2(200, 40))) {
         if (this->hw_enabled) {
-            if (this->hardware_mode_idx == 1 && hw.IsMackuConnected()) {
-                hw.SendMackuMove(this->test_move_x, this->test_move_y);
-                std::cout << "[OVERLAY] Sent Macku move: (" << this->test_move_x << ", " << this->test_move_y << ")" << std::endl;
-            } else if (this->hardware_mode_idx == 2 && hw.IsKMboxConnected()) {
-                hw.SendKMboxMove(this->test_move_x, this->test_move_y);
-                std::cout << "[OVERLAY] Sent KMbox move: (" << this->test_move_x << ", " << this->test_move_y << ")" << std::endl;
+            if (this->hardware_mode_idx == 1 && makcu.IsConnected()) {
+                makcu.Move(this->test_move_x, this->test_move_y);
+                std::cout << "[OVERLAY] Sent Makcu move: (" << this->test_move_x << ", " << this->test_move_y << ")" << std::endl;
+            } else if (this->hardware_mode_idx == 2) {
+                // KMbox logic removed
+                std::cout << "[OVERLAY] KMbox not supported" << std::endl;
             } else if (this->hardware_mode_idx == 0) {
                 // Local mouse - use SendInput
                 #ifdef _WIN32

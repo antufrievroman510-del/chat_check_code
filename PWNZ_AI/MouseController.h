@@ -41,9 +41,6 @@ public:
 
     // Смена метода ввода на лету
     void SetMethod(MouseMethod method);
-    
-    // Обновление конфигурации (заглушка, HardwareBackend удалён)
-    void UpdateHardwareConfig(const void* config);
 
 private:
     MouseController() = default;

@@ -13,9 +13,9 @@
 // naming как в source_logic/source_logic/sunone_aimbot_2.h
 // Определения находятся в main.cpp в namespace pwnz_ai
 namespace pwnz_ai {
-    extern std::atomic<bool> aiming;    // RMB/SIDE2 - прицеливание (основная клавиша аима)
-    extern std::atomic<bool> shooting;  // LMB - стрельба
-    extern std::atomic<bool> zooming;   // RMB - зум/прицеливание
+    extern std::atomic<bool>& aiming;    // RMB/SIDE2 - прицеливание (основная клавиша аима)
+    extern std::atomic<bool>& shooting;  // LMB - стрельба
+    extern std::atomic<bool>& zooming;   // RMB - зум/прицеливание
 }
 
 namespace pwnz_ai {
