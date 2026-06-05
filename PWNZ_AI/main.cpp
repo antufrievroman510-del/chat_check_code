@@ -919,7 +919,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         // Устанавливаем hardware_type из mouse_input_method_idx для корректного выбора метода
         aim.hardware_type = overlay.mouse_input_method_idx;
         
-        std::cout << "[INIT] Hardware type: " << aim.hardware_type << " (0=SendInput, 1=Makcu, 2=KMbox)" << std::endl;
+        std::cout << "[INIT] Hardware type: " << aim.hardware_type << " (0=SendInput, 1=Makcu, 2=KMbox-REMOVED)" << std::endl;
         
         try {
             if (aim.InitHardware()) {

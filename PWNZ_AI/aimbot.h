@@ -12,9 +12,11 @@
 #include <chrono>
 #include <memory>
 
-// Forward declarations для unique_ptr
+// Сначала включаем IMouseInput.h чтобы получить полное определение интерфейса
+#include "IMouseInput.h"
+
+// Forward declarations для других классов
 namespace pwnz_ai {
-    class IMouseInput;
     class MakcuInput;
 }
 
@@ -23,7 +25,6 @@ namespace pwnz_ai {
 #include "AimbotTarget.h"
 #include "AimMath.h"
 #include "MouseController.h"
-#include "IMouseInput.h"  // Должен быть включен ДО SendInputMouse.h и MakcuInput.h
 #include "SendInputMouse.h"
 #include "MakcuInput.h"
 
@@ -130,8 +131,7 @@ private:
     AimConfig m_config;
 
     // Полиморфный указатель на метод ввода (интерфейс IMouseInput)
-    // Используем raw pointer + unique_ptr с кастомным deleter для абстрактного класса
-    std::unique_ptr<pwnz_ai::IMouseInput> m_mouseInput;
+    std::unique_ptr<pwnz_ai::IMouseInput, std::default_delete<pwnz_ai::IMouseInput>> m_mouseInput;
     
     // Указатель на экземпляр MakcuInput для аппаратного режима
     std::unique_ptr<pwnz_ai::MakcuInput> m_makcuInstance;

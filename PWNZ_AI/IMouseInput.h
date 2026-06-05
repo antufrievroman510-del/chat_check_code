@@ -4,7 +4,7 @@
  * @brief Abstract interface for all mouse input methods
  * 
  * This interface allows easy addition of new input methods
- * (SendInput, Makcu, KMbox, Razer, GHub, Driver, etc.)
+ * (SendInput, Makcu, Razer, GHub, Driver, etc.)
  * without changing the main aimbot code.
  */
 
