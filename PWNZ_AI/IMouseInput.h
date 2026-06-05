@@ -11,7 +11,21 @@
 #ifndef IMOUSE_INPUT_H
 #define IMOUSE_INPUT_H
 
+#include <string>
+
 namespace pwnz_ai {
+
+// ============================================================
+// Mouse button enumeration
+// ============================================================
+enum class MouseButton {
+    NONE = 0,
+    LEFT = 1,
+    RIGHT = 2,
+    MIDDLE = 3,
+    SIDE1 = 4,
+    SIDE2 = 5
+};
 
 // ============================================================
 // Abstract class IMouseInput
@@ -23,9 +37,10 @@ public:
 
     /**
      * @brief Initialize the input method
+     * @param port Port or connection string (e.g., "COM3" for Makcu)
      * @return true if successful, false if error
      */
-    virtual bool Init() = 0;
+    virtual bool Init(const std::string& port = "") = 0;
 
     /**
      * @brief Move mouse by relative amount
@@ -36,26 +51,32 @@ public:
 
     /**
      * @brief Emulate mouse button click (full click: press + release)
-     * @param button Button code (0=left, 1=right, 2=middle, etc.)
+     * @param button Button code (use MouseButton enum)
      */
-    virtual void Click(int button) = 0;
+    virtual void Click(MouseButton button) = 0;
 
     /**
      * @brief Press mouse button (hold)
-     * @param button Button code (0=left, 1=right, 2=middle, etc.)
+     * @param button Button code (use MouseButton enum)
      */
-    virtual void Press(int button) = 0;
+    virtual void Press(MouseButton button) = 0;
 
     /**
      * @brief Release mouse button
-     * @param button Button code (0=left, 1=right, 2=middle, etc.)
+     * @param button Button code (use MouseButton enum)
      */
-    virtual void Release(int button) = 0;
+    virtual void Release(MouseButton button) = 0;
 
     /**
      * @brief Shutdown and release resources
      */
     virtual void Shutdown() = 0;
+
+    /**
+     * @brief Check if device is connected
+     * @return true if connected, false otherwise
+     */
+    virtual bool IsConnected() const = 0;
 };
 
 } // namespace pwnz_ai

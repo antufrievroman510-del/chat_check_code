@@ -2,7 +2,7 @@
 
 namespace pwnz_ai {
 
-bool SendInputMouse::Init() {
+bool SendInputMouse::Init(const std::string& /*port*/) {
     // Для SendInput не требуется специальной инициализации
     // Функция SendInput доступна напрямую из user32.dll
     m_initialized = true;
@@ -18,7 +18,7 @@ void SendInputMouse::Move(int dx, int dy) {
     SendMouseInput(MOUSEEVENTF_MOVE, dx, dy);
 }
 
-void SendInputMouse::Click(int button) {
+void SendInputMouse::Click(MouseButton button) {
     if (!m_initialized) {
         return;
     }
@@ -28,15 +28,15 @@ void SendInputMouse::Click(int button) {
 
     // Определяем флаги для нажатия и отпускания кнопки
     switch (button) {
-        case 0: // Левая кнопка
+        case MouseButton::LEFT:
             downFlag = MOUSEEVENTF_LEFTDOWN;
             upFlag = MOUSEEVENTF_LEFTUP;
             break;
-        case 1: // Правая кнопка
+        case MouseButton::RIGHT:
             downFlag = MOUSEEVENTF_RIGHTDOWN;
             upFlag = MOUSEEVENTF_RIGHTUP;
             break;
-        case 2: // Средняя кнопка
+        case MouseButton::MIDDLE:
             downFlag = MOUSEEVENTF_MIDDLEDOWN;
             upFlag = MOUSEEVENTF_MIDDLEUP;
             break;
@@ -49,7 +49,7 @@ void SendInputMouse::Click(int button) {
     SendMouseInput(upFlag);
 }
 
-void SendInputMouse::Press(int button) {
+void SendInputMouse::Press(MouseButton button) {
     if (!m_initialized) {
         return;
     }
@@ -58,13 +58,13 @@ void SendInputMouse::Press(int button) {
 
     // Определяем флаг нажатия кнопки
     switch (button) {
-        case 0: // Левая кнопка
+        case MouseButton::LEFT:
             downFlag = MOUSEEVENTF_LEFTDOWN;
             break;
-        case 1: // Правая кнопка
+        case MouseButton::RIGHT:
             downFlag = MOUSEEVENTF_RIGHTDOWN;
             break;
-        case 2: // Средняя кнопка
+        case MouseButton::MIDDLE:
             downFlag = MOUSEEVENTF_MIDDLEDOWN;
             break;
         default:
@@ -75,7 +75,7 @@ void SendInputMouse::Press(int button) {
     SendMouseInput(downFlag);
 }
 
-void SendInputMouse::Release(int button) {
+void SendInputMouse::Release(MouseButton button) {
     if (!m_initialized) {
         return;
     }
@@ -84,13 +84,13 @@ void SendInputMouse::Release(int button) {
 
     // Определяем флаг отпускания кнопки
     switch (button) {
-        case 0: // Левая кнопка
+        case MouseButton::LEFT:
             upFlag = MOUSEEVENTF_LEFTUP;
             break;
-        case 1: // Правая кнопка
+        case MouseButton::RIGHT:
             upFlag = MOUSEEVENTF_RIGHTUP;
             break;
-        case 2: // Средняя кнопка
+        case MouseButton::MIDDLE:
             upFlag = MOUSEEVENTF_MIDDLEUP;
             break;
         default:

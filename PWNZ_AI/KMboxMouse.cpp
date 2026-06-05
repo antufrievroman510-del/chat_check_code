@@ -12,7 +12,7 @@ KMboxMouse::~KMboxMouse() {
     Shutdown();
 }
 
-bool KMboxMouse::Init() {
+bool KMboxMouse::Init(const std::string& /*port*/) {
     if (m_initialized) {
         return true;
     }
@@ -44,43 +44,50 @@ void KMboxMouse::Move(int dx, int dy) {
     m_kmbox->Move(dx, dy);
 }
 
-void KMboxMouse::Click(int button) {
+void KMboxMouse::Click(MouseButton button) {
     if (!m_initialized || !m_kmbox) {
         return;
     }
 
     // Эмуляция нажатия кнопки через интерфейс KMBoxNet
-    m_kmbox->Click(button);
+    int btn = static_cast<int>(button) - 1; // Преобразование enum в int (0-based)
+    m_kmbox->Click(btn);
 }
 
-void KMboxMouse::Press(int button) {
+void KMboxMouse::Press(MouseButton button) {
     if (!m_initialized || !m_kmbox) {
         return;
     }
 
     // Отправка команды нажатия кнопки (без отпускания)
     uint8_t btn = 0;
-    if (button == 0) btn = KMBoxButton::LEFT;
-    else if (button == 1) btn = KMBoxButton::RIGHT;
-    else if (button == 2) btn = KMBoxButton::MIDDLE;
+    switch (button) {
+        case MouseButton::LEFT: btn = KMBoxButton::LEFT; break;
+        case MouseButton::RIGHT: btn = KMBoxButton::RIGHT; break;
+        case MouseButton::MIDDLE: btn = KMBoxButton::MIDDLE; break;
+        default: btn = KMBoxButton::LEFT; break;
+    }
     
     m_kmbox->MouseButton(btn, true);
-    std::cout << "[KMboxMouse] Press button=" << button << std::endl;
+    std::cout << "[KMboxMouse] Press button=" << static_cast<int>(button) << std::endl;
 }
 
-void KMboxMouse::Release(int button) {
+void KMboxMouse::Release(MouseButton button) {
     if (!m_initialized || !m_kmbox) {
         return;
     }
 
     // Отправка команды отпускания кнопки
     uint8_t btn = 0;
-    if (button == 0) btn = KMBoxButton::LEFT;
-    else if (button == 1) btn = KMBoxButton::RIGHT;
-    else if (button == 2) btn = KMBoxButton::MIDDLE;
+    switch (button) {
+        case MouseButton::LEFT: btn = KMBoxButton::LEFT; break;
+        case MouseButton::RIGHT: btn = KMBoxButton::RIGHT; break;
+        case MouseButton::MIDDLE: btn = KMBoxButton::MIDDLE; break;
+        default: btn = KMBoxButton::LEFT; break;
+    }
     
     m_kmbox->MouseButton(btn, false);
-    std::cout << "[KMboxMouse] Release button=" << button << std::endl;
+    std::cout << "[KMboxMouse] Release button=" << static_cast<int>(button) << std::endl;
 }
 
 void KMboxMouse::Shutdown() {
@@ -89,6 +96,10 @@ void KMboxMouse::Shutdown() {
         m_initialized = false;
         std::cout << "[KMboxMouse] Disconnected." << std::endl;
     }
+}
+
+bool KMboxMouse::IsConnected() const {
+    return m_initialized && m_kmbox && m_kmbox->IsConnected();
 }
 
 void KMboxMouse::SetConnectionInfo(const std::string& ip, int port) {
