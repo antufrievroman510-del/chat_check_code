@@ -1,4 +1,8 @@
 #pragma once
+
+#ifndef SENDINPUTMOUSE_H
+#define SENDINPUTMOUSE_H
+
 #include "IMouseInput.h"
 #include <Windows.h>
 
