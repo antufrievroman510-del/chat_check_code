@@ -50,7 +50,7 @@ class Aimbot;
 
 class Overlay {
 public:
-    // ---- Состояние (все поля остаются как у вас) ----
+    // ---- Г‘Г®Г±ГІГ®ГїГ­ГЁГҐ (ГўГ±ГҐ ГЇГ®Г«Гї Г®Г±ГІГ ГѕГІГ±Гї ГЄГ ГЄ Гі ГўГ Г±) ----
     bool is_loading = true;
     float load_progress = 0.0f;
     int current_tip_idx = 0;
@@ -235,9 +235,6 @@ public:
 
     // GPU & Model Settings
     int dml_gpu_index = 0;
-    bool force_model_res = false;
-    int custom_model_w = 640;
-    int custom_model_h = 640;
 
     // Hardware 2PC Settings
     char com_port_buf[32] = "COM3";
@@ -249,22 +246,22 @@ public:
     int random_delay_max = 30;
     bool hw_enabled = false;
     bool obs_bypass_enabled = false; // OBS Bypass toggle
-    
+
     // Makcu Net Settings (UDP)
     char makcu_ip_buf[32] = "192.168.1.100";
     int makcu_port = 3333;
-    
+
     // Mouse Click 2PC Settings (UDP)
     bool mouse_click_udp_enabled = false;
     char mouse_click_ip_buf[32] = "192.168.1.100";
     int mouse_click_port = 5556;
     char auto_detected_ip_buf[32] = ""; // Auto-detected IP for display
-    
+
     // Test values
     int test_move_x = 50;
     int test_move_y = 50;
 
-    // ---- Основные методы ----
+    // ---- ГЋГ±Г­Г®ГўГ­Г»ГҐ Г¬ГҐГІГ®Г¤Г» ----
     bool Initialize();
     bool Update();
     void Render(const std::vector<Detection>& detections, int screen_w, int screen_h, int roi_w, int roi_h, Aimbot* aim, bool show_menu);
@@ -282,7 +279,7 @@ public:
     void RenderHWTutorial();
     std::string ToLower(std::string s);
 
-    // ---- Методы вкладок (объявлены, реализованы в overlay.cpp из старого) ----
+    // ---- ГЊГҐГІГ®Г¤Г» ГўГЄГ«Г Г¤Г®ГЄ (Г®ГЎГєГїГўГ«ГҐГ­Г», Г°ГҐГ Г«ГЁГ§Г®ГўГ Г­Г» Гў overlay.cpp ГЁГ§ Г±ГІГ Г°Г®ГЈГ®) ----
     void RenderAimbotTab(float content_w, float content_h, const ImVec4& acc_vec, ImU32 acc_u32, bool& cfg_changed);
     void RenderVisualsTab(float content_w, float content_h, const ImVec4& acc_vec, ImU32 acc_u32, bool& cfg_changed);
     void RenderNeuralTab(float content_w, float content_h, const ImVec4& acc_vec, ImU32 acc_u32, bool& cfg_changed);
@@ -295,7 +292,7 @@ public:
     void RenderXTierTab(float content_w, float content_h, const ImVec4& acc_vec, ImU32 acc_u32, bool& cfg_changed);
     void RenderMetricsTab(float content_w, float content_h, const ImVec4& acc_vec, ImU32 acc_u32, bool& cfg_changed);
 
-    // ---- Новые методы для разбивки Render ----
+    // ---- ГЌГ®ГўГ»ГҐ Г¬ГҐГІГ®Г¤Г» Г¤Г«Гї Г°Г Г§ГЎГЁГўГЄГЁ Render ----
     void RenderAutoLogin(const ImVec4& acc_vec, ImU32 acc_u32);
     void RenderLoadingScreen(const ImVec4& acc_vec, ImU32 acc_u32);
     void RenderAuthWindow(const ImVec4& acc_vec, ImU32 acc_u32);
