@@ -397,9 +397,6 @@ void Overlay::LoadConfig(Aimbot* aim) {
     handlers["byte_match_thresh"] = [&](const std::string& v) { byte_match_thresh = safe_stof(v); };
     handlers["byte_frame_rate"] = [&](const std::string& v) { byte_frame_rate = std::stoi(v); };
     handlers["dml_gpu_index"] = [&](const std::string& v) { dml_gpu_index = std::stoi(v); };
-    handlers["force_model_res"] = [&](const std::string& v) { force_model_res = std::stoi(v); };
-    handlers["custom_model_w"] = [&](const std::string& v) { custom_model_w = std::stoi(v); };
-    handlers["custom_model_h"] = [&](const std::string& v) { custom_model_h = std::stoi(v); };
     handlers["min_sensitivity"] = [&](const std::string& v) { min_sensitivity = safe_stof(v); };
     handlers["max_sensitivity"] = [&](const std::string& v) { max_sensitivity = safe_stof(v); };
     handlers["kalman_compensate_detection_delay"] = [&](const std::string& v) { kalman_compensate_detection_delay = std::stoi(v); };
@@ -497,21 +494,18 @@ void Overlay::LoadConfig(Aimbot* aim) {
     handlers["sticky_frames_keep"] = [&](const std::string& v) { sticky_frames_keep = std::stoi(v); };
     handlers["prediction_method"] = [&](const std::string& v) { prediction_method = std::stoi(v); };
     handlers["dml_gpu_index"] = [&](const std::string& v) { dml_gpu_index = std::stoi(v); };
-    handlers["force_model_res"] = [&](const std::string& v) { force_model_res = std::stoi(v); };
-    handlers["custom_model_w"] = [&](const std::string& v) { custom_model_w = std::stoi(v); };
-    handlers["custom_model_h"] = [&](const std::string& v) { custom_model_h = std::stoi(v); };
     handlers[("min_sensitivity")] = [&](const std::string& v) { min_sensitivity = safe_stof(v); };
     handlers["max_sensitivity"] = [&](const std::string& v) { max_sensitivity = safe_stof(v); };
     handlers["kalman_compensate_detection_delay"] = [&](const std::string& v) { kalman_compensate_detection_delay = std::stoi(v); };
     handlers["kalman_additional_prediction_ms"] = [&](const std::string& v) { kalman_additional_prediction_ms = safe_stof(v); };
     handlers["prediction_interval"] = [&](const std::string& v) { prediction_interval = safe_stof(v); };
     handlers["disable_headshot"] = [&](const std::string& v) { disable_headshot = std::stoi(v); };
-    
+
     // Mouse Click UDP Settings
     handlers["mouse_click_udp_enabled"] = [&](const std::string& v) { this->mouse_click_udp_enabled = std::stoi(v); };
     handlers["mouse_click_ip_buf"] = [&](const std::string& v) { strncpy_s(this->mouse_click_ip_buf, sizeof(this->mouse_click_ip_buf), v.c_str(), sizeof(this->mouse_click_ip_buf) - 1); };
     handlers["mouse_click_port"] = [&](const std::string& v) { this->mouse_click_port = std::stoi(v); };
-    
+
     // Makcu Net Settings
     handlers["makcu_ip_buf"] = [&](const std::string& v) { strncpy_s(this->makcu_ip_buf, sizeof(this->makcu_ip_buf), v.c_str(), sizeof(this->makcu_ip_buf) - 1); };
     handlers["makcu_port"] = [&](const std::string& v) { this->makcu_port = std::stoi(v); };
@@ -683,21 +677,18 @@ void Overlay::SaveConfig(Aimbot* aim) {
     ss << "sticky_frames_keep=" << sticky_frames_keep << "\n";
     ss << "prediction_method=" << prediction_method << "\n";
     ss << "dml_gpu_index=" << dml_gpu_index << "\n";
-    ss << "force_model_res=" << force_model_res << "\n";
-    ss << "custom_model_w=" << custom_model_w << "\n";
-    ss << "custom_model_h=" << custom_model_h << "\n";
     ss << "min_sensitivity=" << min_sensitivity << "\n";
     ss << "max_sensitivity=" << max_sensitivity << "\n";
     ss << "kalman_compensate_detection_delay=" << kalman_compensate_detection_delay << "\n";
     ss << "kalman_additional_prediction_ms=" << kalman_additional_prediction_ms << "\n";
     ss << "prediction_interval=" << prediction_interval << "\n";
     ss << "disable_headshot=" << disable_headshot << "\n";
-    
+
     // Mouse Click UDP Settings
     ss << "mouse_click_udp_enabled=" << this->mouse_click_udp_enabled << "\n";
     ss << "mouse_click_ip_buf=" << this->mouse_click_ip_buf << "\n";
     ss << "mouse_click_port=" << this->mouse_click_port << "\n";
-    
+
     // Makcu Net Settings
     ss << "makcu_ip_buf=" << this->makcu_ip_buf << "\n";
     ss << "makcu_port=" << this->makcu_port << "\n";
@@ -979,7 +970,7 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
     const char* tgts[] = { "Head", "Body", "Auto" };
 
     // === ЛЕВАЯ КОЛОНКА ===
-    
+
     // Aimbot Core - Основные настройки
     if (BeginPanel("Aimbot Core", ImVec2(0, 320), acc_vec, true, &aim_enable, acc_u32)) cfg_changed = true;
     if (DrawKeybinder("Main Bind:", &aim_key_main, 1, "Основная кнопка активации.")) cfg_changed = true;
@@ -1001,17 +992,17 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
     ImGui::TextColored(acc_vec, "Min Sensitivity:");
     HelpMarker("Минимальная скорость движения мыши. Чем выше значение, тем быстрее аимбот на близких дистанциях.");
     if (CustomSliderFloat("##min_sp", "##min_sp_lbl", &min_sensitivity, 0.01f, 5.0f, "%.3f", acc_vec)) cfg_changed = true;
-    
+
     ImGui::Spacing();
     ImGui::TextColored(acc_vec, "Max Sensitivity:");
     HelpMarker("Максимальная скорость движения мыши. Потолок скорости на дальних дистанциях.");
     if (CustomSliderFloat("##max_sp", "##max_sp_lbl", &max_sensitivity, 0.1f, 20.0f, "%.3f", acc_vec)) cfg_changed = true;
-    
+
     ImGui::Spacing();
     ImGui::TextColored(acc_vec, "Max Move Step:");
     HelpMarker("Максимальное смещение мыши за один кадр. Ограничивает резкость движений.");
     if (CustomSliderFloat("##max_move", "##max_move_lbl", &max_move_step, 10.0f, 500.0f, "%.1f px", acc_vec)) cfg_changed = true;
-    
+
     EndPanel();
 
     // Pixelsmooth / Smoothing - Плавность
@@ -1030,15 +1021,15 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
     if (BeginPanel("Humanizer", ImVec2(0, 280), acc_vec, true, &humanizer_enable, acc_u32)) cfg_changed = true;
     if (CustomSliderFloat("Reaction Delay:", "##hum_react", &hum_reaction_delay, 0.0f, 200.0f, "%.0f ms", acc_vec, "Искусственная задержка реакции.")) cfg_changed = true;
     if (CustomSliderFloat("Tremor Scale:", "##hum_tremor", &hum_tremor_scale, 0.0f, 5.0f, "%.2f", acc_vec, "Размах дрожания рук.")) cfg_changed = true;
-    
+
     if (DrawToggle("Micro Movements:", "##hum_micro", &hum_micro_movements, acc_u32, "Микродвижения прицела.")) cfg_changed = true;
     if (hum_micro_movements) {
         if (CustomSliderFloat("Micro Amplitude:", "##hum_micro_amp", &hum_micro_amplitude, 0.0f, 3.0f, "%.2f px", acc_vec, "Амплитуда микродвижений.")) cfg_changed = true;
     }
-    
+
     if (CustomSliderFloat("Path Randomization:", "##hum_path_rand", &hum_path_randomization, 0.0f, 2.0f, "%.2f", acc_vec, "Рандомизация траектории.")) cfg_changed = true;
     if (CustomSliderFloat("Reaction Jitter:", "##reac_jit", &hum_reaction_jitter, 0.0f, 5.0f, "%.1f px", acc_vec, "Отклонение при захвате цели.")) cfg_changed = true;
-    
+
     if (DrawToggle("Overshoot:", "##hum_overshoot_en", &hum_overshoot_enabled, acc_u32, "Искусственный перелёт цели.")) cfg_changed = true;
     if (hum_overshoot_enabled) {
         if (CustomSliderFloat("Overshoot Chance:", "##hum_overshoot_ch", &hum_overshoot_chance, 0.0f, 50.0f, "%.1f%%", acc_vec, "Шанс перелёта.")) cfg_changed = true;
@@ -1065,7 +1056,7 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
     EndPanel();
 
     ImGui::Columns(1);
-    
+
     // Misc - Дополнительные настройки
     if (BeginPanel("Misc", ImVec2(0, 120), acc_vec)) cfg_changed = true;
     if (DrawToggle("Disable Headshot:", "##no_head", &disable_headshot, acc_u32, "Запретить прицеливание в голову.")) cfg_changed = true;
@@ -1151,29 +1142,16 @@ void Overlay::RenderNeuralTab(float content_w, float content_h, const ImVec4& ac
     if (CustomSliderInt("Max Targets", "##mxdet", &neural_max_det, 1, 20, "%d", acc_vec, "Макс. целей.")) cfg_changed = true;
     EndPanel();
 
-    // Model Engine & GPU Panel
-    if (BeginPanel("Model Engine & GPU", ImVec2(0, 270), acc_vec)) cfg_changed = true;
-    const char* gpu_opts[] = { "GPU 0 (Auto/iGPU)", "GPU 1 (dGPU)", "GPU 2" };
-    if (CustomCombo("GPU Device:", "##gpu_idx", &dml_gpu_index, gpu_opts, 3, "Выбор видеокарты (0 обычно Встройка, 1 - Дискретная).")) cfg_changed = true;
-
+    // GPU info panel — всё основное на GPU, разрешение модели определяется автоматически из ONNX
+    if (BeginPanel("Model Engine & GPU", ImVec2(0, 100), acc_vec)) cfg_changed = true;
     ImGui::Spacing();
-    if (DrawToggle("Force Custom Res", "##frc_res", &force_model_res, acc_u32, "Включи для моделей с динамическими осями (-1) (Например 640x640).")) cfg_changed = true;
-    if (force_model_res) {
-        if (CustomSliderInt("Model Width", "##mdl_w", &custom_model_w, 160, 1280, "%d px", acc_vec)) cfg_changed = true;
-        if (CustomSliderInt("Model Height", "##mdl_h", &custom_model_h, 160, 1280, "%d px", acc_vec)) cfg_changed = true;
-    }
-
+    ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.4f, 1.0f), "[HW] DirectML — GPU Auto");
     ImGui::Spacing();
-    ImGui::Separator();
+    ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "Model resolution: auto from ONNX");
     ImGui::Spacing();
-
-    // ЯВНАЯ КНОПКА ПРИМЕНЕНИЯ РАЗРЕШЕНИЯ И GPU
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-    if (ImGui::Button("APPLY SETTINGS & RELOAD MODEL", ImVec2(-1, 35))) {
-        apply_model_flag = true;
-    }
-    ImGui::PopStyleColor();
-
+    // Выбор GPU индекса остаётся для тех у кого несколько видеокарт
+    const char* gpu_opts[] = { "GPU 0 (Primary)", "GPU 1", "GPU 2" };
+    if (CustomCombo("GPU Device:", "##gpu_idx", &dml_gpu_index, gpu_opts, 3, "Выбери видеокарту. Обычно GPU 0 — основная.")) cfg_changed = true;
     EndPanel();
 
     ImGui::NextColumn();
@@ -1386,7 +1364,7 @@ void Overlay::RenderProfileTab(float content_w, float content_h, const ImVec4& a
 }
 
 // ============================================================
- 
+
 
 // ============================================================
 // RenderHardwareTab (вкладка Hardware/2PC)
@@ -1394,53 +1372,53 @@ void Overlay::RenderProfileTab(float content_w, float content_h, const ImVec4& a
 void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& acc_vec, ImU32 acc_u32, bool& cfg_changed) {
     // Синхронизируем текущую привязку кнопки аимбота с глобальной переменной для UDP сервера
     g_current_aim_bind_vk = this->aim_key_main;
-    
+
     ImGui::Columns(2, nullptr, false);
     ImGui::SetColumnWidth(0, content_w * 0.5f);
 
     // === ЛЕВАЯ КОЛОНКА: Основные настройки Hardware ===
     if (BeginPanel("Hardware Output Mode", ImVec2(0, 320), acc_vec)) cfg_changed = true;
-    
+
     const char* hw_modes[] = {
         "Local Mouse (SendInput) [UNSAFE]",
         "Makcu (UART/COM) [2PC]",
         "Makcu UART (COM)"
     };
-    
-    if (CustomCombo("Mode:", "##hw_mode", &this->hardware_mode_idx, hw_modes, 3, 
+
+    if (CustomCombo("Mode:", "##hw_mode", &this->hardware_mode_idx, hw_modes, 3,
         is_russian ? "Выберите режим работы" : "Select hardware mode")) {
         cfg_changed = true;
     }
-    
+
     ImGui::Spacing();
-    
+
     // Выбор метода ввода мыши (для всех режимов)
     const char* mouse_methods[] = {
         "SendInput (Windows API)",
         "Makcu (ESP32S3 HID)",
         "Makcu (UART/COM)"
     };
-    
+
     if (CustomCombo("Mouse Input Method:", "##mouse_method", &this->mouse_input_method_idx, mouse_methods, 3,
         is_russian ? "Метод эмуляции мыши" : "Mouse emulation method")) {
         cfg_changed = true;
     }
-    
-    HelpMarker(is_russian ? "SendInput - программный ввод (небезопасно)\nMakcu - аппаратный ввод через 2PC (безопасно)" 
-                         : "SendInput - software input (unsafe)\nMakcu - hardware input via 2PC (safe)");
-    
+
+    HelpMarker(is_russian ? "SendInput - программный ввод (небезопасно)\nMakcu - аппаратный ввод через 2PC (безопасно)"
+        : "SendInput - software input (unsafe)\nMakcu - hardware input via 2PC (safe)");
+
     ImGui::Spacing();
-    
+
     // Enable Hardware Toggle
-    if (DrawToggle("Enable Hardware:", "##hw_en", &this->hw_enabled, acc_u32, 
+    if (DrawToggle("Enable Hardware:", "##hw_en", &this->hw_enabled, acc_u32,
         is_russian ? "Включить аппаратный ввод" : "Enable hardware input")) {
         cfg_changed = true;
     }
-    
+
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
-    
+
     // Кнопка Apply Hardware Settings
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 1.0f, 0.3f, 1.0f));
@@ -1448,9 +1426,9 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         this->apply_hw_flag = true;
     }
     ImGui::PopStyleColor(2);
-    HelpMarker(is_russian ? "Применить настройки оборудования и переподключить метод ввода" 
-                         : "Apply hardware settings and reconnect input method");
-    
+    HelpMarker(is_russian ? "Применить настройки оборудования и переподключить метод ввода"
+        : "Apply hardware settings and reconnect input method");
+
     // Bypass Options
     const char* bypass_modes[] = {
         "None",
@@ -1458,12 +1436,12 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         "Razer",
         "Random Delay"
     };
-    
+
     if (CustomCombo("Bypass Mode:", "##bypass", &this->bypass_mode_idx, bypass_modes, 4,
         is_russian ? "Режим обхода античита" : "Anti-cheat bypass mode")) {
         cfg_changed = true;
     }
-    
+
     if (this->bypass_mode_idx == 3) { // Random Delay
         ImGui::Spacing();
         ImGui::Text(is_russian ? "Random Delay (ms):" : "Random Delay (ms):");
@@ -1474,11 +1452,11 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         ImGui::PopItemWidth();
         HelpMarker(is_russian ? "Мин/макс задержка для рандомизации" : "Min/Max delay for randomization");
     }
-    
+
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
-    
+
     // OBS Bypass Toggle - используем obs_bypass для реального скрытия
     if (DrawToggle("OBS Bypass:", "##obs_bypass", &this->obs_bypass_enabled, acc_u32,
         is_russian ? "Скрыть оверлей при записи/скриншотах" : "Hide overlay during recording/screenshots")) {
@@ -1488,7 +1466,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             SetWindowDisplayAffinity(hwnd, this->obs_bypass_enabled ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE);
         }
     }
-    
+
     EndPanel();
 
     ImGui::NextColumn();
@@ -1497,17 +1475,17 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     if (this->hardware_mode_idx == 1) {
         // Makcu UART Settings
         if (BeginPanel("Makcu (UART/COM) Settings", ImVec2(0, 320), acc_vec)) cfg_changed = true;
-        
+
         ImGui::Text(is_russian ? "COM Порт:" : "COM Port:");
         ImGui::PushItemWidth(150);
-        
+
         // COM-порт выпадающий список от COM1 до COM10
-        const char* com_ports[] = { 
-            "COM1", "COM2", "COM3", "COM4", "COM5", 
-            "COM6", "COM7", "COM8", "COM9", "COM10" 
+        const char* com_ports[] = {
+            "COM1", "COM2", "COM3", "COM4", "COM5",
+            "COM6", "COM7", "COM8", "COM9", "COM10"
         };
         static int com_port_idx = 2; // По умолчанию COM3
-        
+
         // Синхронизация индекса с буфером com_port_buf
         for (int i = 0; i < 10; i++) {
             if (strcmp(com_ports[i], this->com_port_buf) == 0) {
@@ -1515,24 +1493,24 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
                 break;
             }
         }
-        
+
         if (ImGui::Combo("##com_port", &com_port_idx, com_ports, IM_ARRAYSIZE(com_ports))) {
             strncpy_s(this->com_port_buf, sizeof(this->com_port_buf), com_ports[com_port_idx], _TRUNCATE);
             cfg_changed = true;
         }
         ImGui::PopItemWidth();
         HelpMarker(is_russian ? "Выберите COM порт из списка (COM1-COM10)" : "Select COM port from list (COM1-COM10)");
-        
+
         ImGui::Spacing();
-        
+
         const char* baud_rates[] = { "9600", "19200", "38400", "57600", "115200", "4000000" };
         int baud_values[] = { 9600, 19200, 38400, 57600, 115200, 4000000 };
-        
+
         ImGui::Text(is_russian ? "Baud Rate:" : "Baud Rate:");
         ImGui::PushItemWidth(150);
         if (ImGui::Combo("##baud", &this->baud_rate_idx, baud_rates, IM_ARRAYSIZE(baud_rates))) cfg_changed = true;
         ImGui::PopItemWidth();
-        
+
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
@@ -1540,7 +1518,7 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         // === КРИТИЧНО: Используем MakcuInput для 2PC-связки ===
         // MakcuInput использует библиотеку macku2pc с коллбэками для кнопок
         static std::unique_ptr<pwnz_ai::MakcuInput> g_makcu_input;
-        
+
         bool connected = (g_makcu_input != nullptr && g_makcu_input->IsConnected());
 
         // Кнопка "Принять" для подключения
@@ -1548,14 +1526,14 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 0.8f));
             if (ImGui::Button("Apply/Connect", ImVec2(150, 35))) {
                 // Попытка подключения к выбранному порту
-                std::cout << "[OVERLAY] Attempting to connect to " << this->com_port_buf 
-                          << "..." << std::endl;
-                
+                std::cout << "[OVERLAY] Attempting to connect to " << this->com_port_buf
+                    << "..." << std::endl;
+
                 // Создаём объект MakcuInput если ещё не создан
                 if (!g_makcu_input) {
                     g_makcu_input = std::make_unique<pwnz_ai::MakcuInput>();
                 }
-                
+
                 // Подключаемся через MakcuInput (используя порт из настроек)
                 std::string portStr = std::string(this->com_port_buf);
                 bool result = g_makcu_input->Init(portStr);
@@ -1568,13 +1546,15 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
                     this->hardware_mode_idx = 1;  // Makcu mode
                     this->mouse_input_method_idx = 1;  // Makcu input method
                     std::cout << "[OVERLAY] Set apply_hw_flag to trigger button monitor start" << std::endl;
-                } else {
+                }
+                else {
                     std::cerr << "[OVERLAY] Failed to connect to Makcu device" << std::endl;
                     g_makcu_input.reset();  // Очищаем при ошибке
                 }
             }
             ImGui::PopStyleColor();
-        } else {
+        }
+        else {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
             if (ImGui::Button("Disconnect", ImVec2(150, 35))) {
                 if (g_makcu_input) {
@@ -1585,46 +1565,50 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             }
             ImGui::PopStyleColor();
         }
-        
+
         ImGui::SameLine();
-        
+
         // Отображение статуса подключения
         if (connected) {
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), is_russian ? "✓ Подключено" : "✓ Connected");
             ImGui::SameLine();
             ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "(VID:PID 1A86:55D3)");
-        } else {
+        }
+        else {
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), is_russian ? "✗ Отключено" : "✗ Disconnected");
         }
-        
+
         // Дополнительная информация о статусе
         ImGui::Spacing();
         if (connected) {
-            ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), 
+            ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f),
                 is_russian ? "Устройство Macku готово к работе" : "Macku device ready");
-        } else {
-            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), 
+        }
+        else {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f),
                 is_russian ? "Нажмите 'Apply/Connect' для подключения" : "Press 'Apply/Connect' to connect");
         }
-        
+
         EndPanel();
-        
-    } else if (this->hardware_mode_idx == 2) {
+
+    }
+    else if (this->hardware_mode_idx == 2) {
         // KMbox удалён - показываем сообщение
         ImVec4 disable_vec = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);  // Серый цвет для отключенных элементов
         if (BeginPanel(is_russian ? "KMbox (удалено)" : "KMbox (removed)", ImVec2(0, 150), disable_vec)) cfg_changed = true;
-        
-        ImGui::TextColored(disable_vec, is_russian ? 
+
+        ImGui::TextColored(disable_vec, is_russian ?
             "Режим KMbox был удалён из проекта.\nИспользуйте режим Makcu (UART/COM) вместо него." :
             "KMbox mode has been removed from the project.\nUse Makcu (UART/COM) mode instead.");
-        
+
         EndPanel();
-    } else {
+    }
+    else {
         // Local Mouse Info - режим SendInput
         if (BeginPanel("Local Mouse (SendInput) [UNSAFE]", ImVec2(0, 280), acc_vec)) {
             ImGui::TextColored(acc_vec, is_russian ? "Стандартный ввод Windows" : "Standard Windows Input");
             ImGui::Spacing();
-            ImGui::TextWrapped(is_russian ? 
+            ImGui::TextWrapped(is_russian ?
                 "Используется API SendInput для эмуляции мыши.\nНе требует дополнительного оборудования." :
                 "Uses SendInput API for mouse emulation.\nNo additional hardware required.");
             ImGui::Spacing();
@@ -1634,25 +1618,25 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         // Закрываем панель всегда, даже если BeginPanel вернул false
         EndPanel();
     }
-    
+
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
-    
+
     // === 2PC Mouse Click UDP Settings ===
     if (BeginPanel("2PC Mouse Click UDP", ImVec2(0, 320), acc_vec)) cfg_changed = true;
-    
+
     ImGui::TextColored(acc_vec, is_russian ? "Передача нажатий мыши по сети" : "Mouse Click Transfer over Network");
     ImGui::Spacing();
-    
+
     // Чекбокс включения
     if (DrawToggle("Enable UDP Receiver:", "##udp_click_en", &this->mouse_click_udp_enabled, acc_u32,
         is_russian ? "Принимать нажатия с игрового ПК" : "Receive clicks from gaming PC")) {
         cfg_changed = true;
     }
-    
+
     ImGui::Spacing();
-    
+
     // Автоматически определённый IP (для отображения пользователю)
     ImGui::TextColored(acc_vec, is_russian ? "Этот ПК IP (для клиента):" : "This PC IP (for client):");
     ImGui::PushItemWidth(200);
@@ -1663,12 +1647,12 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     }
     ImGui::InputText("##auto_ip", this->auto_detected_ip_buf, sizeof(this->auto_detected_ip_buf), ImGuiInputTextFlags_ReadOnly);
     ImGui::PopItemWidth();
-    HelpMarker(is_russian ? 
-        "Введите этот IP в клиентскую утилиту на игровом ПК" : 
+    HelpMarker(is_russian ?
+        "Введите этот IP в клиентскую утилиту на игровом ПК" :
         "Enter this IP in the client utility on the gaming PC");
-    
+
     ImGui::Spacing();
-    
+
     // Настройка Порта
     ImGui::Text(is_russian ? "UDP Port:" : "UDP Port:");
     ImGui::PushItemWidth(100);
@@ -1682,9 +1666,9 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
     ImGui::PopItemWidth();
     ImGui::SameLine();
     HelpMarker(is_russian ? "Порт для получения нажатий (по умолчанию 5556)" : "Port for receiving clicks (default 5556)");
-    
+
     ImGui::Spacing();
-    
+
     // Кнопка Apply / Принять
     ImGui::SameLine();
     if (ImGui::Button("APPLY / ПРИНЯТЬ", ImVec2(180, 30))) {
@@ -1692,61 +1676,64 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
         Restart2PCClicks(this->mouse_click_port);
         std::cout << "[GUI] 2PC Click server restarted on port " << this->mouse_click_port << std::endl;
     }
-    HelpMarker(is_russian ? 
-        "Сохранить настройки и перезапустить UDP сервер" : 
+    HelpMarker(is_russian ?
+        "Сохранить настройки и перезапустить UDP сервер" :
         "Save settings and restart UDP server");
-    
+
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
-    
+
     // Статус сервера
     if (g_click_server_running.load()) {
-        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f),
             is_russian ? "✓ Сервер запущен" : "✓ Server Running");
-    } else {
-        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), 
+    }
+    else {
+        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
             is_russian ? "⚠ Сервер остановлен" : "⚠ Server Stopped");
     }
-    
+
     // Индикатор последнего клика
     auto now = std::chrono::steady_clock::now();
     auto last_lmb = g_last_lmb_click.load();
     auto last_rmb = g_last_rmb_click.load();
     int click_type = g_last_click_type.load();
-    
+
     float lmb_secs = std::chrono::duration<float>(now - last_lmb).count();
     float rmb_secs = std::chrono::duration<float>(now - last_rmb).count();
-    
+
     ImGui::Spacing();
     if (click_type == 1 && lmb_secs < 3.0f) {
-        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 
+        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
             is_russian ? "◉ ЛКМ (%.1f сек назад)" : "◉ LMB (%.1f sec ago)", lmb_secs);
-    } else if (click_type == 2 && rmb_secs < 3.0f) {
-        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
+    }
+    else if (click_type == 2 && rmb_secs < 3.0f) {
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f),
             is_russian ? "◉ ПКМ (%.1f сек назад) - АИМ АКТИВЕН" : "◉ RMB (%.1f sec ago) - AIM ACTIVE", rmb_secs);
-    } else {
+    }
+    else {
         ImGui::TextDisabled(is_russian ? "Ожидание кликов..." : "Waiting for clicks...");
     }
-    
+
     ImGui::Spacing();
-    ImGui::TextWrapped(is_russian ? 
+    ImGui::TextWrapped(is_russian ?
         "Все нажатия мыши (ЛКМ, ПКМ, СКМ, Колесо, X1/X2) будут приниматься от клиентской утилиты." :
         "All mouse clicks (LMB, RMB, MMB, Wheel, X1/X2) will be received from client utility.");
-    
+
     EndPanel();
-    
+
     ImGui::Columns(1);
-    
+
     // Bottom Section - Quick Guide for 2PC UDP
     ImGui::Spacing();
     if (BeginPanel(is_russian ? "📖 Быстрая инструкция по 2PC UDP" : "📖 Quick Guide for 2PC UDP", ImVec2(-1, 220), acc_vec)) {
         ImGui::Columns(2, nullptr, false);
-        
+
         // Column 1: Setup Steps
         ImGui::TextColored(acc_vec, is_russian ? "НАСТРОЙКА (5 шагов):" : "SETUP (5 steps):");
         ImGui::Separator();
-        ImGui::TextWrapped(is_russian ? 
+        ImGui::TextWrapped(is_russian ?
             "1. На этом ПК (читовом): скопируй IP из поля выше\n"
             "2. На игровом ПК: запусти MouseClickSender.exe\n"
             "3. Введи IP читового ПК в настройках клиента\n"
@@ -1754,19 +1741,19 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             "5. Здесь нажми 'APPLY / ПРИНЯТЬ'\n\n"
             "ВАЖНО: Эмулируется та кнопка, которая выбрана в настройках аимбота (вкладка Aimbot -> Key Bind)!\n"
             "Нажимай ЛЮБУЮ кнопку мыши на игровом ПК - она будет эмулирована на читовом ПК." :
-            "1. On this PC (cheat): copy IP from field above\n"
+        "1. On this PC (cheat): copy IP from field above\n"
             "2. On gaming PC: run MouseClickSender.exe\n"
             "3. Enter cheat PC IP in client settings\n"
             "4. Click 'Start' on client\n"
             "5. Here click 'APPLY / ПРИНЯТЬ'\n\n"
             "After that press RMB on gaming PC - aimbot will activate!");
-        
+
         ImGui::NextColumn();
-        
+
         // Column 2: Important Notes
         ImGui::TextColored(acc_vec, is_russian ? "ВАЖНО:" : "IMPORTANT:");
         ImGui::Separator();
-        ImGui::TextWrapped(is_russian ? 
+        ImGui::TextWrapped(is_russian ?
             "• Сервер слушает порт 5556 (по умолчанию)\n"
             "• Брандмауэр должен разрешать UDP 5556\n"
             "• Эмулируется кнопка из настроек аимбота (ЛКМ/ПКМ/СКМ/X1/X2)\n"
@@ -1775,48 +1762,49 @@ void Overlay::RenderHardwareTab(float content_w, float content_h, const ImVec4& 
             "• Измени привязку в Aimbot -> Key Bind для смены кнопки\n"
             "• Индикатор показывает последний клик\n"
             "• Оба ПК должны быть в одной сети" :
-            "• Server listens on port 5556 (default)\n"
+        "• Server listens on port 5556 (default)\n"
             "• Firewall must allow UDP 5556\n"
             "• RMB activates aimbot (g_remote_aim_key)\n"
             "• LMB activates shooting (SendInput)\n"
             "• Indicator shows last click\n"
             "• Both PCs must be in same network");
-        
+
         ImGui::Columns(1);
-        
+
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
-        
+
         // Status line with green checkmark
         if (g_click_server_running.load()) {
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), is_russian ? 
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), is_russian ?
                 "✓ СТАТУС: Сервер запущен и принимает клики → Аимбот активируется при ПКМ" :
                 "✓ STATUS: Server running and receiving clicks → Aimbot activates on RMB");
-        } else {
-            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), is_russian ? 
+        }
+        else {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), is_russian ?
                 "⚠ СТАТУС: Сервер остановлен - нажми APPLY для запуска" :
                 "⚠ STATUS: Server stopped - click APPLY to start");
         }
-        
+
         ImGui::Spacing();
-        ImGui::TextDisabled(is_russian ? 
+        ImGui::TextDisabled(is_russian ?
             "Подробная документация: 2PC_UDP_INSTRUCTION_RU.md" :
             "Full documentation: 2PC_UDP_INSTRUCTION_RU.md");
     }
     EndPanel();
-    
+
     // === КНОПКА ПРИМЕНЕНИЯ НАСТРОЕК HARDWARE ===
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
-    
+
     ImGui::SetCursorPosX((content_w - 200.0f) * 0.5f); // Центрируем кнопку
     if (ImGui::Button("APPLY HARDWARE SETTINGS", ImVec2(200, 40))) {
         this->apply_hw_flag = true;
         std::cout << "[OVERLAY] Hardware apply button pressed!" << std::endl;
     }
-    HelpMarker(is_russian ? 
+    HelpMarker(is_russian ?
         "Применить настройки hardware:\n- Режим ввода (SendInput/Makcu)\n- COM-порт или IP/порт\n- Bypass режим\n\nПосле нажатия аимбот перезапустит hardware модуль." :
         "Apply hardware settings:\n- Input mode (SendInput/Makcu)\n- COM port or IP/port\n- Bypass mode\n\nAimbot will restart hardware module after pressing.");
 }
@@ -1900,25 +1888,25 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
 
     // Left Column - Hardware Test Panel
     if (BeginPanel("Hardware Test Panel", ImVec2(0, 350), acc_vec)) cfg_changed = true;
-    
+
     ImGui::TextColored(acc_vec, is_russian ? "Тестирование движения:" : "Movement Test:");
     ImGui::Spacing();
-    
+
     ImGui::Text(is_russian ? "X:" : "X:");
     ImGui::SameLine();
     ImGui::PushItemWidth(100);
     if (ImGui::InputInt("##test_x", &this->test_move_x)) cfg_changed = true;
     ImGui::PopItemWidth();
-    
+
     ImGui::SameLine();
     ImGui::Text(is_russian ? "Y:" : "Y:");
     ImGui::SameLine();
     ImGui::PushItemWidth(100);
     if (ImGui::InputInt("##test_y", &this->test_move_y)) cfg_changed = true;
     ImGui::PopItemWidth();
-    
+
     ImGui::Spacing();
-    
+
     // Test Move Button using MouseController functions
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 0.8f));
     if (ImGui::Button(is_russian ? "Test Move Mouse" : "Test Move Mouse", ImVec2(200, 40))) {
@@ -1928,9 +1916,10 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
                 auto& mc = pwnz_ai::MouseController::GetInstance();
                 mc.MoveMouse(this->test_move_x, this->test_move_y);
                 std::cout << "[OVERLAY] Sent Makcu move: (" << this->test_move_x << ", " << this->test_move_y << ")" << std::endl;
-            } else if (this->hardware_mode_idx == 0) {
+            }
+            else if (this->hardware_mode_idx == 0) {
                 // Local mouse - use SendInput
-                #ifdef _WIN32
+#ifdef _WIN32
                 INPUT input = {};
                 input.type = INPUT_MOUSE;
                 input.mi.dx = this->test_move_x;
@@ -1938,11 +1927,12 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
                 input.mi.dwFlags = MOUSEEVENTF_MOVE;
                 SendInput(1, &input, sizeof(INPUT));
                 std::cout << "[OVERLAY] Sent local move: (" << this->test_move_x << ", " << this->test_move_y << ")" << std::endl;
-                #endif
+#endif
             }
-        } else {
+        }
+        else {
             // Fallback to local input even if hardware not enabled
-            #ifdef _WIN32
+#ifdef _WIN32
             INPUT input = {};
             input.type = INPUT_MOUSE;
             input.mi.dx = this->test_move_x;
@@ -1950,19 +1940,19 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
             input.mi.dwFlags = MOUSEEVENTF_MOVE;
             SendInput(1, &input, sizeof(INPUT));
             std::cout << "[OVERLAY] Sent local move (hw disabled): (" << this->test_move_x << ", " << this->test_move_y << ")" << std::endl;
-            #endif
+#endif
         }
     }
     ImGui::PopStyleColor();
     HelpMarker(is_russian ? "Сдвинуть курсор на указанные значения" : "Move cursor by specified values");
-    
+
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
-    
+
     ImGui::TextColored(acc_vec, is_russian ? "Тестирование кликов:" : "Click Test:");
     ImGui::Spacing();
-    
+
     // Test Left Click
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.7f, 0.2f, 0.8f));
     if (ImGui::Button(is_russian ? "Test Left Click" : "Test Left Click", ImVec2(200, 35))) {
@@ -1974,8 +1964,9 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
                 Sleep(50);
                 mc.ReleaseButton(VK_LBUTTON);
                 std::cout << "[OVERLAY] Sent Makcu left click" << std::endl;
-            } else {
-                #ifdef _WIN32
+            }
+            else {
+#ifdef _WIN32
                 INPUT inputs[2] = {};
                 inputs[0].type = INPUT_MOUSE;
                 inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
@@ -1983,10 +1974,11 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
                 inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
                 SendInput(2, inputs, sizeof(INPUT));
                 std::cout << "[OVERLAY] Sent local left click" << std::endl;
-                #endif
+#endif
             }
-        } else {
-            #ifdef _WIN32
+        }
+        else {
+#ifdef _WIN32
             INPUT inputs[2] = {};
             inputs[0].type = INPUT_MOUSE;
             inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
@@ -1994,13 +1986,13 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
             inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
             SendInput(2, inputs, sizeof(INPUT));
             std::cout << "[OVERLAY] Sent local left click (hw disabled)" << std::endl;
-            #endif
+#endif
         }
     }
     ImGui::PopStyleColor();
-    
+
     ImGui::Spacing();
-    
+
     // Test Double Click
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.5f, 0.2f, 0.8f));
     if (ImGui::Button(is_russian ? "Test Double Click" : "Test Double Click", ImVec2(200, 35))) {
@@ -2014,8 +2006,9 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
                 mc.PressButton(VK_LBUTTON);
                 mc.ReleaseButton(VK_LBUTTON);
                 std::cout << "[OVERLAY] Sent Makcu double click" << std::endl;
-            } else {
-                #ifdef _WIN32
+            }
+            else {
+#ifdef _WIN32
                 INPUT inputs[4] = {};
                 inputs[0].type = INPUT_MOUSE;
                 inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
@@ -2026,10 +2019,11 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
                 inputs[3].type = INPUT_MOUSE;
                 inputs[3].mi.dwFlags = MOUSEEVENTF_LEFTUP;
                 SendInput(4, inputs, sizeof(INPUT));
-                #endif
+#endif
             }
-        } else {
-            #ifdef _WIN32
+        }
+        else {
+#ifdef _WIN32
             INPUT inputs[4] = {};
             inputs[0].type = INPUT_MOUSE;
             inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
@@ -2040,88 +2034,90 @@ void Overlay::RenderHWCheckTab(float content_w, float content_h, const ImVec4& a
             inputs[3].type = INPUT_MOUSE;
             inputs[3].mi.dwFlags = MOUSEEVENTF_LEFTUP;
             SendInput(4, inputs, sizeof(INPUT));
-            #endif
+#endif
         }
     }
     ImGui::PopStyleColor();
-    
+
     EndPanel();
 
     ImGui::NextColumn();
 
     // Right Column - Status & Info
     BeginPanel("Hardware Status", ImVec2(0, 200), acc_vec);
-    
+
     ImGui::TextColored(acc_vec, is_russian ? "Текущий режим:" : "Current Mode:");
     ImGui::Spacing();
-    
+
     const char* mode_names[] = {
         "Local Mouse (SendInput) [UNSAFE]",
         "Makcu (UART/COM)",
         "KMbox (REMOVED)"
     };
-    
+
     ImGui::Text("%s", mode_names[this->hardware_mode_idx]);
-    
+
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
-    
+
     ImGui::TextColored(acc_vec, is_russian ? "Статус оборудования:" : "Hardware Status:");
     ImGui::Spacing();
-    
+
     // Check Makcu connection status via MouseController global instance
     bool macku_connected = false;  // Placeholder - would need proper status check
-    
+
     if (macku_connected) {
         ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ Makcu: CONNECTED");
         ImGui::Text(is_russian ? "Порт: %s" : "Port: %s", this->com_port_buf);
-    } else {
+    }
+    else {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "✗ Makcu: DISCONNECTED");
     }
-    
+
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
-    
+
     if (this->hw_enabled) {
-        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f),
             is_russian ? "✅ Hardware ENABLED" : "✅ Hardware ENABLED");
-    } else {
-        ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), 
+    }
+    else {
+        ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
             is_russian ? "⚠ Hardware DISABLED" : "⚠ Hardware DISABLED");
     }
-    
+
     EndPanel();
-    
+
     ImGui::Spacing();
-    
+
     BeginPanel(is_russian ? "📋 Информация" : "📋 Information", ImVec2(0, content_h - 200 - 20), acc_vec);
-    
-    ImGui::TextWrapped(is_russian ? 
+
+    ImGui::TextWrapped(is_russian ?
         "Для проверки работы:\n"
         "1. Выбери режим в вкладке 'Hardware/2PC'\n"
         "2. Подключи устройство (Connect)\n"
         "3. Включи 'Enable Hardware'\n"
         "4. Вернись сюда и нажми тестовые кнопки\n"
         "5. Курсор должен сдвинуться или произойти клик" :
-        "To verify operation:\n"
+    "To verify operation:\n"
         "1. Select mode in 'Hardware/2PC' tab\n"
         "2. Connect device (Connect button)\n"
         "3. Enable 'Enable Hardware'\n"
         "4. Come back here and click test buttons\n"
         "5. Cursor should move or click should occur");
-    
+
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
-    
-    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), 
+
+    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
         is_russian ? "⚠ Примечание:" : "⚠ Note:");
-    ImGui::TextWrapped(is_russian ? 
+    ImGui::TextWrapped(is_russian ?
         "Если hardware не подключен, тесты будут использовать локальный ввод Windows (SendInput)." :
         "If hardware is not connected, tests will use local Windows input (SendInput).");
-    
+
     EndPanel();
 
     ImGui::Columns(1);
@@ -2386,10 +2382,10 @@ bool Overlay::Initialize() {
     colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.95f, 1.00f);
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
-    
+
     // Initialize 2PC network module
     network_2pc = std::make_unique<Network2PC>();
-    
+
     chat_history.push_back({ is_russian ? "Привет! Я твой ИИ-Ассистент PWNZ." : "Hello! I am your PWNZ Assistant.", false });
     Aimbot temp_aim;
     LoadConfig(&temp_aim);
@@ -2403,14 +2399,14 @@ bool Overlay::Update() {
         DispatchMessage(&msg);
         if (msg.message == WM_QUIT) return false;
     }
-    
+
     // Проверка смены GPU для перезагрузки модели
     static int last_dml_gpu_index = dml_gpu_index;
     if (dml_gpu_index != last_dml_gpu_index) {
         apply_model_flag = true;
         last_dml_gpu_index = dml_gpu_index;
     }
-    
+
     return true;
 }
 
