@@ -355,7 +355,7 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
         // Проверка на корректность разрешения модели
         if (current_yolo_w < 100 || current_yolo_h < 100) {
             std::cerr << "[Inference] Invalid model resolution: " << current_yolo_w << "x" 
-                      << current_yolo_h << ". Skipping frame." << std::endl;
+                      << current_yolo_h << ". Skipping frame. Model may not be initialized!" << std::endl;
             Sleep(10);
             continue;
         }
@@ -401,6 +401,16 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
                 }
                 std::span<const unsigned char> pixel_span{ capture_buffers[current_write],
                                                           static_cast<std::size_t>(current_yolo_w) * current_yolo_h * 4 };
+                
+                // Отладочный лог для первого кадра
+                static int debug_frame_count = 0;
+                if (++debug_frame_count <= 3) {
+                    std::cout << "[Inference] Frame " << debug_frame_count 
+                              << ": Input size=" << current_yolo_w << "x" << current_yolo_h
+                              << ", ROI=(" << roi_screen_x << "," << roi_screen_y << ")"
+                              << std::endl;
+                }
+                
                 // &frame_timings -> тайминги pre/inf/nms в stdout каждые 60 кадров
                 current_frame_raw = det->run_inference(pixel_span, current_yolo_w, current_yolo_h,
                     body_conf, head_conf, local_cfg.neural_nms, local_cfg.neural_max_det,
@@ -1082,16 +1092,35 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::string model_to_load = model_files[overlay.ai_model];
         std::string fp16_model;
         EnsureFP16Model(model_to_load, fp16_model);
+        
+        // Проверка существования файла модели перед загрузкой
+        if (GetFileAttributesA(fp16_model.c_str()) == INVALID_FILE_ATTRIBUTES) {
+            std::cerr << "[INIT] ERROR: Model file NOT FOUND: " << fp16_model << std::endl;
+            if (logfile.is_open()) { logfile << "ERROR: Model file not found: " << fp16_model << std::endl; logfile.flush(); }
+            
+            // Пробуем оригинальную модель, если _fp16 не найдена
+            if (fp16_model != model_to_load && GetFileAttributesA(model_to_load.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                std::cout << "[INIT] FP16 model not found, trying original model: " << model_to_load << std::endl;
+                fp16_model = model_to_load;
+            } else {
+                MessageBoxA(0, ("Модель не найдена: " + fp16_model).c_str(), "FATAL ERROR", MB_ICONERROR);
+                VMProtectEnd(); return -1;
+            }
+        }
+        
         if (logfile.is_open()) { logfile << "Step 6: loading model: " << fp16_model << std::endl; logfile.flush(); }
 
         int force_w = 0; // Разрешение модели определяется автоматически из ONNX
         int force_h = 0;
+        std::cout << "[INIT] Initializing detector with model: " << fp16_model << std::endl;
         if (!det.initialize(fp16_model, force_w, force_h, overlay.dml_gpu_index)) {
+            std::cerr << "[INIT] Detector initialization FAILED!" << std::endl;
             if (logfile.is_open()) { logfile << "ERROR: det.initialize failed" << std::endl; logfile.flush(); }
-            MessageBoxA(0, "Нейросеть не загрузилась!", "FATAL ERROR", MB_ICONERROR);
+            MessageBoxA(0, "Нейросеть не загрузилась! Проверьте консоль.", "FATAL ERROR", MB_ICONERROR);
             VMProtectEnd(); return -1;
         }
-        if (logfile.is_open()) { logfile << "Step 7: model loaded OK" << std::endl; logfile.flush(); }
+        std::cout << "[INIT] Detector initialized successfully! Model size: " << det.get_width() << "x" << det.get_height() << std::endl;
+        if (logfile.is_open()) { logfile << "Step 7: model loaded OK (" << det.get_width() << "x" << det.get_height() << ")" << std::endl; logfile.flush(); }
     }
     catch (...) {
         if (logfile.is_open()) { logfile << "EXCEPTION in try block" << std::endl; logfile.flush(); }
