@@ -396,7 +396,10 @@ void Overlay::LoadConfig(Aimbot* aim) {
     handlers["byte_track_buffer"] = [&](const std::string& v) { byte_track_buffer = std::stoi(v); };
     handlers["byte_match_thresh"] = [&](const std::string& v) { byte_match_thresh = safe_stof(v); };
     handlers["byte_frame_rate"] = [&](const std::string& v) { byte_frame_rate = std::stoi(v); };
-    handlers["detection_resolution"] = [&](const std::string& v) { detection_resolution = std::stoi(v); };
+    handlers["dml_gpu_index"] = [&](const std::string& v) { dml_gpu_index = std::stoi(v); };
+    handlers["force_model_res"] = [&](const std::string& v) { force_model_res = std::stoi(v); };
+    handlers["custom_model_w"] = [&](const std::string& v) { custom_model_w = std::stoi(v); };
+    handlers["custom_model_h"] = [&](const std::string& v) { custom_model_h = std::stoi(v); };
     handlers["min_sensitivity"] = [&](const std::string& v) { min_sensitivity = safe_stof(v); };
     handlers["max_sensitivity"] = [&](const std::string& v) { max_sensitivity = safe_stof(v); };
     handlers["kalman_compensate_detection_delay"] = [&](const std::string& v) { kalman_compensate_detection_delay = std::stoi(v); };
@@ -493,9 +496,12 @@ void Overlay::LoadConfig(Aimbot* aim) {
     handlers["sticky_threshold"] = [&](const std::string& v) { sticky_threshold = safe_stof(v); };
     handlers["sticky_frames_keep"] = [&](const std::string& v) { sticky_frames_keep = std::stoi(v); };
     handlers["prediction_method"] = [&](const std::string& v) { prediction_method = std::stoi(v); };
+    handlers["dml_gpu_index"] = [&](const std::string& v) { dml_gpu_index = std::stoi(v); };
+    handlers["force_model_res"] = [&](const std::string& v) { force_model_res = std::stoi(v); };
+    handlers["custom_model_w"] = [&](const std::string& v) { custom_model_w = std::stoi(v); };
+    handlers["custom_model_h"] = [&](const std::string& v) { custom_model_h = std::stoi(v); };
     handlers[("min_sensitivity")] = [&](const std::string& v) { min_sensitivity = safe_stof(v); };
     handlers["max_sensitivity"] = [&](const std::string& v) { max_sensitivity = safe_stof(v); };
-    handlers["detection_resolution"] = [&](const std::string& v) { detection_resolution = std::stoi(v); };
     handlers["kalman_compensate_detection_delay"] = [&](const std::string& v) { kalman_compensate_detection_delay = std::stoi(v); };
     handlers["kalman_additional_prediction_ms"] = [&](const std::string& v) { kalman_additional_prediction_ms = safe_stof(v); };
     handlers["prediction_interval"] = [&](const std::string& v) { prediction_interval = safe_stof(v); };
@@ -676,9 +682,12 @@ void Overlay::SaveConfig(Aimbot* aim) {
     ss << "sticky_threshold=" << sticky_threshold << "\n";
     ss << "sticky_frames_keep=" << sticky_frames_keep << "\n";
     ss << "prediction_method=" << prediction_method << "\n";
+    ss << "dml_gpu_index=" << dml_gpu_index << "\n";
+    ss << "force_model_res=" << force_model_res << "\n";
+    ss << "custom_model_w=" << custom_model_w << "\n";
+    ss << "custom_model_h=" << custom_model_h << "\n";
     ss << "min_sensitivity=" << min_sensitivity << "\n";
     ss << "max_sensitivity=" << max_sensitivity << "\n";
-    ss << "detection_resolution=" << detection_resolution << "\n";
     ss << "kalman_compensate_detection_delay=" << kalman_compensate_detection_delay << "\n";
     ss << "kalman_additional_prediction_ms=" << kalman_additional_prediction_ms << "\n";
     ss << "prediction_interval=" << prediction_interval << "\n";
@@ -1003,8 +1012,6 @@ void Overlay::RenderAimbotTab(float content_w, float content_h, const ImVec4& ac
     HelpMarker("Максимальное смещение мыши за один кадр. Ограничивает резкость движений.");
     if (CustomSliderFloat("##max_move", "##max_move_lbl", &max_move_step, 10.0f, 500.0f, "%.1f px", acc_vec)) cfg_changed = true;
     
-    ImGui::Spacing();
-    if (CustomSliderInt("Detection Resolution:", "##det_res", &detection_resolution, 160, 960, "%d px", acc_vec, "Разрешение детекции для аимбота.")) cfg_changed = true;
     EndPanel();
 
     // Pixelsmooth / Smoothing - Плавность
@@ -1142,6 +1149,19 @@ void Overlay::RenderNeuralTab(float content_w, float content_h, const ImVec4& ac
     if (BeginPanel("Inference Optimization", ImVec2(0, content_h - 310 - 20), acc_vec)) cfg_changed = true;
     if (CustomSliderFloat("NMS Threshold", "##nms", &neural_nms, 0.1f, 0.9f, "%.2f", acc_vec, "Порог NMS.")) cfg_changed = true;
     if (CustomSliderInt("Max Targets", "##mxdet", &neural_max_det, 1, 20, "%d", acc_vec, "Макс. целей.")) cfg_changed = true;
+    EndPanel();
+
+    // Model Engine & GPU Panel
+    if (BeginPanel("Model Engine & GPU", ImVec2(0, 200), acc_vec)) cfg_changed = true;
+    const char* gpu_opts[] = { "GPU 0 (Auto/iGPU)", "GPU 1 (dGPU)", "GPU 2" };
+    if (CustomCombo("GPU Device:", "##gpu_idx", &dml_gpu_index, gpu_opts, 3, "0 - Встройка (часто быстрее захват), 1 - Дискретная NVIDIA.")) cfg_changed = true;
+
+    ImGui::Spacing();
+    if (DrawToggle("Force Custom Res", "##frc_res", &force_model_res, acc_u32, "Включи, если модель имеет динамические оси (-1).")) cfg_changed = true;
+    if (force_model_res) {
+        if (CustomSliderInt("Model Width", "##mdl_w", &custom_model_w, 160, 1280, "%d px", acc_vec)) cfg_changed = true;
+        if (CustomSliderInt("Model Height", "##mdl_h", &custom_model_h, 160, 1280, "%d px", acc_vec)) cfg_changed = true;
+    }
     EndPanel();
 
     ImGui::NextColumn();
@@ -2371,6 +2391,14 @@ bool Overlay::Update() {
         DispatchMessage(&msg);
         if (msg.message == WM_QUIT) return false;
     }
+    
+    // Проверка смены GPU для перезагрузки модели
+    static int last_dml_gpu_index = dml_gpu_index;
+    if (dml_gpu_index != last_dml_gpu_index) {
+        apply_model_flag = true;
+        last_dml_gpu_index = dml_gpu_index;
+    }
+    
     return true;
 }
 

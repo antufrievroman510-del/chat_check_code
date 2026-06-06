@@ -232,7 +232,12 @@ public:
     float kalman_additional_prediction_ms = 0.0f;
     float prediction_interval = 0.01f;
     bool disable_headshot = false;
-    int detection_resolution = 960;
+
+    // GPU & Model Settings
+    int dml_gpu_index = 0;
+    bool force_model_res = false;
+    int custom_model_w = 640;
+    int custom_model_h = 640;
 
     // Hardware 2PC Settings
     char com_port_buf[32] = "COM3";

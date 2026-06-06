@@ -1078,7 +1078,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         EnsureFP16Model(model_to_load, fp16_model);
         if (logfile.is_open()) { logfile << "Step 6: loading model: " << fp16_model << std::endl; logfile.flush(); }
 
-        if (!det.initialize(fp16_model, overlay.detection_resolution, overlay.detection_resolution)) {
+        int force_w = overlay.force_model_res ? overlay.custom_model_w : 0;
+        int force_h = overlay.force_model_res ? overlay.custom_model_h : 0;
+        if (!det.initialize(fp16_model, force_w, force_h, overlay.dml_gpu_index)) {
             if (logfile.is_open()) { logfile << "ERROR: det.initialize failed" << std::endl; logfile.flush(); }
             MessageBoxA(0, "Нейросеть не загрузилась!", "FATAL ERROR", MB_ICONERROR);
             VMProtectEnd(); return -1;
@@ -1297,7 +1299,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             std::string model_to_load = model_files[overlay.ai_model];
             std::string fp16_model;
             EnsureFP16Model(model_to_load, fp16_model);
-            det.initialize(fp16_model, overlay.detection_resolution, overlay.detection_resolution);
+            int force_w = overlay.force_model_res ? overlay.custom_model_w : 0;
+            int force_h = overlay.force_model_res ? overlay.custom_model_h : 0;
+            det.initialize(fp16_model, force_w, force_h, overlay.dml_gpu_index);
             render_yolo_w = det.get_width(); render_yolo_h = det.get_height();
         }
         std::vector<Detection> render_det;

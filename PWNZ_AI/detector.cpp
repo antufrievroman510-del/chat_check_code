@@ -4,13 +4,10 @@
 #include <algorithm>
 #include <vector>
 #include <cmath>
-#include <dxgi.h> 
 #include <limits>
 #include <chrono>
 #include <span>
 #include <cstring>
-
-#pragma comment(lib, "dxgi.lib")
 
 // ============================================================================
 // СТРУКТУРЫ И ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
@@ -130,14 +127,14 @@ Detector::~Detector() {
     output_names.clear();
 }
 
-bool Detector::initialize(const std::string& model_path, int force_w, int force_h) {
+bool Detector::initialize(const std::string& model_path, int force_w, int force_h, int gpu_index) {
     try {
         env = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "BogX_Engine");
         session_options = Ort::SessionOptions();
 
-        // Оптимизация потоков для CPU
-        session_options.SetIntraOpNumThreads(4);
-        session_options.SetInterOpNumThreads(4);
+        // Оптимизация потоков для CPU - только 1 поток для DirectML
+        session_options.SetIntraOpNumThreads(1);
+        session_options.SetInterOpNumThreads(1);
         session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
         session_options.SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
 
@@ -151,63 +148,9 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
             std::cout << "[Detector] DirectML not available, using CPU execution provider" << std::endl;
         }
         else if (dml_api != nullptr) {
-            IDXGIFactory1* factory = nullptr;
-            if (SUCCEEDED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)&factory))) {
-                IDXGIAdapter1* adapter = nullptr;
-                IDXGIAdapter1* bestAdapter = nullptr;
-                SIZE_T maxVRAM = 0;
-                int bestAdapterIndex = -1;
-
-                // Поиск лучшей видеокарты (NVIDIA)
-                for (UINT i = 0; factory->EnumAdapters1(i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i) {
-                    DXGI_ADAPTER_DESC1 desc;
-                    adapter->GetDesc1(&desc);
-
-                    // Исправленный флаг программного адаптера
-                    bool isDiscrete = (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0;
-
-                    bool isNVIDIA = (wcsstr(desc.Description, L"NVIDIA") != nullptr);
-                    bool isAMD = (wcsstr(desc.Description, L"AMD") != nullptr || wcsstr(desc.Description, L"Radeon") != nullptr);
-                    bool isIntel = (wcsstr(desc.Description, L"Intel") != nullptr);
-
-                    if (isNVIDIA && desc.DedicatedVideoMemory > maxVRAM) {
-                        maxVRAM = desc.DedicatedVideoMemory;
-                        if (bestAdapter) bestAdapter->Release();
-                        bestAdapter = adapter;
-                        bestAdapterIndex = i;
-
-                        // Исправленный вывод названия видеокарты (конвертация WCHAR в string)
-                        std::wstring ws(desc.Description);
-                        std::string desc_str(ws.begin(), ws.end());
-                        std::cout << "[Detector] Found NVIDIA GPU: " << desc_str
-                            << " (VRAM: " << (desc.DedicatedVideoMemory / (1024 * 1024)) << " MB)" << std::endl;
-                    }
-                    else if (!isNVIDIA && !isIntel && isDiscrete && desc.DedicatedVideoMemory > maxVRAM && bestAdapterIndex == -1) {
-                        maxVRAM = desc.DedicatedVideoMemory;
-                        if (bestAdapter) bestAdapter->Release();
-                        bestAdapter = adapter;
-                        bestAdapterIndex = i;
-                    }
-                    else {
-                        adapter->Release();
-                    }
-                }
-
-                if (bestAdapter && bestAdapterIndex >= 0) {
-                    // Инициализация DML на выбранной видеокарте (без OrtDmlApiOptions)
-                    dml_api->SessionOptionsAppendExecutionProvider_DML(session_options, bestAdapterIndex);
-                    std::cout << "[Detector] DirectML initialized on adapter index " << bestAdapterIndex << std::endl;
-                    bestAdapter->Release();
-                }
-                else {
-                    dml_api->SessionOptionsAppendExecutionProvider_DML(session_options, 0);
-                    std::cout << "[Detector] DirectML initialized on default adapter (index 0)" << std::endl;
-                }
-                factory->Release();
-            }
-            else {
-                dml_api->SessionOptionsAppendExecutionProvider_DML(session_options, 0);
-            }
+            // Чистая инициализация по индексу из UI (без EnumAdapters1)
+            dml_api->SessionOptionsAppendExecutionProvider_DML(session_options, gpu_index);
+            std::cout << "[Detector] DirectML initialized on GPU Index: " << gpu_index << std::endl;
         }
 
         std::wstring w_model_path(model_path.begin(), model_path.end());
