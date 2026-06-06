@@ -8,6 +8,7 @@
 #include <chrono>
 #include <span>
 #include <cstring>
+#include <windows.h>
 
 #pragma comment(lib, "dxgi.lib")
 
@@ -19,22 +20,33 @@ static void GetModelResolutionFromName(const std::string& model_path, int& out_w
     size_t pos = model_name.find_last_of("/\\");
     if (pos != std::string::npos) model_name = model_name.substr(pos + 1);
     
+    // Удаляем _fp16 из имени для корректного определения
+    size_t fp16_pos = model_name.find("_fp16");
+    if (fp16_pos != std::string::npos) {
+        model_name = model_name.substr(0, fp16_pos) + ".onnx";
+    }
+    
+    std::cout << "[Detector] Parsing model name: " << model_name << std::endl;
+    
     // BogX-Nano.onnx / BogX-Pro.onnx: 512x288
     // BogX-Lite.onnx / BogX-Ultra.onnx: 736x416
     if (model_name.find("Nano") != std::string::npos || 
         model_name.find("Pro") != std::string::npos) {
         out_w = 512;
         out_h = 288;
+        std::cout << "[Detector] Detected Nano/Pro model: 512x288" << std::endl;
     }
     else if (model_name.find("Lite") != std::string::npos || 
              model_name.find("Ultra") != std::string::npos) {
         out_w = 736;
         out_h = 416;
+        std::cout << "[Detector] Detected Lite/Ultra model: 736x416" << std::endl;
     }
     else {
         // Неизвестная модель — дефолт 640x640
         out_w = 640;
         out_h = 640;
+        std::cout << "[Detector] Unknown model, using default: 640x640" << std::endl;
     }
 }
 
@@ -133,6 +145,13 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
         }
 
         std::wstring wpath(model_path.begin(), model_path.end());
+        
+        // Проверка существования файла модели
+        if (GetFileAttributesW(wpath.c_str()) == INVALID_FILE_ATTRIBUTES) {
+            std::cerr << "[Detector] ERROR: Model file NOT FOUND: " << model_path << std::endl;
+            return false;
+        }
+        
         session = std::make_unique<Ort::Session>(*env, wpath.c_str(), session_options);
 
         Ort::AllocatorWithDefaultOptions alloc;
@@ -144,6 +163,13 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
         // Приоритет 2: определяем по имени модели (для динамических shape)
         auto input_info = session->GetInputTypeInfo(0);
         auto input_shape = input_info.GetTensorTypeAndShapeInfo().GetShape();
+        
+        std::cout << "[Detector] Raw ONNX input shape: [";
+        for (size_t i = 0; i < input_shape.size(); ++i) {
+            std::cout << input_shape[i];
+            if (i + 1 < input_shape.size()) std::cout << ", ";
+        }
+        std::cout << "]" << std::endl;
         
         bool shape_valid = (input_shape.size() >= 4 && 
                            input_shape[2] > 0 && input_shape[2] < 5000 &&
@@ -170,7 +196,7 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
         return true;
     }
     catch (const Ort::Exception& e) { std::cerr << "ONNX Error: " << e.what() << std::endl; }
-    catch (...) {}
+    catch (...) { std::cerr << "[Detector] Unknown exception during initialization" << std::endl; }
     return false;
 }
 
