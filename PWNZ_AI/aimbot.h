@@ -72,7 +72,6 @@ public:
     int aim_toggle_key = 0; // Клавиша переключения вкл/выкл аимбота
     float fov = 190.0f;
     float smooth_factor = 0.15f;
-    int detection_resolution = 960;
     bool disable_headshot = false;
     bool humanizer_enable = true;
     float hum_reaction_delay = 25.0f;

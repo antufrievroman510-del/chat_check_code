@@ -98,7 +98,6 @@ void Aimbot::SyncFromOverlay(Overlay& overlay) {
     fov = overlay.fov_aimbot;
     min_sensitivity = overlay.min_sensitivity;
     max_sensitivity = overlay.max_sensitivity;
-    detection_resolution = overlay.detection_resolution;
     
     // Humanizer
     humanizer_enable = overlay.humanizer_enable;
@@ -449,7 +448,7 @@ void Aimbot::SendHardwareRelease(int button) {
 std::pair<double, double> Aimbot::degToCounts(double degX, double degY) const {
     // Прямое преобразование градусов в пиксели движения
     // Используем fov для масштаба
-    float scale = static_cast<float>(detection_resolution) / fov;
+    float scale = static_cast<float>(fov) / 90.0f; // Стандартный масштаб: fov / 90 градусов
     double cx = degX * scale;
     double cy = degY * scale;
     return { cx, cy };
