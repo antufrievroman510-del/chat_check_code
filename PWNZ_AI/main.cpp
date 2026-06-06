@@ -72,7 +72,7 @@ namespace pwnz_ai {
     std::atomic<bool> g_makcu_aiming(false);      // SIDE2 (Mouse5) - прицеливание (основная клавиша аима)
     std::atomic<bool> g_makcu_shooting(false);    // LMB - стрельба
     std::atomic<bool> g_makcu_zooming(false);     // RMB - зум/прицеливание
-    
+
     // Глобальные переменные для 2PC-связки (определены в main.cpp)
     inline std::atomic<bool>& aiming = g_makcu_aiming;
     inline std::atomic<bool>& shooting = g_makcu_shooting;
@@ -176,25 +176,25 @@ std::mutex g_cfg_mutex;
 bool IsAimKeyPressed(Overlay* overlay) {
     MUTATE_SIGNATURE;
     bool key_pressed = false;
-    
+
     if (overlay->aim_key_main != 0 && (GetAsyncKeyState(overlay->aim_key_main) & 0x8000)) {
         key_pressed = true;
     }
     if (overlay->aim_key_sub != 0 && (GetAsyncKeyState(overlay->aim_key_sub) & 0x8000)) {
         key_pressed = true;
     }
-    
+
     // [DEBUG] Логирование нажатия клавиш аима
     static bool last_key_state = false;
     if (key_pressed && !last_key_state) {
-        std::cout << "[AIM KEY] Aim key PRESSED! Main=" << overlay->aim_key_main 
-                  << " Sub=" << overlay->aim_key_sub << std::endl;
+        std::cout << "[AIM KEY] Aim key PRESSED! Main=" << overlay->aim_key_main
+            << " Sub=" << overlay->aim_key_sub << std::endl;
     }
     if (!key_pressed && last_key_state) {
         std::cout << "[AIM KEY] Aim key RELEASED" << std::endl;
     }
     last_key_state = key_pressed;
-    
+
     return key_pressed;
 }
 
@@ -276,13 +276,21 @@ bool FindAndSpoofArduino(const char* target_vid, const char* target_pid) {
 void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
+    // Буферы под максимально возможный ROI (736×416 — самая большая из 4 моделей).
+    // Не аллоцируем 3840×2160 (62 МБ) когда реально нужно максимум 736×416×4 = ~1.2 МБ.
+    // Если модель окажется крупнее — буфер пересоздаётся ниже динамически.
+    constexpr int MAX_MODEL_W = 736;
+    constexpr int MAX_MODEL_H = 416;
+    int capture_buf_w = MAX_MODEL_W;
+    int capture_buf_h = MAX_MODEL_H;
+
     unsigned char* capture_buffers[2] = {
-        new unsigned char[3840 * 2160 * 4],
-        new unsigned char[3840 * 2160 * 4]
+        new unsigned char[MAX_MODEL_W * MAX_MODEL_H * 4],
+        new unsigned char[MAX_MODEL_W * MAX_MODEL_H * 4]
     };
     unsigned char* zoom_buffers[2] = {
-        new unsigned char[3840 * 2160 * 4],
-        new unsigned char[3840 * 2160 * 4]
+        new unsigned char[MAX_MODEL_W * MAX_MODEL_H * 4],
+        new unsigned char[MAX_MODEL_W * MAX_MODEL_H * 4]
     };
 
     std::vector<Detection> detections_buffers[2];
@@ -375,22 +383,22 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
         auto cap_start = std::chrono::high_resolution_clock::now();
         bool frame_captured = false;
         if (current_zoom > 1.0f) {
-            std::span<std::byte> zoom_span{reinterpret_cast<std::byte*>(zoom_buffers[current_write]), 
-                                           static_cast<std::size_t>(capture_w) * capture_h * 4};
+            std::span<std::byte> zoom_span{ reinterpret_cast<std::byte*>(zoom_buffers[current_write]),
+                                           static_cast<std::size_t>(capture_w) * capture_h * 4 };
             frame_captured = cap->GetHardwareROIFrame(zoom_span, roi_screen_x, roi_screen_y, capture_w, capture_h);
             if (frame_captured) DownscaleImage(zoom_buffers[current_write], capture_w, capture_h, capture_buffers[current_write], current_yolo_w, current_yolo_h);
         }
         else {
-            std::span<std::byte> capture_span{reinterpret_cast<std::byte*>(capture_buffers[current_write]), 
-                                              static_cast<std::size_t>(capture_w) * capture_h * 4};
+            std::span<std::byte> capture_span{ reinterpret_cast<std::byte*>(capture_buffers[current_write]),
+                                              static_cast<std::size_t>(capture_w) * capture_h * 4 };
             frame_captured = cap->GetHardwareROIFrame(capture_span, roi_screen_x, roi_screen_y, capture_w, capture_h);
         }
         auto cap_end = std::chrono::high_resolution_clock::now();
         g_last_capture_time = std::chrono::duration<float, std::milli>(cap_end - cap_start).count();
 
         if (frame_captured) {
-            auto infer_start = std::chrono::high_resolution_clock::now();
             std::vector<Detection> current_frame_raw;
+            FrameTimings frame_timings{};
             {
                 std::lock_guard<std::mutex> mod_lock(g_model_mutex);
                 float body_conf = local_cfg.ai_confidence_body / 100.0f;
@@ -399,14 +407,15 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
                     body_conf = (std::max)(0.35f, body_conf - 0.05f);
                     head_conf = (std::max)(0.25f, head_conf - 0.05f);
                 }
-                std::span<const unsigned char> pixel_span{capture_buffers[current_write], 
-                                                          static_cast<std::size_t>(current_yolo_w) * current_yolo_h * 4};
+                std::span<const unsigned char> pixel_span{ capture_buffers[current_write],
+                                                          static_cast<std::size_t>(current_yolo_w) * current_yolo_h * 4 };
+                // &frame_timings -> тайминги pre/inf/nms в stdout каждые 60 кадров
                 current_frame_raw = det->run_inference(pixel_span, current_yolo_w, current_yolo_h,
                     body_conf, head_conf, local_cfg.neural_nms, local_cfg.neural_max_det,
-                    local_cfg.elite_smoke_vision);
+                    local_cfg.elite_smoke_vision, &frame_timings);
             }
-            auto infer_end = std::chrono::high_resolution_clock::now();
-            float infer_ms = std::chrono::duration<float, std::milli>(infer_end - infer_start).count();
+            // g_last_inference_time = полный пайплайн: preprocess + inference + nms
+            float infer_ms = frame_timings.total_ms;
             g_last_inference_time = infer_ms;
 
             {
@@ -655,7 +664,8 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
 
         if (local_cfg.eco_mode) {
             Sleep(1);
-        } else {
+        }
+        else {
             std::this_thread::yield(); // Отдаем квант времени без жесткого сна
         }
     }
@@ -681,11 +691,11 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
             std::lock_guard<std::mutex> lock(g_cfg_mutex);
             memcpy(&local_cfg, &g_safe_cfg, sizeof(SafeConfig));
         }
-        
+
         // СИНХРОНИЗАЦИЯ В РЕАЛЬНОМ ВРЕМЕНИ: копируем настройки из Overlay напрямую
         // Это обеспечивает мгновенную реакцию на изменение ползунков в меню
         aim->SyncFromOverlay(*overlay);
-        
+
         // ИСПРАВЛЕНИЕ: Проверяем overlay->aim_enable вместо local_cfg.aim_enable
         // Потому что SyncFromOverlay уже синхронизировал все настройки из overlay
         // Для 2PC-режима (Makcu) также проверяем глобальные переменные aiming/shooting/zooming
@@ -694,14 +704,14 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
             hardware_aim_active = pwnz_ai::aiming.load() || pwnz_ai::shooting.load() || pwnz_ai::zooming.load();
         }
         bool currently_aiming = (IsAimKeyPressed(overlay) || g_remote_aim_key.load() || hardware_aim_active) && overlay->aim_enable;
-        
+
         // [DEBUG] Логирование состояния аимбота для отладки
         static bool debug_logged = false;
         if (currently_aiming && !debug_logged) {
-            std::cout << "[AIM DEBUG] Aim ACTIVATED! Key=" << IsAimKeyPressed(overlay) 
-                      << " Remote=" << g_remote_aim_key.load() 
-                      << " Enable=" << overlay->aim_enable 
-                      << " HW_Type=" << aim->hardware_type << std::endl;
+            std::cout << "[AIM DEBUG] Aim ACTIVATED! Key=" << IsAimKeyPressed(overlay)
+                << " Remote=" << g_remote_aim_key.load()
+                << " Enable=" << overlay->aim_enable
+                << " HW_Type=" << aim->hardware_type << std::endl;
             debug_logged = true;
         }
         if (!currently_aiming && debug_logged) {
@@ -782,11 +792,11 @@ void AimbotLoop(Aimbot* aim, Overlay* overlay) {
 
             // Настройки уже синхронизированы через SyncFromOverlay(*overlay) выше
             // Здесь только уникальные параметры которые могут отличаться от UI
-            
-            std::cout << "[AIM DEBUG] Calling Update() with detections=" << current_det.size() 
-                      << " screen=" << g_capture_w << "x" << g_capture_h 
-                      << " new_frame=" << is_new_frame << std::endl;
-            
+
+            std::cout << "[AIM DEBUG] Calling Update() with detections=" << current_det.size()
+                << " screen=" << g_capture_w << "x" << g_capture_h
+                << " new_frame=" << is_new_frame << std::endl;
+
             aim->Update(current_det, g_capture_w, g_capture_h, is_new_frame, current_time_ms, g_current_zoom.load());
             Sleep(1);
         }
@@ -833,12 +843,12 @@ void RemoteActivationServer() {
 
 // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ДЛЯ 2PC CLICKS ====================
 static pwnz_ai::MouseClickServer g_clickServer;
-std::atomic<bool> g_click_server_running{false};
+std::atomic<bool> g_click_server_running{ false };
 
 // Глобальные переменные для отслеживания последних кликов (для GUI)
-std::atomic<std::chrono::steady_clock::time_point> g_last_lmb_click{std::chrono::steady_clock::now()};
-std::atomic<std::chrono::steady_clock::time_point> g_last_rmb_click{std::chrono::steady_clock::now()};
-std::atomic<int> g_last_click_type{0}; // 0=none, 1=LMB, 2=RMB
+std::atomic<std::chrono::steady_clock::time_point> g_last_lmb_click{ std::chrono::steady_clock::now() };
+std::atomic<std::chrono::steady_clock::time_point> g_last_rmb_click{ std::chrono::steady_clock::now() };
+std::atomic<int> g_last_click_type{ 0 }; // 0=none, 1=LMB, 2=RMB
 
 // Текущая привязка кнопки мыши из настроек аимбота (обновляется из overlay)
 int g_current_aim_bind_vk = VK_RBUTTON; // По умолчанию ПКМ
@@ -856,7 +866,7 @@ std::string GetLocalIPAddress() {
         return "127.0.0.1";
     }
 
-    struct addrinfo hints = {}, *addrs;
+    struct addrinfo hints = {}, * addrs;
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
 
@@ -870,7 +880,7 @@ std::string GetLocalIPAddress() {
         sockaddr_in* ipv4 = reinterpret_cast<sockaddr_in*>(addr->ai_addr);
         char ip_str[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &ipv4->sin_addr, ip_str, sizeof(ip_str));
-        
+
         // Пропускаем localhost
         if (strcmp(ip_str, "127.0.0.1") != 0) {
             ip = ip_str;
@@ -888,93 +898,99 @@ void Initialize2PCClicks(int port = 5556) {
         std::cout << "[INIT] Click server already running, skipping...\n";
         return;
     }
-    
+
     std::cout << "[INIT] Setting up 2PC click receiver on port " << port << "...\n";
 
     // Коллбэк для ЛКМ (стрельба)
     g_clickServer.set_lmb_callback([](bool pressed) {
         pwnz_ai::MouseController& mc = pwnz_ai::MouseController::GetInstance();
-        
+
         if (pressed) {
             mc.PressButton(VK_LBUTTON);
             g_last_lmb_click.store(std::chrono::steady_clock::now());
             g_last_click_type.store(1);
             std::cout << "[CLICK] LMB PRESSED (from network)\n";
-        } else {
+        }
+        else {
             mc.ReleaseButton(VK_LBUTTON);
             std::cout << "[CLICK] LMB RELEASED (from network)\n";
         }
-    });
+        });
 
     // Коллбэк для ПКМ (прицеливание) - ВАЖНО: обновляем g_remote_aim_key
     g_clickServer.set_rmb_callback([](bool pressed) {
         pwnz_ai::MouseController& mc = pwnz_ai::MouseController::GetInstance();
         int aim_bind = g_current_aim_bind_vk; // Выносим объявление наружу
-        
+
         if (pressed) {
             mc.PressButton(aim_bind);
             g_remote_aim_key.store(true);
             g_last_rmb_click.store(std::chrono::steady_clock::now());
             g_last_click_type.store(2);
             std::cout << "[CLICK] RMB PRESSED (from network) -> Emulating VK=" << aim_bind << " - AIMBOT ACTIVATED\n";
-        } else {
+        }
+        else {
             mc.ReleaseButton(aim_bind);
             g_remote_aim_key.store(false);
             std::cout << "[CLICK] RMB RELEASED (from network) - AIMBOT DEACTIVATED\n";
         }
-    });
+        });
 
     // Коллбэк для СКМ
     g_clickServer.set_mmb_callback([](bool pressed) {
         pwnz_ai::MouseController& mc = pwnz_ai::MouseController::GetInstance();
-        
+
         if (pressed) {
             mc.PressButton(VK_MBUTTON);
             std::cout << "[CLICK] MMB PRESSED (from network)\n";
-        } else {
+        }
+        else {
             mc.ReleaseButton(VK_MBUTTON);
             std::cout << "[CLICK] MMB RELEASED (from network)\n";
         }
-    });
+        });
 
     // Коллбэк для колеса прокрутки
     g_clickServer.set_wheel_callback([](int delta) {
         pwnz_ai::MouseController& mc = pwnz_ai::MouseController::GetInstance();
         mc.ScrollWheel(delta);
         std::cout << "[CLICK] WHEEL SCROLL " << (delta > 0 ? "UP" : "DOWN") << " (from network)\n";
-    });
+        });
 
     // Коллбэк для боковой кнопки X1 (Назад)
     g_clickServer.set_x1_callback([](bool pressed) {
         pwnz_ai::MouseController& mc = pwnz_ai::MouseController::GetInstance();
-        
+
         if (pressed) {
             mc.PressButton(VK_XBUTTON1);
             std::cout << "[CLICK] X1 (BACK) PRESSED (from network)\n";
-        } else {
+        }
+        else {
             mc.ReleaseButton(VK_XBUTTON1);
             std::cout << "[CLICK] X1 (BACK) RELEASED (from network)\n";
         }
-    });
+        });
 
     // Коллбэк для боковой кнопки X2 (Вперед)
     g_clickServer.set_x2_callback([](bool pressed) {
         pwnz_ai::MouseController& mc = pwnz_ai::MouseController::GetInstance();
-        
+
         if (pressed) {
             mc.PressButton(VK_XBUTTON2);
             std::cout << "[CLICK] X2 (FORWARD) PRESSED (from network)\n";
-        } else {
+        }
+        else {
             mc.ReleaseButton(VK_XBUTTON2);
             std::cout << "[CLICK] X2 (FORWARD) RELEASED (from network)\n";
         }
-    });
+        });
 
     // Запуск сервера на указанном порту
     if (g_clickServer.start(port)) {
         g_click_server_running.store(true);
         std::cout << "[INIT] Click server running on port " << port << "\n";
-    } else {
+    }
+    else {
         std::cerr << "[ERROR] Failed to start click server!\n";
     }
 }
@@ -1013,7 +1029,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     g_capture_w = GetSystemMetrics(SM_CXSCREEN);
     g_capture_h = GetSystemMetrics(SM_CYSCREEN);
     DXGICapture cap; Detector det; Overlay overlay; Aimbot aim;
-    
+
     // Инициализация 2PC кликов с портом из настроек overlay
     Initialize2PCClicks(overlay.mouse_click_port);
     const char* model_files[] = { "models\\BogX-Nano.onnx", "models\\BogX-Lite.onnx", "models\\BogX-Pro.onnx", "models\\BogX-Ultra.onnx" };
@@ -1045,21 +1061,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         overlay.is_first_frame_init = true;
         aim.hardware_type = overlay.hardware_mode_idx;  // Исправлено: было hardware_type
         aim.com_port = overlay.com_port;
-        
+
         // ИСПРАВЛЕНИЕ: Гарантируем инициализацию SendInput для hardware_type=0
         // Это критично для работы трекинга через стандартную мышь Windows
         // Устанавливаем hardware_type из mouse_input_method_idx для корректного выбора метода
         aim.hardware_type = overlay.mouse_input_method_idx;
-        
+
         std::cout << "[INIT] Hardware type: " << aim.hardware_type << " (0=SendInput, 1=Makcu, 2=KMbox-REMOVED)" << std::endl;
-        
+
         try {
             if (aim.InitHardware()) {
                 std::cout << "[INIT] Hardware initialized successfully" << std::endl;
                 if (aim.hardware_type == 0) {
                     std::cout << "[INIT] SendInput is ready for hardware_type=0" << std::endl;
                 }
-            } else {
+            }
+            else {
                 std::cout << "[INIT] WARNING: Hardware initialization returned false, but fallback should have worked" << std::endl;
             }
         }
@@ -1077,8 +1094,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         EnsureFP16Model(model_to_load, fp16_model);
         if (logfile.is_open()) { logfile << "Step 6: loading model: " << fp16_model << std::endl; logfile.flush(); }
 
-        int force_w = overlay.force_model_res ? overlay.custom_model_w : 0;
-        int force_h = overlay.force_model_res ? overlay.custom_model_h : 0;
+        int force_w = 0; // Разрешение модели определяется автоматически из ONNX
+        int force_h = 0;
         if (!det.initialize(fp16_model, force_w, force_h, overlay.dml_gpu_index)) {
             if (logfile.is_open()) { logfile << "ERROR: det.initialize failed" << std::endl; logfile.flush(); }
             MessageBoxA(0, "Нейросеть не загрузилась!", "FATAL ERROR", MB_ICONERROR);
@@ -1247,40 +1264,41 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         was_menu_open = current_menu_state;
         if (overlay.apply_hw_flag) {
             overlay.apply_hw_flag = false;
-            
+
             // Синхронизация всех hardware настроек из overlay в aimbot
             aim.com_port = std::atoi(overlay.com_port_buf + 3); // "COM3" -> 3
             aim.hardware_type = overlay.hardware_mode_idx;
             aim.bypass_mode = overlay.bypass_mode_idx;
             aim.net_ip = overlay.makcu_ip_buf;
             aim.net_port = overlay.makcu_port;
-            
+
             // КРИТИЧНО: Синхронизация mouse_input_method_idx для выбора метода ввода
             // 0=SendInput, 1=Makcu
             int selected_method = overlay.mouse_input_method_idx;
-            
-            std::cout << "[MAIN] Applying hardware settings: type=" << aim.hardware_type 
-                      << " method=" << selected_method
-                      << " com_port=" << aim.com_port
-                      << " bypass=" << aim.bypass_mode
-                      << " makcu_ip=" << aim.net_ip
-                      << " makcu_port=" << aim.net_port
-                      << std::endl;
-            
+
+            std::cout << "[MAIN] Applying hardware settings: type=" << aim.hardware_type
+                << " method=" << selected_method
+                << " com_port=" << aim.com_port
+                << " bypass=" << aim.bypass_mode
+                << " makcu_ip=" << aim.net_ip
+                << " makcu_port=" << aim.net_port
+                << std::endl;
+
             // Пересоздаём устройство ввода с новыми настройками
             aim.CloseHardware();
-            
+
             // Переопределяем hardware_type на основе выбранного метода ввода мыши
             // Это позволяет использовать SendInput даже в режиме 2PC для тестирования
             aim.hardware_type = selected_method;
-            
+
             aim.InitHardware();
-            
+
             // === КРИТИЧНО: Запускаем поток опроса кнопок для 2PC-связки с Makcu ===
             if (aim.hardware_type == 1) {  // 1 = Makcu
                 std::cout << "[MAIN] Starting button monitor thread for Makcu 2PC mode" << std::endl;
                 aim.StartButtonMonitor();
-            } else {
+            }
+            else {
                 // Останавливаем поток, если переключились на другой режим
                 aim.StopButtonMonitor();
             }
@@ -1296,8 +1314,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             std::string model_to_load = model_files[overlay.ai_model];
             std::string fp16_model;
             EnsureFP16Model(model_to_load, fp16_model);
-            int force_w = overlay.force_model_res ? overlay.custom_model_w : 0;
-            int force_h = overlay.force_model_res ? overlay.custom_model_h : 0;
+            int force_w = 0; // Разрешение определяется автоматически из ONNX
+            int force_h = 0;
             det.initialize(fp16_model, force_w, force_h, overlay.dml_gpu_index);
             render_yolo_w = det.get_width(); render_yolo_h = det.get_height();
         }
