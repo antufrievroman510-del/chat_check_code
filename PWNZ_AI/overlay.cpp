@@ -1152,16 +1152,28 @@ void Overlay::RenderNeuralTab(float content_w, float content_h, const ImVec4& ac
     EndPanel();
 
     // Model Engine & GPU Panel
-    if (BeginPanel("Model Engine & GPU", ImVec2(0, 200), acc_vec)) cfg_changed = true;
+    if (BeginPanel("Model Engine & GPU", ImVec2(0, 270), acc_vec)) cfg_changed = true;
     const char* gpu_opts[] = { "GPU 0 (Auto/iGPU)", "GPU 1 (dGPU)", "GPU 2" };
-    if (CustomCombo("GPU Device:", "##gpu_idx", &dml_gpu_index, gpu_opts, 3, "0 - Встройка (часто быстрее захват), 1 - Дискретная NVIDIA.")) cfg_changed = true;
+    if (CustomCombo("GPU Device:", "##gpu_idx", &dml_gpu_index, gpu_opts, 3, "Выбор видеокарты (0 обычно Встройка, 1 - Дискретная).")) cfg_changed = true;
 
     ImGui::Spacing();
-    if (DrawToggle("Force Custom Res", "##frc_res", &force_model_res, acc_u32, "Включи, если модель имеет динамические оси (-1).")) cfg_changed = true;
+    if (DrawToggle("Force Custom Res", "##frc_res", &force_model_res, acc_u32, "Включи для моделей с динамическими осями (-1) (Например 640x640).")) cfg_changed = true;
     if (force_model_res) {
         if (CustomSliderInt("Model Width", "##mdl_w", &custom_model_w, 160, 1280, "%d px", acc_vec)) cfg_changed = true;
         if (CustomSliderInt("Model Height", "##mdl_h", &custom_model_h, 160, 1280, "%d px", acc_vec)) cfg_changed = true;
     }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // ЯВНАЯ КНОПКА ПРИМЕНЕНИЯ РАЗРЕШЕНИЯ И GPU
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+    if (ImGui::Button("APPLY SETTINGS & RELOAD MODEL", ImVec2(-1, 35))) {
+        apply_model_flag = true;
+    }
+    ImGui::PopStyleColor();
+
     EndPanel();
 
     ImGui::NextColumn();
