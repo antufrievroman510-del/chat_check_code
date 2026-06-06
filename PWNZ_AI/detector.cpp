@@ -44,6 +44,19 @@ void NMS_Improved(std::vector<Detection>& detections, float nms_threshold, std::
 
     auto t0 = std::chrono::steady_clock::now();
 
+    // Предварительная обрезка: удаляем детекты с низкой уверенностью до NMS
+    // Это уменьшает количество элементов для обработки O(N^2)
+    const float pre_nms_conf_thresh = 0.15f;
+    detections.erase(
+        std::remove_if(detections.begin(), detections.end(),
+            [pre_nms_conf_thresh](const Detection& d) { return d.confidence < pre_nms_conf_thresh; }),
+        detections.end());
+    
+    if (detections.empty()) {
+        if (nms_time) *nms_time = std::chrono::duration<double, std::milli>(0);
+        return;
+    }
+
     std::sort(detections.begin(), detections.end(),
         [](const Detection& a, const Detection& b) {
             return a.confidence > b.confidence;
@@ -51,27 +64,33 @@ void NMS_Improved(std::vector<Detection>& detections, float nms_threshold, std::
 
     std::vector<bool> suppress(detections.size(), false);
     std::vector<Detection> result;
-    result.reserve(detections.size());
+    result.reserve((std::min)(detections.size(), static_cast<size_t>(256)));
 
     for (size_t i = 0; i < detections.size(); ++i) {
         if (suppress[i]) continue;
         result.push_back(detections[i]);
 
         const float area_i = detections[i].box.w * detections[i].box.h;
+        
+        // Оптимизация: ранний выход если результат уже достаточно велик
+        if (result.size() >= 100) break;
+        
         for (size_t j = i + 1; j < detections.size(); ++j) {
             if (suppress[j]) continue;
 
-            float x1 = (std::max)(detections[i].box.x, detections[j].box.x);
-            float y1 = (std::max)(detections[i].box.y, detections[j].box.y);
-            float x2 = (std::min)(detections[i].box.x + detections[i].box.w, detections[j].box.x + detections[j].box.w);
-            float y2 = (std::min)(detections[i].box.y + detections[i].box.h, detections[j].box.y + detections[j].box.h);
+            // Быстрая проверка по bounding box перед вычислением IoU
+            float dx = (std::max)(detections[i].box.x, detections[j].box.x) - 
+                       (std::min)(detections[i].box.x + detections[i].box.w, detections[j].box.x + detections[j].box.w);
+            float dy = (std::max)(detections[i].box.y, detections[j].box.y) - 
+                       (std::min)(detections[i].box.y + detections[i].box.h, detections[j].box.y + detections[j].box.h);
+            
+            // Если bounding boxes не пересекаются — пропускаем вычисление IoU
+            if (dx >= 0.0f || dy >= 0.0f) continue;
 
-            if (x2 > x1 && y2 > y1) {
-                float intersection = (x2 - x1) * (y2 - y1);
-                float union_area = area_i + detections[j].box.w * detections[j].box.h - intersection;
-                if (intersection / union_area > nms_threshold) {
-                    suppress[j] = true;
-                }
+            float intersection = (-dx) * (-dy);
+            float union_area = area_i + detections[j].box.w * detections[j].box.h - intersection;
+            if (intersection / union_area > nms_threshold) {
+                suppress[j] = true;
             }
         }
     }
@@ -98,6 +117,8 @@ void PreprocessDirect(std::span<const unsigned char> src, std::vector<float>& ds
     
     // Входное изображение в формате BGRA (4 канала)
     // Конвертируем в RGB планарный формат (3 канала, float нормализованный)
+    // ШАГ 3: Параллелизация через OpenMP для ускорения на многоядерном CPU
+    #pragma omp parallel for num_threads(4)
     for (int i = 0; i < channel_size; ++i) {
         int src_idx = i * 4;
         r_ptr[i] = src[src_idx + 2] * inv255;  // B -> R
@@ -123,9 +144,19 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
     try {
         env = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "BogX_Engine");
         session_options = Ort::SessionOptions();
-        session_options.SetIntraOpNumThreads(1);
+        
+        // === ШАГ 3: Оптимизация количества потоков для CPU (Ryzen 5 5600H - 6 ядер/12 потоков) ===
+        // Устанавливаем 4-6 потоков для инференса, оставляя ресурсы для захвата и трекинга
+        session_options.SetIntraOpNumThreads(4);
+        session_options.SetInterOpNumThreads(4);
+        
+        // Включаем максимальную оптимизацию графа
         session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
         session_options.SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
+        
+        // Отключаем паттерны памяти для лучшей работы DirectML на GPU
+        session_options.DisableMemPattern();
+        session_options.SetMemoryPatternOptimization(false);
 
         const OrtApi& ort_api = Ort::GetApi();
         const OrtDmlApi* dml_api = nullptr;
@@ -133,16 +164,38 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
             // DML API не доступна, пробуем инициализировать без DirectML
             std::cout << "[Detector] DirectML not available, using CPU execution provider" << std::endl;
         } else if (dml_api != nullptr) {
+            // === ШАГ 2: Решение проблемы Optimus — принудительный выбор дискретной GPU (NVIDIA RTX 3050) ===
             IDXGIFactory1* factory = nullptr;
             if (SUCCEEDED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)&factory))) {
                 IDXGIAdapter1* adapter = nullptr;
                 IDXGIAdapter1* bestAdapter = nullptr;
                 SIZE_T maxVRAM = 0;
-                int bestAdapterIndex = 0;
+                int bestAdapterIndex = -1;
+                
+                // Перебираем все адаптеры для поиска дискретной GPU с максимальным объемом VRAM
                 for (UINT i = 0; factory->EnumAdapters1(i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i) {
                     DXGI_ADAPTER_DESC1 desc;
                     adapter->GetDesc1(&desc);
-                    if (desc.DedicatedVideoMemory > maxVRAM) {
+                    
+                    // Проверяем флаг DXGIS_ADAPTER_FLAG1_GRAPHICS — это дискретная или мощная GPU
+                    bool isDiscrete = (desc.Flags & DXGI_ADAPTER_FLAG1_SOFTWARE) == 0;
+                    
+                    // Приоритет: NVIDIA > AMD Discrete > Intel Integrated
+                    bool isNVIDIA = (wcsstr(desc.Description, L"NVIDIA") != nullptr);
+                    bool isAMD = (wcsstr(desc.Description, L"AMD") != nullptr || wcsstr(desc.Description, L"Radeon") != nullptr);
+                    bool isIntel = (wcsstr(desc.Description, L"Intel") != nullptr);
+                    
+                    // Выбираем адаптер с максимальным VRAM, приоритет NVIDIA
+                    if (isNVIDIA && desc.DedicatedVideoMemory > maxVRAM) {
+                        maxVRAM = desc.DedicatedVideoMemory;
+                        if (bestAdapter) bestAdapter->Release();
+                        bestAdapter = adapter;
+                        bestAdapterIndex = i;
+                        std::cout << "[Detector] Found NVIDIA GPU: " << desc.Description 
+                                  << " (VRAM: " << (desc.DedicatedVideoMemory / (1024 * 1024)) << " MB)" << std::endl;
+                    }
+                    else if (!isNVIDIA && !isIntel && isDiscrete && desc.DedicatedVideoMemory > maxVRAM && bestAdapterIndex == -1) {
+                        // Если NVIDIA не найдена, берем другую дискретную GPU
                         maxVRAM = desc.DedicatedVideoMemory;
                         if (bestAdapter) bestAdapter->Release();
                         bestAdapter = adapter;
@@ -152,12 +205,23 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
                         adapter->Release();
                     }
                 }
-                if (bestAdapter) {
+                
+                // Инициализируем DML на выбранном адаптере
+                if (bestAdapter && bestAdapterIndex >= 0) {
+                    // Настраиваем параметры DML для максимальной производительности
+                    OrtDmlApiOptions dml_options = {};
+                    dml_options.flags = 0;  // Базовые флаги
+                    
+                    // Принудительно используем выбранный адаптер
                     dml_api->SessionOptionsAppendExecutionProvider_DML(session_options, bestAdapterIndex);
+                    
+                    std::cout << "[Detector] DirectML initialized on adapter index " << bestAdapterIndex << std::endl;
                     bestAdapter->Release();
                 }
                 else {
+                    // Фоллбэк на первый доступный адаптер
                     dml_api->SessionOptionsAppendExecutionProvider_DML(session_options, 0);
+                    std::cout << "[Detector] DirectML initialized on default adapter (index 0)" << std::endl;
                 }
                 factory->Release();
             }

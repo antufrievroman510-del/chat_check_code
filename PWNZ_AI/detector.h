@@ -35,6 +35,6 @@ private:
     std::vector<const char*> output_names;
     std::vector<float> m_input_tensor_data;
 
-    int model_width = 960;   // УВЕЛИЧЕНО с 736 до 960
-    int model_height = 544;  // УВЕЛИЧЕНО с 416 до 544 (соотношение ~1.76)
+    int model_width = 736;   // Стандартное значение YOLO для оптимальной производительности
+    int model_height = 416;  // Стандартное значение YOLO для оптимальной производительности
 };

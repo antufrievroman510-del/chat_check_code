@@ -12,174 +12,34 @@
 venv/
 .venv/
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-.venv.bak/
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Build directories
-build/
-dist/
-*.egg-info/
+.mypy_cache/
+.pytest_cache/
+node_modules/
 
 # Logs and temp files
 *.log
 *.tmp
 *.swp
-*.swo
-*~
-
-# Environment variables
-.env
-.env.local
-.env.*
 
 # Editors
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
+
+# System files
 .DS_Store
 Thumbs.db
+.env
+.env.local
+*.env.*
 
-# Coverage reports
+# Coverage
 coverage/
 htmlcov/
 .coverage
-*.cover
-coverage.xml
 
-# MyPy cache
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# PyTest cache
-.pytest_cache/
-
-# Gradle
-.gradle/
+# Build directories (if present)
 build/
-
-# Java
-*.class
-*.jar
-*.war
-*.ear
-*.nar
+dist/
 target/
-
-# C/C++
-*.o
-*.obj
-*.exe
-*.dll
-*.so
-*.a
-*.lib
-*.dylib
-*.plist
-*.idb
-*.pdb
-*.gch
-*.pch
-*.ilk
-*.iobj
-*.ipdb
-*.tlog
-*.exp
-*.imp
-*.map
-*.suo
-*.sdf
-*.opensdf
-*.natvis
-*.VC.db
-*.VC.VC.opendb
-*.aps
-*.ncb
-*.opt
-*.plg
-*.bsc
-*.ilk
-*.vcxproj.filters
-*.vcxproj.user
-*.sln.docstates
-*.userosscache
-*.sdf.log
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC.VC.opendb-wal
-*.VC.db-shm
-*.VC.db-wal
-*.VC.VC.opendb-shm
-*.VC......
+.gradle/
 ```
