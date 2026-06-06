@@ -137,11 +137,18 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
         const OrtDmlApi* dml_api = nullptr;
         if (ort_api.GetExecutionProviderApi("DML", ORT_API_VERSION,
             reinterpret_cast<const void**>(&dml_api)) == nullptr) {
-            std::cout << "[Detector] DirectML unavailable, falling back to CPU" << std::endl;
+            std::cout << "[Detector] DirectML API available" << std::endl;
         }
-        else if (dml_api) {
+        else {
+            std::cerr << "[Detector] WARNING: DirectML API not available!" << std::endl;
+        }
+        
+        if (dml_api) {
             dml_api->SessionOptionsAppendExecutionProvider_DML(session_options, gpu_index);
             std::cout << "[Detector] DirectML successfully attached to GPU index: " << gpu_index << std::endl;
+        }
+        else {
+            std::cerr << "[Detector] ERROR: DirectML provider NOT attached! Will use CPU (slow)." << std::endl;
         }
 
         std::wstring wpath(model_path.begin(), model_path.end());
@@ -152,7 +159,15 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
             return false;
         }
         
+        std::wcout << L"[Detector] Loading model: " << wpath << std::endl;
         session = std::make_unique<Ort::Session>(*env, wpath.c_str(), session_options);
+        
+        if (!session) {
+            std::cerr << "[Detector] ERROR: Session is null after loading!" << std::endl;
+            return false;
+        }
+        
+        std::cout << "[Detector] Model loaded successfully." << std::endl;
 
         Ort::AllocatorWithDefaultOptions alloc;
         input_names.push_back(_strdup(session->GetInputNameAllocated(0, alloc).get()));
@@ -222,10 +237,22 @@ std::vector<Detection> Detector::run_inference(
     // ZERO-RESIZE: Если разрешение ROI не совпадает с моделью — инференс запрещён.
     // Разрешение захвата должно строго соответствовать разрешению модели.
     if (w != model_width || h != model_height) {
-        std::cerr << "[Detector] Resolution mismatch: ROI=" << w << "x" << h
-                  << " Model=" << model_width << "x" << model_height
-                  << ". Skipping inference (zero-resize policy)." << std::endl;
+        static int mismatch_log_count = 0;
+        if (mismatch_log_count < 10) {
+            std::cerr << "[Detector] Resolution MISMATCH: ROI=" << w << "x" << h
+                      << " Model=" << model_width << "x" << model_height
+                      << ". Skipping inference (zero-resize policy)." << std::endl;
+            mismatch_log_count++;
+        }
         return results;
+    }
+    
+    // Логирование первого кадра для отладки
+    static int first_frame_log = 0;
+    if (first_frame_log < 3) {
+        std::cout << "[Detector] Running inference #" << (first_frame_log + 1) 
+                  << " with ROI=" << w << "x" << h << std::endl;
+        first_frame_log++;
     }
 
     float actual_body_thr = elite_smoke_vision ? (body_conf_threshold * 0.75f) : body_conf_threshold;
