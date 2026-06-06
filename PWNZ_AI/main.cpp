@@ -366,7 +366,7 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
             last_head_buffer_int = head_buffer;
         }
 
-        int current_yolo_w = 960, current_yolo_h = 544;
+        int current_yolo_w = 736, current_yolo_h = 416;  // Стандартные значения YOLO (обновлено после оптимизации)
         {
             std::lock_guard<std::mutex> mod_lock(g_model_mutex);
             current_yolo_w = det->get_width();
@@ -462,6 +462,20 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
             for (const auto& d : filtered) {
                 if (d.class_id == 0) body_dets.push_back(d);
                 else if (d.class_id == 1) head_dets.push_back(d);
+            }
+
+            // ШАГ 4: Оптимизация — ограничиваем количество детектов для трекинга
+            // чтобы BYTETracker не блокировал основной цикл
+            constexpr size_t MAX_TRACKING_DETS = 256;
+            if (body_dets.size() > MAX_TRACKING_DETS) {
+                std::sort(body_dets.begin(), body_dets.end(),
+                    [](const Detection& a, const Detection& b) { return a.confidence > b.confidence; });
+                body_dets.resize(MAX_TRACKING_DETS);
+            }
+            if (head_dets.size() > MAX_TRACKING_DETS) {
+                std::sort(head_dets.begin(), head_dets.end(),
+                    [](const Detection& a, const Detection& b) { return a.confidence > b.confidence; });
+                head_dets.resize(MAX_TRACKING_DETS);
             }
 
             Eigen::MatrixXf body_detection_matrix(body_dets.size(), 5);
