@@ -389,16 +389,13 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
         auto cap_start = std::chrono::high_resolution_clock::now();
         
         // Захват ROI напрямую в буфер модели (без ресайза!)
-        std::span<std::byte> capture_span{ reinterpret_cast<std::byte*>(capture_buffers[current_write]),
-                                          static_cast<std::size_t>(capture_w) * capture_h * 4 };
-        bool frame_captured = cap->GetHardwareROIFrame(capture_span, roi_screen_x, roi_screen_y, capture_w, capture_h);
+        bool frame_captured = cap->GetHardwareROIFrame(capture_buffers[current_write], roi_screen_x, roi_screen_y, capture_w, capture_h);
         
         auto cap_end = std::chrono::high_resolution_clock::now();
         g_last_capture_time = std::chrono::duration<float, std::milli>(cap_end - cap_start).count();
 
         if (frame_captured) {
             std::vector<Detection> current_frame_raw;
-            FrameTimings frame_timings{};
             {
                 std::lock_guard<std::mutex> mod_lock(g_model_mutex);
                 float body_conf = local_cfg.ai_confidence_body / 100.0f;
@@ -407,8 +404,6 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
                     body_conf = (std::max)(0.35f, body_conf - 0.05f);
                     head_conf = (std::max)(0.25f, head_conf - 0.05f);
                 }
-                std::span<const unsigned char> pixel_span{ capture_buffers[current_write],
-                                                          static_cast<std::size_t>(current_yolo_w) * current_yolo_h * 4 };
                 
                 // Отладочный лог для первого кадра
                 static int debug_frame_count = 0;
@@ -416,33 +411,25 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
                     std::cout << "[Inference] Frame " << debug_frame_count 
                               << ": Input size=" << current_yolo_w << "x" << current_yolo_h
                               << ", ROI=(" << roi_screen_x << "," << roi_screen_y << ")"
-                              << ", pixel_span.size=" << pixel_span.size()
                               << std::endl;
                 }
                 
-                // &frame_timings -> тайминги pre/inf/nms в stdout каждые 60 кадров
-                current_frame_raw = det->run_inference(pixel_span, current_yolo_w, current_yolo_h,
+                current_frame_raw = det->run_inference(capture_buffers[current_write], current_yolo_w, current_yolo_h,
                     body_conf, head_conf, local_cfg.neural_nms, local_cfg.neural_max_det,
-                    local_cfg.elite_smoke_vision, &frame_timings);
+                    local_cfg.elite_smoke_vision);
                 
                 // Логирование результатов первых кадров
                 if (debug_frame_count <= 5) {
                     std::cout << "[Inference] Frame " << debug_frame_count 
                               << ": Detections=" << current_frame_raw.size()
-                              << ", Timings: pre=" << frame_timings.preprocess_ms 
-                              << "ms, inf=" << frame_timings.inference_ms 
-                              << "ms, nms=" << frame_timings.nms_ms 
-                              << "ms, total=" << frame_timings.total_ms << "ms"
                               << std::endl;
                 }
             }
-            // g_last_inference_time = полный пайплайн: preprocess + inference + nms
-            float infer_ms = frame_timings.total_ms;
-            g_last_inference_time = infer_ms;
+            g_last_inference_time = 0.0f;
 
             {
                 std::lock_guard<std::mutex> lock(g_metrics_mutex);
-                g_inference_history.push_back(infer_ms);
+                g_inference_history.push_back(0.0f);
                 if (g_inference_history.size() > 100) g_inference_history.pop_front();
                 if (g_inference_history.size() >= 10) {
                     float sum = 0.0f, sum_sq = 0.0f;
