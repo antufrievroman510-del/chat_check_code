@@ -359,6 +359,14 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
             Sleep(10);
             continue;
         }
+        
+        // Отладочный лог при старте потока инференса
+        static bool inference_started = false;
+        if (!inference_started) {
+            std::cout << "[Inference] Starting inference thread with model resolution: " 
+                      << current_yolo_w << "x" << current_yolo_h << std::endl;
+            inference_started = true;
+        }
 
         float current_zoom = 1.0f;
         g_current_zoom.store(current_zoom);
@@ -404,10 +412,11 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
                 
                 // Отладочный лог для первого кадра
                 static int debug_frame_count = 0;
-                if (++debug_frame_count <= 3) {
+                if (++debug_frame_count <= 5) {
                     std::cout << "[Inference] Frame " << debug_frame_count 
                               << ": Input size=" << current_yolo_w << "x" << current_yolo_h
                               << ", ROI=(" << roi_screen_x << "," << roi_screen_y << ")"
+                              << ", pixel_span.size=" << pixel_span.size()
                               << std::endl;
                 }
                 
@@ -415,6 +424,17 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
                 current_frame_raw = det->run_inference(pixel_span, current_yolo_w, current_yolo_h,
                     body_conf, head_conf, local_cfg.neural_nms, local_cfg.neural_max_det,
                     local_cfg.elite_smoke_vision, &frame_timings);
+                
+                // Логирование результатов первых кадров
+                if (debug_frame_count <= 5) {
+                    std::cout << "[Inference] Frame " << debug_frame_count 
+                              << ": Detections=" << current_frame_raw.size()
+                              << ", Timings: pre=" << frame_timings.preprocess_ms 
+                              << "ms, inf=" << frame_timings.inference_ms 
+                              << "ms, nms=" << frame_timings.nms_ms 
+                              << "ms, total=" << frame_timings.total_ms << "ms"
+                              << std::endl;
+                }
             }
             // g_last_inference_time = полный пайплайн: preprocess + inference + nms
             float infer_ms = frame_timings.total_ms;
