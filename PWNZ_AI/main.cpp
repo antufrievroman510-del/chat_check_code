@@ -199,14 +199,6 @@ bool IsAimKeyPressed(Overlay* overlay) {
     return key_pressed;
 }
 
-void GetModelSize(int model_idx, int& out_w, int& out_h) {
-    if (model_idx == 0) { out_w = 512; out_h = 288; }
-    else if (model_idx == 1) { out_w = 736; out_h = 416; }
-    else if (model_idx == 2) { out_w = 512; out_h = 288; }
-    else if (model_idx == 3) { out_w = 736; out_h = 416; }
-    else { out_w = 736; out_h = 416; }
-}
-
 inline void DownscaleImage(const unsigned char* src, int src_w, int src_h, unsigned char* dst, int dst_w, int dst_h) {
     float scale_x = static_cast<float>(src_w) / dst_w;
     float scale_y = static_cast<float>(src_h) / dst_h;
@@ -662,7 +654,11 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
             current_read = 1 - current_read;
         }
 
-        Sleep(local_cfg.eco_mode ? 2 : 1);
+        if (local_cfg.eco_mode) {
+            Sleep(1);
+        } else {
+            std::this_thread::yield(); // Отдаем квант времени без жесткого сна
+        }
     }
 
     delete[] capture_buffers[0];
@@ -1077,13 +1073,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             std::cout << "[INIT] Attempting emergency fallback to SendInput..." << std::endl;
         }
 
-        int start_w, start_h; GetModelSize(overlay.ai_model, start_w, start_h);
         std::string model_to_load = model_files[overlay.ai_model];
         std::string fp16_model;
         EnsureFP16Model(model_to_load, fp16_model);
         if (logfile.is_open()) { logfile << "Step 6: loading model: " << fp16_model << std::endl; logfile.flush(); }
 
-        if (!det.initialize(fp16_model, start_w, start_h)) {
+        if (!det.initialize(fp16_model, overlay.detection_resolution, overlay.detection_resolution)) {
             if (logfile.is_open()) { logfile << "ERROR: det.initialize failed" << std::endl; logfile.flush(); }
             MessageBoxA(0, "Нейросеть не загрузилась!", "FATAL ERROR", MB_ICONERROR);
             VMProtectEnd(); return -1;
@@ -1299,11 +1294,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         if (overlay.apply_model_flag) {
             overlay.apply_model_flag = false;
             std::lock_guard<std::mutex> lock(g_model_mutex);
-            int new_w, new_h; GetModelSize(overlay.ai_model, new_w, new_h);
             std::string model_to_load = model_files[overlay.ai_model];
             std::string fp16_model;
             EnsureFP16Model(model_to_load, fp16_model);
-            det.initialize(fp16_model, new_w, new_h);
+            det.initialize(fp16_model, overlay.detection_resolution, overlay.detection_resolution);
             render_yolo_w = det.get_width(); render_yolo_h = det.get_height();
         }
         std::vector<Detection> render_det;

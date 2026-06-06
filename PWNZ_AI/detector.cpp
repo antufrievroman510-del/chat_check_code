@@ -220,16 +220,20 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
         auto input_info = session->GetInputTypeInfo(0);
         auto input_shape = input_info.GetTensorTypeAndShapeInfo().GetShape();
 
-        if (force_w > 0 && force_h > 0) {
-            model_width = force_w;
-            model_height = force_h;
-        }
-        else if (input_shape.size() >= 4 && input_shape[2] != -1 && input_shape[3] != -1) {
-            model_height = (int)input_shape[2];
-            model_width = (int)input_shape[3];
+        // Динамическое определение разрешения модели
+        if (input_shape.size() >= 4 && input_shape[2] > 0 && input_shape[3] > 0) {
+            // Модель имеет статические размеры - берем их из ONNX
+            model_height = static_cast<int>(input_shape[2]);
+            model_width = static_cast<int>(input_shape[3]);
+        } else {
+            // Модель имеет динамические оси (-1) - используем переданные значения из UI
+            model_width = (force_w > 0) ? force_w : 640;
+            model_height = (force_h > 0) ? force_h : 640;
         }
 
         m_input_tensor_data.resize(3 * model_width * model_height);
+        m_resized_tensor_data.resize(3 * model_width * model_height);
+        m_final_tensor_data.resize(3 * model_width * model_height);
         return true;
     }
     catch (const Ort::Exception& e) {
@@ -264,20 +268,20 @@ std::vector<Detection> Detector::run_inference(std::span<const unsigned char> pi
     try {
         auto t0 = std::chrono::steady_clock::now();
 
-        std::vector<float> resized_tensor_data;
         const float* preprocess_ptr = nullptr;
 
         if (w != model_width || h != model_height) {
-            resized_tensor_data.resize(3 * model_width * model_height);
+            m_resized_tensor_data.resize(3 * model_width * model_height);
 
             const float x_ratio = static_cast<float>(w) / model_width;
             const float y_ratio = static_cast<float>(h) / model_height;
             const float inv255 = 0.003921568f;
 
-            float* r_ptr = resized_tensor_data.data();
-            float* g_ptr = resized_tensor_data.data() + (model_width * model_height);
-            float* b_ptr = resized_tensor_data.data() + 2 * (model_width * model_height);
+            float* r_ptr = m_resized_tensor_data.data();
+            float* g_ptr = m_resized_tensor_data.data() + (model_width * model_height);
+            float* b_ptr = m_resized_tensor_data.data() + 2 * (model_width * model_height);
 
+#pragma omp parallel for num_threads(4)
             for (int my = 0; my < model_height; ++my) {
                 for (int mx = 0; mx < model_width; ++mx) {
                     const float ox = x_ratio * mx;
@@ -315,26 +319,25 @@ std::vector<Detection> Detector::run_inference(std::span<const unsigned char> pi
                     }
                 }
             }
-            preprocess_ptr = resized_tensor_data.data();
+            preprocess_ptr = m_resized_tensor_data.data();
         }
         else {
             PreprocessDirect(pixel_data, m_input_tensor_data, model_width, model_height);
             preprocess_ptr = m_input_tensor_data.data();
         }
 
-        std::vector<float> input_tensor_data;
         if (preprocess_ptr == m_input_tensor_data.data()) {
-            input_tensor_data = m_input_tensor_data;
+            m_final_tensor_data = m_input_tensor_data;
         }
         else {
-            input_tensor_data.assign(resized_tensor_data.begin(), resized_tensor_data.end());
+            m_final_tensor_data.assign(m_resized_tensor_data.begin(), m_resized_tensor_data.end());
         }
 
         std::vector<int64_t> input_shape = { 1, 3, model_height, model_width };
         auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
         Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
             memory_info,
-            input_tensor_data.data(),
+            m_final_tensor_data.data(),
             3 * model_width * model_height,
             input_shape.data(),
             input_shape.size());
