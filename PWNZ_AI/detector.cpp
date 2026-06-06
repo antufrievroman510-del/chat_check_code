@@ -8,6 +8,9 @@
 #include <chrono>
 #include <span>
 #include <cstring>
+#include <execution>
+#include <ranges>
+#include <numeric>
 
 // ============================================================================
 // СТРУКТУРЫ И ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
@@ -106,13 +109,14 @@ void PreprocessDirect(std::span<const unsigned char> src, std::vector<float>& ds
         return;
     }
 
-#pragma omp parallel for num_threads(4)
-    for (int i = 0; i < channel_size; ++i) {
+    // C++20 параллельный цикл с гарантированной многопоточностью
+    auto range = std::views::iota(0, channel_size);
+    std::for_each(std::execution::par_unseq, range.begin(), range.end(), [&](int i) {
         int src_idx = i * 4;
         r_ptr[i] = src[src_idx + 2] * inv255;  // B -> R
         g_ptr[i] = src[src_idx + 1] * inv255;  // G -> G
         b_ptr[i] = src[src_idx + 0] * inv255;  // R -> B
-    }
+    });
 }
 
 Detector::Detector() {}
@@ -132,8 +136,8 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
         env = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "BogX_Engine");
         session_options = Ort::SessionOptions();
 
-        // Оптимизация потоков для CPU - только 1 поток для DirectML
-        session_options.SetIntraOpNumThreads(1);
+        // Оптимизация потоков для CPU - 4 потока для CPU fallback
+        session_options.SetIntraOpNumThreads(4);
         session_options.SetInterOpNumThreads(1);
         session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
         session_options.SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
@@ -176,7 +180,6 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
 
         m_input_tensor_data.resize(3 * model_width * model_height);
         m_resized_tensor_data.resize(3 * model_width * model_height);
-        m_final_tensor_data.resize(3 * model_width * model_height);
         return true;
     }
     catch (const Ort::Exception& e) {
@@ -224,8 +227,10 @@ std::vector<Detection> Detector::run_inference(std::span<const unsigned char> pi
             float* g_ptr = m_resized_tensor_data.data() + (model_width * model_height);
             float* b_ptr = m_resized_tensor_data.data() + 2 * (model_width * model_height);
 
-#pragma omp parallel for num_threads(4)
-            for (int my = 0; my < model_height; ++my) {
+            // C++20 параллельный цикл для ресайза
+            std::vector<int> ys(model_height);
+            std::iota(ys.begin(), ys.end(), 0);
+            std::for_each(std::execution::par_unseq, ys.begin(), ys.end(), [&](int my) {
                 for (int mx = 0; mx < model_width; ++mx) {
                     const float ox = x_ratio * mx;
                     const float oy = y_ratio * my;
@@ -261,7 +266,7 @@ std::vector<Detection> Detector::run_inference(std::span<const unsigned char> pi
                         else b_ptr[dst_idx] = v * inv255;
                     }
                 }
-            }
+            });
             preprocess_ptr = m_resized_tensor_data.data();
         }
         else {
@@ -269,18 +274,12 @@ std::vector<Detection> Detector::run_inference(std::span<const unsigned char> pi
             preprocess_ptr = m_input_tensor_data.data();
         }
 
-        if (preprocess_ptr == m_input_tensor_data.data()) {
-            m_final_tensor_data = m_input_tensor_data;
-        }
-        else {
-            m_final_tensor_data.assign(m_resized_tensor_data.begin(), m_resized_tensor_data.end());
-        }
-
+        // Zero-Copy: передаем указатель напрямую в ONNX без копирования
         std::vector<int64_t> input_shape = { 1, 3, model_height, model_width };
         auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
         Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
             memory_info,
-            m_final_tensor_data.data(),
+            const_cast<float*>(preprocess_ptr), // ИСПОЛЬЗУЕМ УКАЗАТЕЛЬ НАПРЯМУЮ, БЕЗ КОПИРОВАНИЯ!
             3 * model_width * model_height,
             input_shape.data(),
             input_shape.size());
