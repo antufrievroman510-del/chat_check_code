@@ -12,6 +12,33 @@
 #pragma comment(lib, "dxgi.lib")
 
 // ============================================================================
+// Определение размеров моделей BogX
+// ============================================================================
+static void GetModelResolutionFromName(const std::string& model_path, int& out_w, int& out_h) {
+    std::string model_name = model_path;
+    size_t pos = model_name.find_last_of("/\\");
+    if (pos != std::string::npos) model_name = model_name.substr(pos + 1);
+    
+    // BogX-Nano.onnx / BogX-Pro.onnx: 512x288
+    // BogX-Lite.onnx / BogX-Ultra.onnx: 736x416
+    if (model_name.find("Nano") != std::string::npos || 
+        model_name.find("Pro") != std::string::npos) {
+        out_w = 512;
+        out_h = 288;
+    }
+    else if (model_name.find("Lite") != std::string::npos || 
+             model_name.find("Ultra") != std::string::npos) {
+        out_w = 736;
+        out_h = 416;
+    }
+    else {
+        // Неизвестная модель — дефолт 640x640
+        out_w = 640;
+        out_h = 640;
+    }
+}
+
+// ============================================================================
 // NMS (Non-Maximum Suppression)
 // ============================================================================
 static void NMS_Improved(std::vector<Detection>& dets, float nms_threshold, float* nms_ms_out) {
@@ -112,16 +139,27 @@ bool Detector::initialize(const std::string& model_path, int force_w, int force_
         input_names.push_back(_strdup(session->GetInputNameAllocated(0, alloc).get()));
         output_names.push_back(_strdup(session->GetOutputNameAllocated(0, alloc).get()));
 
-        // Автоматическое определение размера модели (если нет жестко заданного force_w)
+        // Автоматическое определение размера модели
+        // Приоритет 1: читаем из shape ONNX (если статический)
+        // Приоритет 2: определяем по имени модели (для динамических shape)
         auto input_info = session->GetInputTypeInfo(0);
         auto input_shape = input_info.GetTensorTypeAndShapeInfo().GetShape();
-        if (input_shape.size() >= 4 && input_shape[2] > 0 && input_shape[3] > 0) {
+        
+        bool shape_valid = (input_shape.size() >= 4 && 
+                           input_shape[2] > 0 && input_shape[2] < 5000 &&
+                           input_shape[3] > 0 && input_shape[3] < 5000);
+        
+        if (shape_valid) {
             model_height = static_cast<int>(input_shape[2]);
             model_width = static_cast<int>(input_shape[3]);
+            std::cout << "[Detector] Model resolution from ONNX shape: " 
+                      << model_width << "x" << model_height << std::endl;
         }
         else {
-            model_width = (force_w > 0) ? force_w : 640;
-            model_height = (force_h > 0) ? force_h : 640;
+            // Shape содержит -1 (динамический) или некорректен — определяем по имени модели
+            GetModelResolutionFromName(model_path, model_width, model_height);
+            std::cout << "[Detector] Model resolution from filename: " 
+                      << model_width << "x" << model_height << std::endl;
         }
 
         // Предварительное выделение памяти (избегаем аллокаций в цикле)

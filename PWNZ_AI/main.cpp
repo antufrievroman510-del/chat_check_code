@@ -198,22 +198,7 @@ bool IsAimKeyPressed(Overlay* overlay) {
     return key_pressed;
 }
 
-inline void DownscaleImage(const unsigned char* src, int src_w, int src_h, unsigned char* dst, int dst_w, int dst_h) {
-    float scale_x = static_cast<float>(src_w) / dst_w;
-    float scale_y = static_cast<float>(src_h) / dst_h;
-    for (int y = 0; y < dst_h; ++y) {
-        int py = (std::min)(static_cast<int>(y * scale_y), src_h - 1);
-        for (int x = 0; x < dst_w; ++x) {
-            int px = (std::min)(static_cast<int>(x * scale_x), src_w - 1);
-            int src_idx = (py * src_w + px) * 4;
-            int dst_idx = (y * dst_w + x) * 4;
-            dst[dst_idx] = src[src_idx];
-            dst[dst_idx + 1] = src[src_idx + 1];
-            dst[dst_idx + 2] = src[src_idx + 2];
-            dst[dst_idx + 3] = src[src_idx + 3];
-        }
-    }
-}
+// DownscaleImage удалён — Zero-Resize политика запрещает программный ресайз
 
 bool EnsureFP16Model(const std::string& model_path, std::string& out_fp16_path) {
     if (model_path.find("_fp16.onnx") != std::string::npos) {
@@ -277,21 +262,15 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
     // Буферы под максимально возможный ROI (736×416 — самая большая из 4 моделей).
-    // Не аллоцируем 3840×2160 (62 МБ) когда реально нужно максимум 736×416×4 = ~1.2 МБ.
-    // Если модель окажется крупнее — буфер пересоздаётся ниже динамически.
     constexpr int MAX_MODEL_W = 736;
     constexpr int MAX_MODEL_H = 416;
-    int capture_buf_w = MAX_MODEL_W;
-    int capture_buf_h = MAX_MODEL_H;
 
+    // Один буфер для захвата (double-buffer не нужен при zero-resize)
     unsigned char* capture_buffers[2] = {
         new unsigned char[MAX_MODEL_W * MAX_MODEL_H * 4],
         new unsigned char[MAX_MODEL_W * MAX_MODEL_H * 4]
     };
-    unsigned char* zoom_buffers[2] = {
-        new unsigned char[MAX_MODEL_W * MAX_MODEL_H * 4],
-        new unsigned char[MAX_MODEL_W * MAX_MODEL_H * 4]
-    };
+    // zoom_buffers удалены — Zero-Resize запрещает программный ресайз
 
     std::vector<Detection> detections_buffers[2];
     int current_write = 0;
@@ -365,34 +344,47 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
             last_head_buffer_int = head_buffer;
         }
 
-        int current_yolo_w = 736, current_yolo_h = 416;  // Стандартные значения YOLO (обновлено после оптимизации)
+        // Получаем разрешение модели из детектора (автоматически определяется при инициализации)
+        int current_yolo_w = 0, current_yolo_h = 0;
         {
             std::lock_guard<std::mutex> mod_lock(g_model_mutex);
             current_yolo_w = det->get_width();
             current_yolo_h = det->get_height();
         }
-        if (current_yolo_w < 100 || current_yolo_h < 100) { Sleep(5); continue; }
+        
+        // Проверка на корректность разрешения модели
+        if (current_yolo_w < 100 || current_yolo_h < 100) {
+            std::cerr << "[Inference] Invalid model resolution: " << current_yolo_w << "x" 
+                      << current_yolo_h << ". Skipping frame." << std::endl;
+            Sleep(10);
+            continue;
+        }
 
         float current_zoom = 1.0f;
         g_current_zoom.store(current_zoom);
-        int capture_w = (std::min)(static_cast<int>(current_yolo_w * current_zoom), g_capture_w);
-        int capture_h = (std::min)(static_cast<int>(current_yolo_h * current_zoom), g_capture_h);
+        
+        // ZERO-RESIZE: ROI должен строго соответствовать разрешению модели
+        int capture_w = current_yolo_w;
+        int capture_h = current_yolo_h;
+        
+        // Проверяем, что ROI помещается в экран
+        if (capture_w > g_capture_w || capture_h > g_capture_h) {
+            std::cerr << "[Inference] Model resolution " << current_yolo_w << "x" << current_yolo_h 
+                      << " exceeds screen " << g_capture_w << "x" << g_capture_h << ". Skipping frame." << std::endl;
+            Sleep(1);
+            continue;
+        }
+        
         int roi_screen_x = (g_capture_w / 2) - (capture_w / 2);
         int roi_screen_y = (g_capture_h / 2) - (capture_h / 2);
 
         auto cap_start = std::chrono::high_resolution_clock::now();
-        bool frame_captured = false;
-        if (current_zoom > 1.0f) {
-            std::span<std::byte> zoom_span{ reinterpret_cast<std::byte*>(zoom_buffers[current_write]),
-                                           static_cast<std::size_t>(capture_w) * capture_h * 4 };
-            frame_captured = cap->GetHardwareROIFrame(zoom_span, roi_screen_x, roi_screen_y, capture_w, capture_h);
-            if (frame_captured) DownscaleImage(zoom_buffers[current_write], capture_w, capture_h, capture_buffers[current_write], current_yolo_w, current_yolo_h);
-        }
-        else {
-            std::span<std::byte> capture_span{ reinterpret_cast<std::byte*>(capture_buffers[current_write]),
-                                              static_cast<std::size_t>(capture_w) * capture_h * 4 };
-            frame_captured = cap->GetHardwareROIFrame(capture_span, roi_screen_x, roi_screen_y, capture_w, capture_h);
-        }
+        
+        // Захват ROI напрямую в буфер модели (без ресайза!)
+        std::span<std::byte> capture_span{ reinterpret_cast<std::byte*>(capture_buffers[current_write]),
+                                          static_cast<std::size_t>(capture_w) * capture_h * 4 };
+        bool frame_captured = cap->GetHardwareROIFrame(capture_span, roi_screen_x, roi_screen_y, capture_w, capture_h);
+        
         auto cap_end = std::chrono::high_resolution_clock::now();
         g_last_capture_time = std::chrono::duration<float, std::milli>(cap_end - cap_start).count();
 
@@ -431,11 +423,11 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
                 }
             }
 
+            // Zero-Resize: детекты в координатах ROI (0..model_w, 0..model_h)
+            // Добавляем смещение ROI на экране для перевода в экранные координаты
             for (auto& d : current_frame_raw) {
-                d.box.x = d.box.x * current_zoom + roi_screen_x;
-                d.box.y = d.box.y * current_zoom + roi_screen_y;
-                d.box.w *= current_zoom;
-                d.box.h *= current_zoom;
+                d.box.x += roi_screen_x;
+                d.box.y += roi_screen_y;
             }
             detections_buffers[current_write] = std::move(current_frame_raw);
             buffer_ready[current_write] = true;
