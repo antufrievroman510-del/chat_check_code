@@ -17,7 +17,7 @@ class Detector {
 public:
     Detector();
     ~Detector();
-    bool initialize(const std::string& model_path, int force_w = 0, int force_h = 0);
+    bool initialize(const std::string& model_path, int force_w = 0, int force_h = 0, int gpu_index = 0);
     std::vector<Detection> run_inference(std::span<const unsigned char> pixel_data, int w, int h,
         float body_conf_threshold, float head_conf_threshold,
         float nms_threshold, int max_det,
