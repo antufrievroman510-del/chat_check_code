@@ -14,7 +14,7 @@
 #include "VMProtectSDK.h"
 #include "AimMath.h"
 #include "MouseController.h"
-// #include "overlay.h"  // Убрано - вызывает циклическую зависимость! Overlay использует forward declaration
+#include "overlay.h"  // Убрано - вызывает циклическую зависимость! Overlay использует forward declaration
 #include "MakcuInput.h"  // Для доступа к классу MakcuInput и g_makcu_* переменным
 #include "SendInputMouse.h"  // Добавлено для std::make_unique<SendInputMouse>()
 
