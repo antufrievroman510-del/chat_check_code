@@ -664,8 +664,6 @@ void InferenceThread(DXGICapture* cap, Detector* det, Overlay* overlay) {
 
     delete[] capture_buffers[0];
     delete[] capture_buffers[1];
-    delete[] zoom_buffers[0];
-    delete[] zoom_buffers[1];
 }
 
 // ==================== ПОТОК АИМБОТА ====================
