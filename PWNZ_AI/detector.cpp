@@ -1,4 +1,4 @@
-#define NOMINMAX 
+#define NOMINMAX
 #include "detector.h"
 #include <iostream>
 #include <algorithm>
@@ -8,353 +8,292 @@
 #include <chrono>
 #include <span>
 #include <cstring>
-#include <execution>
-#include <ranges>
-#include <numeric>
+
+#pragma comment(lib, "dxgi.lib")
 
 // ============================================================================
-// СТРУКТУРЫ И ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// NMS (Non-Maximum Suppression)
 // ============================================================================
-
-struct DetectionExt {
-    int class_id;
-    float confidence;
-    struct { float x, y, w, h; } box;
-    int track_id = -1;
-};
-
-inline float CalculateIoU(const Detection& a, const Detection& b) {
-    float x1 = (std::max)(a.box.x, b.box.x);
-    float y1 = (std::max)(a.box.y, b.box.y);
-    float x2 = (std::min)(a.box.x + a.box.w, b.box.x + b.box.w);
-    float y2 = (std::min)(a.box.y + a.box.h, b.box.y + b.box.h);
-    if (x2 < x1 || y2 < y1) return 0.0f;
-    float intersection = (x2 - x1) * (y2 - y1);
-    return intersection / (a.box.w * a.box.h + b.box.w * b.box.h - intersection);
-}
-
-// ============================================================================
-// NMS (из source_logic/postProcess.cpp, адаптированный без OpenCV)
-// ============================================================================
-void NMS_Improved(std::vector<Detection>& detections, float nms_threshold, std::chrono::duration<double, std::milli>* nms_time = nullptr) {
-    if (detections.empty() || nms_threshold <= 0.0f) {
-        if (nms_time) *nms_time = std::chrono::duration<double, std::milli>(0);
+static void NMS_Improved(std::vector<Detection>& dets, float nms_threshold, float* nms_ms_out) {
+    if (dets.empty() || nms_threshold <= 0.f) {
+        if (nms_ms_out) *nms_ms_out = 0.f;
         return;
     }
 
     auto t0 = std::chrono::steady_clock::now();
 
-    const float pre_nms_conf_thresh = 0.15f;
-    detections.erase(
-        std::remove_if(detections.begin(), detections.end(),
-            [pre_nms_conf_thresh](const Detection& d) { return d.confidence < pre_nms_conf_thresh; }),
-        detections.end());
+    // Быстрая фильтрация мусора до тяжелой сортировки O(N^2)
+    constexpr float PRE_THRESH = 0.15f;
+    dets.erase(std::remove_if(dets.begin(), dets.end(),
+        [](const Detection& d) { return d.confidence < PRE_THRESH; }), dets.end());
 
-    if (detections.empty()) {
-        if (nms_time) *nms_time = std::chrono::duration<double, std::milli>(0);
+    if (dets.empty()) {
+        if (nms_ms_out) *nms_ms_out = 0.f;
         return;
     }
 
-    std::sort(detections.begin(), detections.end(),
-        [](const Detection& a, const Detection& b) {
-            return a.confidence > b.confidence;
-        });
+    std::sort(dets.begin(), dets.end(),
+        [](const Detection& a, const Detection& b) { return a.confidence > b.confidence; });
 
-    std::vector<bool> suppress(detections.size(), false);
+    std::vector<bool> suppress(dets.size(), false);
     std::vector<Detection> result;
-    result.reserve((std::min)(detections.size(), static_cast<size_t>(256)));
+    result.reserve((std::min)(dets.size(), static_cast<size_t>(256)));
 
-    for (size_t i = 0; i < detections.size(); ++i) {
+    for (size_t i = 0; i < dets.size(); ++i) {
         if (suppress[i]) continue;
-        result.push_back(detections[i]);
+        result.push_back(dets[i]);
 
-        const float area_i = detections[i].box.w * detections[i].box.h;
-
+        // Ранний выход, если собрали достаточно детектов
         if (result.size() >= 100) break;
 
-        for (size_t j = i + 1; j < detections.size(); ++j) {
+        const float area_i = dets[i].box.w * dets[i].box.h;
+        for (size_t j = i + 1; j < dets.size(); ++j) {
             if (suppress[j]) continue;
 
-            float dx = (std::max)(detections[i].box.x, detections[j].box.x) -
-                (std::min)(detections[i].box.x + detections[i].box.w, detections[j].box.x + detections[j].box.w);
-            float dy = (std::max)(detections[i].box.y, detections[j].box.y) -
-                (std::min)(detections[i].box.y + detections[i].box.h, detections[j].box.y + detections[j].box.h);
+            float dx = (std::max)(dets[i].box.x, dets[j].box.x) -
+                (std::min)(dets[i].box.x + dets[i].box.w, dets[j].box.x + dets[j].box.w);
+            float dy = (std::max)(dets[i].box.y, dets[j].box.y) -
+                (std::min)(dets[i].box.y + dets[i].box.h, dets[j].box.y + dets[j].box.h);
 
-            if (dx >= 0.0f || dy >= 0.0f) continue;
+            if (dx >= 0.f || dy >= 0.f) continue; // Не пересекаются
 
-            float intersection = (-dx) * (-dy);
-            float union_area = area_i + detections[j].box.w * detections[j].box.h - intersection;
-            if (intersection / union_area > nms_threshold) {
-                suppress[j] = true;
-            }
+            float inter = (-dx) * (-dy);
+            float uni = area_i + dets[j].box.w * dets[j].box.h - inter;
+            if (inter / uni > nms_threshold) suppress[j] = true;
         }
     }
 
-    detections = std::move(result);
-    if (nms_time) *nms_time = std::chrono::steady_clock::now() - t0;
-}
-
-// ============================================================================
-// ПРЕПРОЦЕССИНГ
-// ============================================================================
-void PreprocessDirect(std::span<const unsigned char> src, std::vector<float>& dst, int w, int h) {
-    int channel_size = w * h;
-    float* r_ptr = dst.data();
-    float* g_ptr = dst.data() + channel_size;
-    float* b_ptr = dst.data() + channel_size * 2;
-    const float inv255 = 0.003921568f;
-
-    const std::size_t required_size = static_cast<std::size_t>(w) * h * 4;
-    if (src.size_bytes() < required_size) {
-        return;
+    dets = std::move(result);
+    if (nms_ms_out) {
+        *nms_ms_out = std::chrono::duration<float, std::milli>(
+            std::chrono::steady_clock::now() - t0).count();
     }
-
-    // C++20 параллельный цикл с гарантированной многопоточностью
-    auto range = std::views::iota(0, channel_size);
-    std::for_each(std::execution::par_unseq, range.begin(), range.end(), [&](int i) {
-        int src_idx = i * 4;
-        r_ptr[i] = src[src_idx + 2] * inv255;  // B -> R
-        g_ptr[i] = src[src_idx + 1] * inv255;  // G -> G
-        b_ptr[i] = src[src_idx + 0] * inv255;  // R -> B
-    });
 }
 
+// ============================================================================
+// КОНСТРУКТОР / ДЕСТРУКТОР
+// ============================================================================
 Detector::Detector() {}
 Detector::~Detector() {
-    for (auto* name : input_names) {
-        if (name) free((void*)name);
-    }
-    for (auto* name : output_names) {
-        if (name) free((void*)name);
-    }
-    input_names.clear();
-    output_names.clear();
+    for (auto* n : input_names)  if (n) free((void*)n);
+    for (auto* n : output_names) if (n) free((void*)n);
 }
 
+// ============================================================================
+// ИНИЦИАЛИЗАЦИЯ ONNX И DIRECTML
+// ============================================================================
 bool Detector::initialize(const std::string& model_path, int force_w, int force_h, int gpu_index) {
     try {
         env = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "BogX_Engine");
         session_options = Ort::SessionOptions();
 
-        // Оптимизация потоков для CPU - 4 потока для CPU fallback
-        session_options.SetIntraOpNumThreads(4);
+        // Максимальная оптимизация под DirectML (1 поток, так как DML сам нагружает GPU)
+        session_options.SetIntraOpNumThreads(1);
         session_options.SetInterOpNumThreads(1);
         session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
         session_options.SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
-
-        // Отключаем паттерны памяти для DirectML
-        session_options.DisableMemPattern();
+        session_options.DisableMemPattern();    // Обязательно для DirectML
 
         const OrtApi& ort_api = Ort::GetApi();
         const OrtDmlApi* dml_api = nullptr;
-
-        if (ort_api.GetExecutionProviderApi("DML", ORT_API_VERSION, reinterpret_cast<const void**>(&dml_api)) == nullptr) {
-            std::cout << "[Detector] DirectML not available, using CPU execution provider" << std::endl;
+        if (ort_api.GetExecutionProviderApi("DML", ORT_API_VERSION,
+            reinterpret_cast<const void**>(&dml_api)) == nullptr) {
+            std::cout << "[Detector] DirectML unavailable, falling back to CPU" << std::endl;
         }
-        else if (dml_api != nullptr) {
-            // Чистая инициализация по индексу из UI (без EnumAdapters1)
+        else if (dml_api) {
             dml_api->SessionOptionsAppendExecutionProvider_DML(session_options, gpu_index);
-            std::cout << "[Detector] DirectML initialized on GPU Index: " << gpu_index << std::endl;
+            std::cout << "[Detector] DirectML successfully attached to GPU index: " << gpu_index << std::endl;
         }
 
-        std::wstring w_model_path(model_path.begin(), model_path.end());
-        session = std::make_unique<Ort::Session>(*env, w_model_path.c_str(), session_options);
+        std::wstring wpath(model_path.begin(), model_path.end());
+        session = std::make_unique<Ort::Session>(*env, wpath.c_str(), session_options);
 
-        Ort::AllocatorWithDefaultOptions allocator;
-        input_names.push_back(_strdup(session->GetInputNameAllocated(0, allocator).get()));
-        output_names.push_back(_strdup(session->GetOutputNameAllocated(0, allocator).get()));
+        Ort::AllocatorWithDefaultOptions alloc;
+        input_names.push_back(_strdup(session->GetInputNameAllocated(0, alloc).get()));
+        output_names.push_back(_strdup(session->GetOutputNameAllocated(0, alloc).get()));
 
+        // Автоматическое определение размера модели (если нет жестко заданного force_w)
         auto input_info = session->GetInputTypeInfo(0);
         auto input_shape = input_info.GetTensorTypeAndShapeInfo().GetShape();
-
-        // Динамическое определение разрешения модели
         if (input_shape.size() >= 4 && input_shape[2] > 0 && input_shape[3] > 0) {
-            // Модель имеет статические размеры - берем их из ONNX
             model_height = static_cast<int>(input_shape[2]);
             model_width = static_cast<int>(input_shape[3]);
-        } else {
-            // Модель имеет динамические оси (-1) - используем переданные значения из UI
+        }
+        else {
             model_width = (force_w > 0) ? force_w : 640;
             model_height = (force_h > 0) ? force_h : 640;
         }
 
-        m_input_tensor_data.resize(3 * model_width * model_height);
-        m_resized_tensor_data.resize(3 * model_width * model_height);
+        // Предварительное выделение памяти (избегаем аллокаций в цикле)
+        const int n = 3 * model_width * model_height;
+        m_preprocess_buf.resize(n);
+
+        std::cout << "[Detector] Loaded Model: " << model_width << "x" << model_height << std::endl;
         return true;
     }
-    catch (const Ort::Exception& e) {
-        std::cerr << "ONNX Error: " << e.what() << std::endl;
-        return false;
-    }
-    catch (...) {
-        return false;
-    }
+    catch (const Ort::Exception& e) { std::cerr << "ONNX Error: " << e.what() << std::endl; }
+    catch (...) {}
+    return false;
 }
 
-std::vector<Detection> Detector::run_inference(std::span<const unsigned char> pixel_data, int w, int h,
-    float body_conf_threshold, float head_conf_threshold,
-    float nms_threshold, int max_det, bool elite_smoke_vision) {
+// ============================================================================
+// ИНФЕРЕНС (ОСНОВНОЙ ЦИКЛ)
+// ============================================================================
+std::vector<Detection> Detector::run_inference(
+    std::span<const unsigned char> pixel_data,
+    int w, int h,
+    float body_conf_threshold,
+    float head_conf_threshold,
+    float nms_threshold,
+    int   max_det,
+    bool  elite_smoke_vision,
+    FrameTimings* out_timings)
+{
+    std::vector<Detection> results;
+    if (!session) return results;
 
-    std::vector<Detection> final_results;
-    if (!session) return final_results;
-
-    const std::size_t required_size = static_cast<std::size_t>(w) * h * 4;
-    if (pixel_data.size_bytes() < required_size) {
-        return final_results;
-    }
-
-    const int orig_w = w;
-    const int orig_h = h;
+    const size_t required = static_cast<size_t>(w) * h * 4;
+    if (pixel_data.size_bytes() < required) return results;
 
     float actual_body_thr = elite_smoke_vision ? (body_conf_threshold * 0.75f) : body_conf_threshold;
     float actual_head_thr = elite_smoke_vision ? (head_conf_threshold * 0.75f) : head_conf_threshold;
-    if (actual_body_thr < 0.1f) actual_body_thr = 0.1f;
-    if (actual_head_thr < 0.1f) actual_head_thr = 0.1f;
+    actual_body_thr = (std::max)(actual_body_thr, 0.1f);
+    actual_head_thr = (std::max)(actual_head_thr, 0.1f);
+
+    float t_pre = 0.f, t_inf = 0.f, t_nms = 0.f;
 
     try {
-        auto t0 = std::chrono::steady_clock::now();
+        // ── 1. PREPROCESSING ───────────────────────────
+        auto t_pre_start = std::chrono::steady_clock::now();
 
-        const float* preprocess_ptr = nullptr;
+        float* r_ptr = m_preprocess_buf.data();
+        float* g_ptr = m_preprocess_buf.data() + model_width * model_height;
+        float* b_ptr = m_preprocess_buf.data() + 2 * model_width * model_height;
+        constexpr float inv255 = 1.f / 255.f;
 
-        if (w != model_width || h != model_height) {
-            m_resized_tensor_data.resize(3 * model_width * model_height);
-
-            const float x_ratio = static_cast<float>(w) / model_width;
-            const float y_ratio = static_cast<float>(h) / model_height;
-            const float inv255 = 0.003921568f;
-
-            float* r_ptr = m_resized_tensor_data.data();
-            float* g_ptr = m_resized_tensor_data.data() + (model_width * model_height);
-            float* b_ptr = m_resized_tensor_data.data() + 2 * (model_width * model_height);
-
-            // C++20 параллельный цикл для ресайза
-            std::vector<int> ys(model_height);
-            std::iota(ys.begin(), ys.end(), 0);
-            std::for_each(std::execution::par_unseq, ys.begin(), ys.end(), [&](int my) {
-                for (int mx = 0; mx < model_width; ++mx) {
-                    const float ox = x_ratio * mx;
-                    const float oy = y_ratio * my;
-
-                    const int ox_int = static_cast<int>(ox);
-                    const int oy_int = static_cast<int>(oy);
-                    const float ox_frac = ox - ox_int;
-                    const float oy_frac = oy - oy_int;
-
-                    const int x0 = (std::min)(ox_int, w - 2);
-                    const int y0 = (std::min)(oy_int, h - 2);
-                    const int x1 = x0 + 1;
-                    const int y1 = y0 + 1;
-
-                    const int idx00 = (y0 * w + x0) * 4;
-                    const int idx01 = (y0 * w + x1) * 4;
-                    const int idx10 = (y1 * w + x0) * 4;
-                    const int idx11 = (y1 * w + x1) * 4;
-
-                    for (int c = 0; c < 3; ++c) {
-                        const float v00 = pixel_data[idx00 + (2 - c)];
-                        const float v01 = pixel_data[idx01 + (2 - c)];
-                        const float v10 = pixel_data[idx10 + (2 - c)];
-                        const float v11 = pixel_data[idx11 + (2 - c)];
-
-                        const float v0 = v00 * (1.0f - ox_frac) + v01 * ox_frac;
-                        const float v1 = v10 * (1.0f - ox_frac) + v11 * ox_frac;
-                        const float v = v0 * (1.0f - oy_frac) + v1 * oy_frac;
-
-                        const int dst_idx = my * model_width + mx;
-                        if (c == 0) r_ptr[dst_idx] = v * inv255;
-                        else if (c == 1) g_ptr[dst_idx] = v * inv255;
-                        else b_ptr[dst_idx] = v * inv255;
-                    }
-                }
-            });
-            preprocess_ptr = m_resized_tensor_data.data();
+        if (w == model_width && h == model_height) {
+            // Разрешения совпадают: быстрое копирование + нормализация BGR -> RGB
+            const int n = model_width * model_height;
+#pragma omp parallel for num_threads(4)
+            for (int i = 0; i < n; ++i) {
+                int s = i * 4;
+                r_ptr[i] = pixel_data[s + 2] * inv255;
+                g_ptr[i] = pixel_data[s + 1] * inv255;
+                b_ptr[i] = pixel_data[s + 0] * inv255;
+            }
         }
         else {
-            PreprocessDirect(pixel_data, m_input_tensor_data, model_width, model_height);
-            preprocess_ptr = m_input_tensor_data.data();
+            // Разрешения НЕ совпадают: Билинейный ресайз "на лету" на CPU
+            const float x_ratio = static_cast<float>(w) / model_width;
+            const float y_ratio = static_cast<float>(h) / model_height;
+
+#pragma omp parallel for num_threads(4)
+            for (int my = 0; my < model_height; ++my) {
+                const float oy = y_ratio * my;
+                const int   oy_int = (std::min)(static_cast<int>(oy), h - 2);
+                const float oy_frac = oy - oy_int;
+
+                for (int mx = 0; mx < model_width; ++mx) {
+                    const float ox = x_ratio * mx;
+                    const int   ox_int = (std::min)(static_cast<int>(ox), w - 2);
+                    const float ox_frac = ox - ox_int;
+
+                    const int idx00 = (oy_int * w + ox_int) * 4;
+                    const int idx01 = (oy_int * w + ox_int + 1) * 4;
+                    const int idx10 = ((oy_int + 1) * w + ox_int) * 4;
+                    const int idx11 = ((oy_int + 1) * w + ox_int + 1) * 4;
+
+                    const int channel_offset[3] = { 2, 1, 0 }; // BGR -> RGB
+                    float* dst_channels[3] = { r_ptr, g_ptr, b_ptr };
+                    const int dst_idx = my * model_width + mx;
+
+                    for (int c = 0; c < 3; ++c) {
+                        int co = channel_offset[c];
+                        float v00 = pixel_data[idx00 + co];
+                        float v01 = pixel_data[idx01 + co];
+                        float v10 = pixel_data[idx10 + co];
+                        float v11 = pixel_data[idx11 + co];
+
+                        float v0 = v00 + (v01 - v00) * ox_frac;
+                        float v1 = v10 + (v11 - v10) * ox_frac;
+                        dst_channels[c][dst_idx] = (v0 + (v1 - v0) * oy_frac) * inv255;
+                    }
+                }
+            }
         }
 
-        // Zero-Copy: передаем указатель напрямую в ONNX без копирования
+        auto t_pre_end = std::chrono::steady_clock::now();
+        t_pre = std::chrono::duration<float, std::milli>(t_pre_end - t_pre_start).count();
+
+        // ── 2. СОЗДАНИЕ ТЕНЗОРА И ИНФЕРЕНС ───────────────────────────────────
+        auto t_inf_start = std::chrono::steady_clock::now();
+
         std::vector<int64_t> input_shape = { 1, 3, model_height, model_width };
+        const int64_t n_elems = 3LL * model_width * model_height;
         auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+
+        // ZERO-COPY: Передаем float напрямую! DirectML сам аппаратно конвертирует в FP16 при необходимости.
         Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
             memory_info,
-            const_cast<float*>(preprocess_ptr), // ИСПОЛЬЗУЕМ УКАЗАТЕЛЬ НАПРЯМУЮ, БЕЗ КОПИРОВАНИЯ!
-            3 * model_width * model_height,
+            m_preprocess_buf.data(),
+            static_cast<size_t>(n_elems),
             input_shape.data(),
             input_shape.size());
 
-        auto output_tensors = session->Run(
+        std::vector<Ort::Value> output_tensors = session->Run(
             Ort::RunOptions{ nullptr },
-            input_names.data(),
-            &input_tensor, 1,
+            input_names.data(), &input_tensor, 1,
             output_names.data(), 1);
 
-        float* data = output_tensors[0].GetTensorMutableData<float>();
-        auto output_shape = output_tensors[0].GetTensorTypeAndShapeInfo().GetShape();
+        auto t_inf_end = std::chrono::steady_clock::now();
+        t_inf = std::chrono::duration<float, std::milli>(t_inf_end - t_inf_start).count();
 
-        if (output_shape.size() != 3) {
-            std::cerr << "[Detector] Unexpected output shape size: " << output_shape.size() << std::endl;
-            return final_results;
-        }
+        // ── 3. ПОСТОБРАБОТКА (Чтение данных с GPU) ───────────────────────────
+        auto& out = output_tensors[0];
+        auto  out_shape = out.GetTensorTypeAndShapeInfo().GetShape();
+        if (out_shape.size() != 3 || out_shape[0] != 1) return results;
 
-        int64_t batch_dim = output_shape[0];
-        int64_t dim1 = output_shape[1];
-        int64_t dim2 = output_shape[2];
-
-        if (batch_dim != 1) return final_results;
-
-        int num_detections = 0;
-        int stride = 0;
+        int64_t dim1 = out_shape[1];
+        int64_t dim2 = out_shape[2];
+        int num_det = 0;
         bool transposed = false;
 
-        if (dim2 == 6) {
-            num_detections = static_cast<int>(dim1);
-            stride = 6;
-            transposed = false;
-        }
-        else if (dim1 == 6) {
-            num_detections = static_cast<int>(dim2);
-            stride = 6;
-            transposed = true;
-        }
-        else {
-            return final_results;
-        }
+        if (dim2 == 6) { num_det = static_cast<int>(dim1); transposed = false; }
+        else if (dim1 == 6) { num_det = static_cast<int>(dim2); transposed = true; }
+        else { return results; }
 
-        final_results.reserve((std::min)(num_detections, 1024));
+        float* data = out.GetTensorMutableData<float>();
+        results.reserve((std::min)(num_det, 1024));
 
-        const float* p = data;
-        for (int i = 0; i < num_detections; ++i) {
+        const float scale_x = static_cast<float>(w) / model_width;
+        const float scale_y = static_cast<float>(h) / model_height;
+
+        for (int i = 0; i < num_det; ++i) {
             float x1, y1, x2, y2, conf;
-            int cls_id;
+            int   cls_id;
 
             if (!transposed) {
-                x1 = p[i * stride + 0];
-                y1 = p[i * stride + 1];
-                x2 = p[i * stride + 2];
-                y2 = p[i * stride + 3];
-                conf = p[i * stride + 4];
-                cls_id = static_cast<int>(std::round(p[i * stride + 5]));
+                x1 = data[i * 6 + 0];
+                y1 = data[i * 6 + 1];
+                x2 = data[i * 6 + 2];
+                y2 = data[i * 6 + 3];
+                conf = data[i * 6 + 4];
+                cls_id = static_cast<int>(std::round(data[i * 6 + 5]));
             }
             else {
-                x1 = p[i + 0 * num_detections];
-                y1 = p[i + 1 * num_detections];
-                x2 = p[i + 2 * num_detections];
-                y2 = p[i + 3 * num_detections];
-                conf = p[i + 4 * num_detections];
-                cls_id = static_cast<int>(std::round(p[i + 5 * num_detections]));
+                x1 = data[i + 0 * num_det];
+                y1 = data[i + 1 * num_det];
+                x2 = data[i + 2 * num_det];
+                y2 = data[i + 3 * num_det];
+                conf = data[i + 4 * num_det];
+                cls_id = static_cast<int>(std::round(data[i + 5 * num_det]));
             }
 
             float thr = (cls_id == 1) ? actual_head_thr : actual_body_thr;
             if (conf < thr) continue;
 
-            float bw = x2 - x1;
-            float bh = y2 - y1;
-            if (bw < 2.0f || bh < 2.0f) continue;
-
-            const float scale_x = static_cast<float>(orig_w) / model_width;
-            const float scale_y = static_cast<float>(orig_h) / model_height;
+            float bw = x2 - x1, bh = y2 - y1;
+            if (bw < 2.f || bh < 2.f) continue;
 
             Detection det;
             det.class_id = cls_id;
@@ -364,22 +303,31 @@ std::vector<Detection> Detector::run_inference(std::span<const unsigned char> pi
             det.box.w = bw * scale_x;
             det.box.h = bh * scale_y;
             det.track_id = -1;
-            final_results.push_back(det);
+            results.push_back(det);
         }
 
-        std::chrono::duration<double, std::milli> nms_time;
-        NMS_Improved(final_results, nms_threshold, &nms_time);
+        NMS_Improved(results, nms_threshold, &t_nms);
 
-        if (static_cast<int>(final_results.size()) > max_det) {
-            final_results.resize(max_det);
+        if (static_cast<int>(results.size()) > max_det) {
+            results.resize(max_det);
         }
     }
-    catch (const Ort::Exception& e) {
-        std::cerr << "[Detector] ONNX Exception: " << e.what() << std::endl;
-    }
-    catch (...) {
-        std::cerr << "[Detector] Unknown exception" << std::endl;
+    catch (const Ort::Exception& e) { std::cerr << "[Detector] ORT: " << e.what() << std::endl; }
+    catch (...) { std::cerr << "[Detector] Unknown exception" << std::endl; }
+
+    // Логирование таймингов
+    if (out_timings) {
+        out_timings->preprocess_ms = t_pre;
+        out_timings->inference_ms = t_inf;
+        out_timings->nms_ms = t_nms;
+        out_timings->total_ms = t_pre + t_inf + t_nms;
     }
 
-    return final_results;
+    static int frame_cnt = 0;
+    if (++frame_cnt % 60 == 0) {
+        std::cout << "[Timings] PreProc=" << t_pre << "ms | Infer=" << t_inf
+            << "ms | NMS=" << t_nms << "ms | Total=" << (t_pre + t_inf + t_nms) << "ms\n";
+    }
+
+    return results;
 }
