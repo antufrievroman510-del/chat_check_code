@@ -9,6 +9,7 @@ struct Detection {
     int class_id;
     float confidence;
     struct { float x, y, w, h; } box;
+    int track_id = -1;
 };
 
 class Detector {

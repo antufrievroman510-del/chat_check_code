@@ -1120,7 +1120,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         int force_w = 0; // Разрешение модели определяется автоматически из ONNX
         int force_h = 0;
         std::cout << "[INIT] Initializing detector with model: " << fp16_model << std::endl;
-        if (!det.initialize(fp16_model, force_w, force_h, overlay.dml_gpu_index)) {
+        if (!det.initialize(fp16_model, force_w, force_h)) {
             std::cerr << "[INIT] Detector initialization FAILED!" << std::endl;
             if (logfile.is_open()) { logfile << "ERROR: det.initialize failed" << std::endl; logfile.flush(); }
             MessageBoxA(0, "Нейросеть не загрузилась! Проверьте консоль.", "FATAL ERROR", MB_ICONERROR);
@@ -1342,7 +1342,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             EnsureFP16Model(model_to_load, fp16_model);
             int force_w = 0; // Разрешение определяется автоматически из ONNX
             int force_h = 0;
-            det.initialize(fp16_model, force_w, force_h, overlay.dml_gpu_index);
+            det.initialize(fp16_model, force_w, force_h);
             render_yolo_w = det.get_width(); render_yolo_h = det.get_height();
         }
         std::vector<Detection> render_det;
