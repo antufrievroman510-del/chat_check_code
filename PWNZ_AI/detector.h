@@ -34,6 +34,8 @@ private:
     std::vector<const char*> input_names;
     std::vector<const char*> output_names;
     std::vector<float> m_input_tensor_data;
+    std::vector<float> m_resized_tensor_data;
+    std::vector<float> m_final_tensor_data;
 
     int model_width = 736;   // Стандартное значение YOLO для оптимальной производительности
     int model_height = 416;  // Стандартное значение YOLO для оптимальной производительности
