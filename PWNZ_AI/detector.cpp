@@ -155,6 +155,15 @@ std::vector<Detection> Detector::run_inference(
     const size_t required = static_cast<size_t>(w) * h * 4;
     if (pixel_data.size_bytes() < required) return results;
 
+    // ZERO-RESIZE: Если разрешение ROI не совпадает с моделью — инференс запрещён.
+    // Разрешение захвата должно строго соответствовать разрешению модели.
+    if (w != model_width || h != model_height) {
+        std::cerr << "[Detector] Resolution mismatch: ROI=" << w << "x" << h
+                  << " Model=" << model_width << "x" << model_height
+                  << ". Skipping inference (zero-resize policy)." << std::endl;
+        return results;
+    }
+
     float actual_body_thr = elite_smoke_vision ? (body_conf_threshold * 0.75f) : body_conf_threshold;
     float actual_head_thr = elite_smoke_vision ? (head_conf_threshold * 0.75f) : head_conf_threshold;
     actual_body_thr = (std::max)(actual_body_thr, 0.1f);
@@ -171,55 +180,14 @@ std::vector<Detection> Detector::run_inference(
         float* b_ptr = m_preprocess_buf.data() + 2 * model_width * model_height;
         constexpr float inv255 = 1.f / 255.f;
 
-        if (w == model_width && h == model_height) {
-            // Разрешения совпадают: быстрое копирование + нормализация BGR -> RGB
-            const int n = model_width * model_height;
+        // Быстрое копирование + нормализация BGR -> RGB (без ресайза!)
+        const int n = model_width * model_height;
 #pragma omp parallel for num_threads(4)
-            for (int i = 0; i < n; ++i) {
-                int s = i * 4;
-                r_ptr[i] = pixel_data[s + 2] * inv255;
-                g_ptr[i] = pixel_data[s + 1] * inv255;
-                b_ptr[i] = pixel_data[s + 0] * inv255;
-            }
-        }
-        else {
-            // Разрешения НЕ совпадают: Билинейный ресайз "на лету" на CPU
-            const float x_ratio = static_cast<float>(w) / model_width;
-            const float y_ratio = static_cast<float>(h) / model_height;
-
-#pragma omp parallel for num_threads(4)
-            for (int my = 0; my < model_height; ++my) {
-                const float oy = y_ratio * my;
-                const int   oy_int = (std::min)(static_cast<int>(oy), h - 2);
-                const float oy_frac = oy - oy_int;
-
-                for (int mx = 0; mx < model_width; ++mx) {
-                    const float ox = x_ratio * mx;
-                    const int   ox_int = (std::min)(static_cast<int>(ox), w - 2);
-                    const float ox_frac = ox - ox_int;
-
-                    const int idx00 = (oy_int * w + ox_int) * 4;
-                    const int idx01 = (oy_int * w + ox_int + 1) * 4;
-                    const int idx10 = ((oy_int + 1) * w + ox_int) * 4;
-                    const int idx11 = ((oy_int + 1) * w + ox_int + 1) * 4;
-
-                    const int channel_offset[3] = { 2, 1, 0 }; // BGR -> RGB
-                    float* dst_channels[3] = { r_ptr, g_ptr, b_ptr };
-                    const int dst_idx = my * model_width + mx;
-
-                    for (int c = 0; c < 3; ++c) {
-                        int co = channel_offset[c];
-                        float v00 = pixel_data[idx00 + co];
-                        float v01 = pixel_data[idx01 + co];
-                        float v10 = pixel_data[idx10 + co];
-                        float v11 = pixel_data[idx11 + co];
-
-                        float v0 = v00 + (v01 - v00) * ox_frac;
-                        float v1 = v10 + (v11 - v10) * ox_frac;
-                        dst_channels[c][dst_idx] = (v0 + (v1 - v0) * oy_frac) * inv255;
-                    }
-                }
-            }
+        for (int i = 0; i < n; ++i) {
+            int s = i * 4;
+            r_ptr[i] = pixel_data[s + 2] * inv255;
+            g_ptr[i] = pixel_data[s + 1] * inv255;
+            b_ptr[i] = pixel_data[s + 0] * inv255;
         }
 
         auto t_pre_end = std::chrono::steady_clock::now();
@@ -232,10 +200,10 @@ std::vector<Detection> Detector::run_inference(
         const int64_t n_elems = 3LL * model_width * model_height;
         auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
-        // ZERO-COPY: Передаем float напрямую! DirectML сам аппаратно конвертирует в FP16 при необходимости.
+        // ZERO-COPY: Передаем float напрямую через const_cast
         Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
             memory_info,
-            m_preprocess_buf.data(),
+            const_cast<float*>(m_preprocess_buf.data()),
             static_cast<size_t>(n_elems),
             input_shape.data(),
             input_shape.size());
@@ -265,8 +233,9 @@ std::vector<Detection> Detector::run_inference(
         float* data = out.GetTensorMutableData<float>();
         results.reserve((std::min)(num_det, 1024));
 
-        const float scale_x = static_cast<float>(w) / model_width;
-        const float scale_y = static_cast<float>(h) / model_height;
+        // scale_x и scale_y = 1.0f, так как ROI == model resolution
+        const float scale_x = 1.0f;
+        const float scale_y = 1.0f;
 
         for (int i = 0; i < num_det; ++i) {
             float x1, y1, x2, y2, conf;
