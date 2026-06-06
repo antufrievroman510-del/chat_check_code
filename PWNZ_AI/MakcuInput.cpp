@@ -53,11 +53,26 @@ bool MakcuInput::Init(const std::string& port) {
     }
 
     std::cout << "[MakcuInput] Successfully connected to Makcu on " << port << std::endl;
+
+    // 5. Запуск UART потока для асинхронной отправки команд
+    m_uartRunning = true;
+    m_uartThread = std::thread(&MakcuInput::UartThreadFunc, this);
+    std::cout << "[MakcuInput] UART thread started" << std::endl;
+
     return true;
 }
 
 void MakcuInput::Shutdown() {
     std::cout << "[MakcuInput] Shutdown called" << std::endl;
+
+    // Останавливаем UART поток
+    m_uartRunning = false;
+    m_uartCV.notify_one();
+    if (m_uartThread.joinable()) {
+        m_uartThread.join();
+    }
+    std::cout << "[MakcuInput] UART thread stopped" << std::endl;
+
     if (m_device && m_device->isConnected()) {
         m_device->disconnect();
         std::cout << "[MakcuInput] Disconnected from device" << std::endl;
@@ -66,14 +81,111 @@ void MakcuInput::Shutdown() {
     std::cout << "[MakcuInput] Device object destroyed" << std::endl;
 }
 
+// === АСИНХРОННЫЕ МЕТОДЫ — ТОЛЬКО ДОБАВЛЕНИЕ В ОЧЕРЕДЬ ===
+
 void MakcuInput::Move(int dx, int dy) {
-    if (!m_device || !m_device->isConnected()) {
-        std::cerr << "[MakcuInput] Cannot move: not connected" << std::endl;
-        return;
-    }
+    if (!m_uartRunning) return;
     
-    // Отправляем движение через makcu
-    m_device->mouseMove(dx, dy);
+    UartCommand cmd;
+    cmd.type = UartCommand::Type::Move;
+    cmd.x = dx;
+    cmd.y = dy;
+
+    {
+        std::lock_guard<std::mutex> lock(m_uartMutex);
+        m_uartQueue.push(cmd);
+    }
+    m_uartCV.notify_one();
+}
+
+void MakcuInput::Click(MouseButton button) {
+    if (!m_uartRunning) return;
+    
+    UartCommand cmd;
+    cmd.type = UartCommand::Type::Click;
+    cmd.button = buttonToInt(button);
+
+    {
+        std::lock_guard<std::mutex> lock(m_uartMutex);
+        m_uartQueue.push(cmd);
+    }
+    m_uartCV.notify_one();
+}
+
+void MakcuInput::Press(MouseButton button) {
+    if (!m_uartRunning) return;
+    
+    UartCommand cmd;
+    cmd.type = UartCommand::Type::Press;
+    cmd.button = buttonToInt(button);
+
+    {
+        std::lock_guard<std::mutex> lock(m_uartMutex);
+        m_uartQueue.push(cmd);
+    }
+    m_uartCV.notify_one();
+}
+
+void MakcuInput::Release(MouseButton button) {
+    if (!m_uartRunning) return;
+    
+    UartCommand cmd;
+    cmd.type = UartCommand::Type::Release;
+    cmd.button = buttonToInt(button);
+
+    {
+        std::lock_guard<std::mutex> lock(m_uartMutex);
+        m_uartQueue.push(cmd);
+    }
+    m_uartCV.notify_one();
+}
+
+// === UART ПОТОК — РЕАЛЬНАЯ ОТПРАВКА НА УСТРОЙСТВО ===
+
+void MakcuInput::UartThreadFunc() {
+    std::cout << "[MakcuInput-UART] Thread started" << std::endl;
+
+    while (m_uartRunning) {
+        UartCommand cmd;
+        
+        // Ждём команду или сигнал остановки
+        {
+            std::unique_lock<std::mutex> lock(m_uartMutex);
+            m_uartCV.wait(lock, [this] { 
+                return !m_uartRunning || !m_uartQueue.empty(); 
+            });
+            
+            if (!m_uartRunning && m_uartQueue.empty()) break;
+            if (m_uartQueue.empty()) continue;
+            
+            cmd = m_uartQueue.front();
+            m_uartQueue.pop();
+        }
+
+        // Выполняем команду (без мьютекса — не блокируем основной поток!)
+        if (m_device && m_device->isConnected()) {
+            switch (cmd.type) {
+                case UartCommand::Type::Move:
+                    m_device->mouseMove(cmd.x, cmd.y);
+                    break;
+                case UartCommand::Type::Press:
+                    m_device->mouseDown(static_cast<makcu::MouseButton>(cmd.button));
+                    break;
+                case UartCommand::Type::Release:
+                    m_device->mouseUp(static_cast<makcu::MouseButton>(cmd.button));
+                    break;
+                case UartCommand::Type::Click:
+                    m_device->mouseDown(static_cast<makcu::MouseButton>(cmd.button));
+                    m_device->mouseUp(static_cast<makcu::MouseButton>(cmd.button));
+                    break;
+            }
+        }
+
+        // Небольшая пауза чтобы не забивать UART
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    std::cout << "[MakcuInput-UART] Thread exiting" << std::endl;
 }
 
 int MakcuInput::buttonToInt(MouseButton button) const {
@@ -85,56 +197,6 @@ int MakcuInput::buttonToInt(MouseButton button) const {
         case MouseButton::SIDE2:  return 4;
         default:                  return -1;
     }
-}
-
-void MakcuInput::Click(MouseButton button) {
-    makcu::MouseButton btn = static_cast<makcu::MouseButton>(button);
-    
-    if (!m_device || !m_device->isConnected()) {
-        std::cerr << "[MakcuInput] Cannot click: not connected" << std::endl;
-        return;
-    }
-    
-    // Эмулируем клик как нажатие + отпускание
-    m_device->mouseDown(btn);
-    m_device->mouseUp(btn);
-}
-
-void MakcuInput::Press(MouseButton button) {
-    makcu::MouseButton btn = static_cast<makcu::MouseButton>(button);
-    
-    if (!m_device || !m_device->isConnected()) {
-        std::cerr << "[MakcuInput] Cannot press: not connected" << std::endl;
-        return;
-    }
-    
-    m_device->mouseDown(btn);
-}
-
-void MakcuInput::Release(MouseButton button) {
-    makcu::MouseButton btn = static_cast<makcu::MouseButton>(button);
-    
-    if (!m_device || !m_device->isConnected()) {
-        std::cerr << "[MakcuInput] Cannot release: not connected" << std::endl;
-        return;
-    }
-    
-    m_device->mouseUp(btn);
-}
-
-bool MakcuInput::IsButtonPressed(MouseButton button) const {
-    switch (button) {
-        case MouseButton::LEFT:   return m_btnLmb.load();
-        case MouseButton::RIGHT:  return m_btnRmb.load();
-        case MouseButton::MIDDLE: return m_btnMmb.load();
-        case MouseButton::SIDE1:  return m_btnSide1.load();
-        case MouseButton::SIDE2:  return m_btnSide2.load();
-        default:                  return false;
-    }
-}
-
-bool MakcuInput::IsConnected() const {
-    return m_device && m_device->isConnected();
 }
 
 void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
@@ -168,6 +230,21 @@ void MakcuInput::onMouseButton(makcu::MouseButton button, bool pressed) {
                       << " pressed=" << pressed << std::endl;
             break;
     }
+}
+
+bool MakcuInput::IsButtonPressed(MouseButton button) const {
+    switch (button) {
+        case MouseButton::LEFT:   return m_btnLmb.load();
+        case MouseButton::RIGHT:  return m_btnRmb.load();
+        case MouseButton::MIDDLE: return m_btnMmb.load();
+        case MouseButton::SIDE1:  return m_btnSide1.load();
+        case MouseButton::SIDE2:  return m_btnSide2.load();
+        default:                  return false;
+    }
+}
+
+bool MakcuInput::IsConnected() const {
+    return m_device && m_device->isConnected();
 }
 
 } // namespace pwnz_ai
