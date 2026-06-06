@@ -13,29 +13,51 @@ struct Detection {
     int track_id = -1;
 };
 
+// РўР°Р№РјРёРЅРіРё РѕРґРЅРѕРіРѕ РєР°РґСЂР° (РґР»СЏ РѕС‚Р»Р°РґРєРё Рё UI)
+struct FrameTimings {
+    float preprocess_ms = 0.f;
+    float inference_ms = 0.f;
+    float nms_ms = 0.f;
+    float total_ms = 0.f;
+};
+
 class Detector {
 public:
     Detector();
     ~Detector();
-    bool initialize(const std::string& model_path, int force_w = 0, int force_h = 0, int gpu_index = 0);
-    std::vector<Detection> run_inference(std::span<const unsigned char> pixel_data, int w, int h,
-        float body_conf_threshold, float head_conf_threshold,
-        float nms_threshold, int max_det,
-        bool elite_smoke_vision = false);
 
-    int get_width() const { return model_width; }
+    bool initialize(const std::string& model_path,
+        int force_w = 0, int force_h = 0,
+        int gpu_index = 0);
+
+    std::vector<Detection> run_inference(
+        std::span<const unsigned char> pixel_data,
+        int w, int h,
+        float body_conf_threshold,
+        float head_conf_threshold,
+        float nms_threshold,
+        int   max_det,
+        bool  elite_smoke_vision = false,
+        FrameTimings* out_timings = nullptr);
+
+    int get_width()  const { return model_width; }
     int get_height() const { return model_height; }
+    bool is_fp16()   const { return m_is_fp16; }
 
 private:
-    std::unique_ptr<Ort::Env> env;
-    Ort::SessionOptions session_options;
+    std::unique_ptr<Ort::Env>     env;
+    Ort::SessionOptions           session_options;
     std::unique_ptr<Ort::Session> session;
 
     std::vector<const char*> input_names;
     std::vector<const char*> output_names;
-    std::vector<float> m_input_tensor_data;
-    std::vector<float> m_resized_tensor_data;
 
-    int model_width = 736;   // Стандартное значение YOLO для оптимальной производительности
-    int model_height = 416;  // Стандартное значение YOLO для оптимальной производительности
+    // Р‘СѓС„РµСЂС‹ preprocessing (float32 вЂ” РІСЃРµРіРґР°, РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ РјРѕРґРµР»Рё)
+    std::vector<float>           m_preprocess_buf;   // BGRв†’RGB float, CHW
+    // Р‘СѓС„РµСЂ РІС…РѕРґР° РґР»СЏ РјРѕРґРµР»Рё: float16 РµСЃР»Рё m_is_fp16, РёРЅР°С‡Рµ РёСЃРїРѕР»СЊР·СѓРµРј m_preprocess_buf РЅР°РїСЂСЏРјСѓСЋ
+    std::vector<Ort::Float16_t>  m_fp16_input_buf;
+
+    bool m_is_fp16 = false;
+    int  model_width = 736;
+    int  model_height = 416;
 };
