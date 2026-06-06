@@ -162,7 +162,6 @@ struct SafeConfig {
     float smooth_factor;
 
     // НОВЫЕ ПОЛЯ ДЛЯ АИМБОТА (Sunone)
-    int detection_resolution;
     float min_sensitivity;
     float max_sensitivity;
     bool kalman_compensate_detection_delay;
@@ -1145,7 +1144,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     g_safe_cfg.smooth_factor = 0.15f;
 
     // Инициализация новых полей
-    g_safe_cfg.detection_resolution = 960;
     g_safe_cfg.min_sensitivity = 0.5f;
     g_safe_cfg.max_sensitivity = 3.0f;
     g_safe_cfg.kalman_compensate_detection_delay = true;
@@ -1230,7 +1228,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             // Синхронизация новых полей Sunone
             g_safe_cfg.min_sensitivity = overlay.min_sensitivity;
             g_safe_cfg.max_sensitivity = overlay.max_sensitivity;
-            g_safe_cfg.detection_resolution = overlay.detection_resolution;
         }
         if (overlay.is_authenticated) {
             auto now_time = std::chrono::steady_clock::now();
